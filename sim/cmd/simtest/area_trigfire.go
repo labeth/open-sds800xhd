@@ -245,6 +245,7 @@ func trigHost(ctx context.Context, dir string) {
 	// Force from Normal without the condition
 	_, _ = scpiQuery(ctx, base+":TRIG:EDGE:SLOP RIS;:TRIG:EDGE:LEV 1.5;:TRIG:MODE NORM")
 	time.Sleep(2 * time.Second)
+	modeBefore, _ := scpiQuery(ctx, ":TRIG:MODE?")
 	b, _ := get("/api/frame.bin?v=2&waitms=10")
 	before, _ := wire.DecodeFrame2(b)
 	_, _ = scpiQuery(ctx, ":TRIG:MODE FTRIG")
@@ -252,8 +253,10 @@ func trigHost(ctx context.Context, dir string) {
 	after, err := wire.DecodeFrame2(b)
 	forced := err == nil && !after.Header.Unchanged && after.Header.Seq != before.Header.Seq
 	mode, _ := scpiQuery(ctx, ":TRIG:MODE?")
-	rowf("web", "sweep", "force from normal, no condition", "one new frame, mode stays NORM",
-		fmt.Sprintf("seq %d → %d, kind %q, mode %s", before.Header.Seq, after.Header.Seq, after.Header.TrigKind, mode), forced && strings.HasPrefix(mode, "NORM"))
+	rowf("web", "sweep", "force from normal, no condition", "one new frame, marked forced",
+		fmt.Sprintf("seq %d → %d, kind %q", before.Header.Seq, after.Header.Seq, after.Header.TrigKind), forced && after.Header.TrigKind == "forced")
+	rowf("SCPI", "sweep", "force from normal: mode", "NORMal before and after FTRIG", modeBefore+" → "+mode,
+		strings.HasPrefix(modeBefore, "NORM") && strings.HasPrefix(mode, "NORM"))
 
 	// Holdoff 0.5 s: frames at least 0.5 s apart
 	_, _ = scpiQuery(ctx, base+":TRIG:EDGE:SLOP RIS;:TRIG:EDGE:LEV 0.5;:TRIG:EDGE:HLDT 0.5;:TRIG:EDGE:HOLD TIME;:TRIG:MODE NORM")
