@@ -8,8 +8,11 @@ import (
 )
 
 func init() {
+	// The register goldens wait for a frame after each case only to commit the
+	// arm; the simulator's frames do not wait for the trigger to fire here
+	// (trigger firing is the trigfire area's).
 	register(boardArea("trigger", "triggers: edge, pulse/slope/video/window/runt/pattern/serial",
-		"Trigger", 120, "", nil, refTriggerParity))
+		"Trigger", 120, "-no-trig-model", nil, refTriggerParity))
 }
 
 // triggerParity pairs a board-test case with the reference run of the

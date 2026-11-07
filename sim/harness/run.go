@@ -23,6 +23,16 @@ func Workspace() string {
 	return filepath.Join(home, "ws", "sds800xhd")
 }
 
+// tier1Script is the simulator's run script: the workspace's, or the one
+// SDS800XHD_TIER1 names (a worktree's, which builds that tree's device model
+// while the lock, rootfs and runs stay in the workspace).
+func tier1Script(ws string) string {
+	if p := os.Getenv("SDS800XHD_TIER1"); p != "" {
+		return p
+	}
+	return filepath.Join(ws, "sim", "run", "tier1.sh")
+}
+
 // Spec is one simulator run.
 type Spec struct {
 	Name     string   // run name: analysis/testenv/runs/<Name>
@@ -81,7 +91,7 @@ type Run struct {
 func Exec(s Spec) (*Run, error) {
 	ws := Workspace()
 	args := []string{
-		filepath.Join(ws, "analysis", ".sim.lock"), filepath.Join(ws, "sim", "run", "tier1.sh"),
+		filepath.Join(ws, "analysis", ".sim.lock"), tier1Script(ws),
 		"-n", s.Name, "-t", strconv.Itoa(s.Secs),
 	}
 	if s.Ports {
