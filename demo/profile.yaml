@@ -1,0 +1,94 @@
+# The SDS800X HD as the browser demo simulates it, in the core's profile
+# schema (open-dso-core/profile). The firmware builds this unit's profile in
+# code at bring-up (app/internal/scopeboard/scopeboard.go, from the unit's
+# identity); this file states the same values for the four-channel 200 MHz
+# variant, which the demo's simulated board needs before any bring-up.
+
+channels: 4
+
+# 12-bit converter codes left-aligned in 16-bit words; mid-screen is 0x8000,
+# the screen spans 0x080 … 0xF7F codes (spec 03 §5).
+format: {bits: 12, storage: u16, shift: 4, frac: 0, min: 2048, max: 63472, mid: 32768}
+
+# Spec 04 §1: the rate route by channels on.
+rates:
+  - samples_per_s: 2e9
+    max_channels: 1
+  - samples_per_s: 1e9
+    max_channels: 2
+  - samples_per_s: 500e6
+    max_channels: 4
+
+max_depth: 100000000
+bandwidth: 200e6
+
+content: [raw-full-rate, raw-decimated, peak-pairs]
+raw_access:
+  max_depth: 10000000
+  per_window: true
+
+triggers:
+  nodes:
+    edge: {slopes: [rising, falling, either]}
+    pulse: {qual_ops: [shorter, longer, inside, outside]}
+    slope: {slopes: [rising, falling], qual_ops: [shorter, longer, inside, outside]}
+    video: {}
+    window: {}
+    runt: {}
+    pattern: {}
+    timeout: {}
+    protocol: {}
+  max_stages: 1
+  protocols: [uart, spi, i2c, can, lin]
+  sources: [analog]
+
+# 1024x600 with touch (spec 07 §2); the demo draws the traces itself.
+display:
+  w: 1024
+  h: 600
+  format: argb8888
+  touch: true
+  divs_h: 10
+  divs_v: 8
+
+# The panel's keys, knob pushes and knobs by the UI model's names (the
+# board's input names map spec 08's physical names to these); the vertical
+# knobs are shared by the channels on this panel.
+inputs:
+  keys: [run, single, auto, trigauto, trignormal, defaultsetup, print, menu, measure, cursors, math,
+    ref, acquire, display, saverecall, trigmenu, utility, ch1, ch2, ch3, ch4, triglvlpush, tdivpush,
+    horizpospush, adjustpush, ch1vdivpush, ch2vdivpush, ch3vdivpush, ch4vdivpush, ch1pospush,
+    ch2pospush, ch3pospush, ch4pospush]
+  knobs: [tdiv, horizpos, triglevel, adjust, ch1vdiv, ch2vdiv, ch3vdiv, ch4vdiv, ch1pos, ch2pos,
+    ch3pos, ch4pos]
+  lamps: [adjust, ch1, ch2, ch3, ch4, cursors, measure, math, ref, decode, auto, normal, single,
+    run, stop]
+  touch: true
+  beeper: true
+
+supervisor:
+  restart: software-health
+
+options: [counter]
+
+absent:
+  logic-probe: "the SLA1016 logic probe is not driven by this firmware"
+  generator: "the external signal generator is not driven by this firmware"
+
+budget:
+  ram_bytes: 528482304
+  cores: 2
+
+stage: 1
+
+# Spec 04: 1 ns/div (200 MHz models) to 1000 s/div.
+timebase:
+  tdiv_s: [1e-9, 2e-9, 5e-9, 10e-9, 20e-9, 50e-9, 100e-9, 200e-9, 500e-9,
+    1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6, 200e-6, 500e-6,
+    1e-3, 2e-3, 5e-3, 10e-3, 20e-3, 50e-3, 100e-3, 200e-3, 500e-3,
+    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
+  full_rate_tdiv_s: 1e-9
+
+variants:
+  - name: sds824x-hd
+    match: {model: SDS824X HD}
