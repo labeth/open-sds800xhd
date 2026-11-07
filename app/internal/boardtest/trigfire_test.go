@@ -417,8 +417,10 @@ func fireCases() []fireCase {
 			tdiv: 200e-9, spec: pat(hal.High),
 		},
 
+		// C2's crossings (1.17 and 1.83 µs of its 2 µs) stay clear of C1's edges: a qualifier edge
+		// coincident with the trigger edge is decided by the hysteresis, not the condition
 		{
-			typ: "qualified", form: "C1 rise while C2 high", sigs: "C1=square,1e6,2,0,rise=4e-9;C2=square,5e5,2,0,rise=4e-9,duty=0.25,inv=1", chans: []int{0, 1},
+			typ: "qualified", form: "C1 rise while C2 high", sigs: "C1=square,1e6,2,0,rise=4e-9;C2=sine,5e5,2,0.5", chans: []int{0, 1},
 			tdiv: 500e-9, spec: qual(true), fires: true, check: func(r fireRec) (string, string, bool) {
 				_, g, ok := posCheck(0, 0, 1)(r)
 				q := r.v(1, int(r.at))
