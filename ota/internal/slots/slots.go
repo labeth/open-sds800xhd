@@ -179,11 +179,13 @@ func (l Layout) App() string { return l.path(l.Status().Current, "app") }
 // WriteFile writes data to path durably through the write guard (package
 // fsguard): a temporary file next to it, fsync, mode, rename, then an fsync
 // of the directory (spec 01 §12.4 step 4).
+// TRLC-LINKS: REQ-HD-012, REQ-HD-016
 func WriteFile(path string, data []byte, mode os.FileMode) error {
 	return hdguard.FS.WriteFile(path, data, mode)
 }
 
 // Remove deletes path, if it exists, durably, through the write guard.
+// TRLC-LINKS: REQ-HD-012, REQ-HD-016
 func Remove(path string) error { return hdguard.FS.Remove(path) }
 
 // SyncDir fsyncs a directory.
