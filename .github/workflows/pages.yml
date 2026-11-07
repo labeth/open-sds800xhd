@@ -1,0 +1,56 @@
+name: Pages
+
+# The browser demo (make demo): the firmware as WebAssembly against a
+# simulated board, built by open-dso-core from this scope's profile and
+# demo file, deployed as this repository's site. Every URL in the site is
+# relative and the service worker's scope is the page's directory, so the
+# site works at /open-sds800xhd/.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The demo is built by open-dso-core from ../open-dso-core (the app's
+      # go.mod replace) until the core is released and pinned by tag.
+      - name: Check out open-dso-core
+        uses: actions/checkout@v4
+        with:
+          repository: labeth/open-dso-core
+          ref: main
+          path: .dso-core
+          token: ${{ secrets.DSO_CORE_TOKEN || github.token }}
+      - name: Place open-dso-core next to the repository
+        run: mv .dso-core ../open-dso-core
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: app/go.mod
+          cache: false
+      - name: build the demo
+        run: make demo
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/demo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -22,12 +22,29 @@
 #   make fpga-synth   - Vivado out-of-context synthesis, place and route per
 #                       block with a utilisation/timing summary (needs Vivado)
 #
+#   make demo      - the browser demo as a static site in build/demo/ (the
+#                    firmware as WebAssembly against a simulated board, built
+#                    by open-dso-core from demo/profile.yaml and demo/demo.json);
+#                    serve the directory on localhost or https to try it
+#   make demo-native - the same demo as a local web server (bench page at
+#                    http://127.0.0.1:8090/demo/, web UI at /); Ctrl-C stops
+#
 # The app module requires open-dso-core next to this repository
-# (app/go.mod's replace) until the core is released and pinned by tag.
+# (app/go.mod's replace) until the core is released and pinned by tag; the
+# demo is built by that checkout too (CORE names another).
 
 GO ?= go
+CORE ?= $(abspath ../open-dso-core)
+DEMO_OUT ?= $(abspath build/demo)
 
-.PHONY: test app vet boardtest ota sim-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth
+.PHONY: test app vet boardtest ota sim-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth demo demo-native
+
+demo:
+	rm -rf $(DEMO_OUT)
+	cd $(CORE) && $(GO) run ./cmd/dsodemo-site -profile $(abspath demo/profile.yaml) -demo $(abspath demo/demo.json) -out $(DEMO_OUT)
+
+demo-native:
+	cd $(CORE) && $(GO) run ./cmd/dsodemo -profile $(abspath demo/profile.yaml) -demo $(abspath demo/demo.json)
 
 test:
 	cd app && $(GO) test ./...
