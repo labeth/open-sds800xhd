@@ -31,6 +31,7 @@ type env struct {
 	hook      string
 	guestBoot string
 	cosim     string // the open PL co-simulation binary (-cosim): the run's PL is the open design
+	cases     string // the areas that run cases (decode) run those whose name holds it
 }
 
 // area is one checklist area: the runs it needs and its checks.
@@ -81,6 +82,7 @@ func main() {
 	prefix := flag.String("prefix", "o800-", "run-name prefix")
 	list := flag.Bool("list", false, "list the areas")
 	cosim := flag.Bool("cosim", false, "run the open-PL co-simulation areas (fpga/build/cosim/opl_cosim, simd -pl open)")
+	cases := flag.String("cases", "", "in the areas of many cases (decode), run those whose name holds this")
 	flag.Parse()
 
 	root, err := os.Getwd()
@@ -93,6 +95,7 @@ func main() {
 		app:       filepath.Join(root, "build", "app"),
 		hook:      filepath.Join(root, "ota", "boot", "extra.sh"),
 		guestBoot: filepath.Join(root, "sim", "guest-boot.sh"),
+		cases:     *cases,
 	}
 	if *cosim {
 		areas, e.cosim = cosimAreas, filepath.Join(root, "fpga", "build", "cosim", "opl_cosim")
