@@ -30,9 +30,26 @@ func init() {
 	l4register(area{
 		name: "l4-install", title: "faults: power cuts during the install stick's copy, the stick's re-run",
 		runs: func(e *env) []harness.Spec {
-			return []harness.Spec{l4Spec(e, "install", "l4-install.sh", 290, map[string]string{"installtest": filepath.Join(e.root, "build", "installtest")})}
+			// the test binary starts in about 150 ms under the emulator:
+			// the cut points cluster past that
+			var specs []harness.Spec
+			for _, c := range []string{"empty 0 120 150 170 190 220 260 400", "installed 120 150 170 190 220 260 400"} {
+				base := strings.Fields(c)[0]
+				conf := filepath.Join(e.root, "build", "l4", "install-"+base+".conf")
+				_ = os.MkdirAll(filepath.Dir(conf), 0o755)    //nolint:gosec // G301: a build output directory of the repository
+				_ = os.WriteFile(conf, []byte(c+"\n"), 0o644) //nolint:gosec // G306: a guest input, not a secret
+				specs = append(specs, l4Spec(e, "install-"+base, "l4-install.sh", 290,
+					map[string]string{"installtest": filepath.Join(e.root, "build", "installtest"), "l4-install.conf": conf}))
+			}
+			return specs
 		},
-		check: func(_ *env, runs []*harness.Run) []harness.Result { return installChecks(runs[0]) },
+		check: func(_ *env, runs []*harness.Run) []harness.Result {
+			var res []harness.Result
+			for _, r := range runs {
+				res = append(res, installChecks(r)...)
+			}
+			return res
+		},
 	})
 	l4register(area{
 		name: "l4-reboot", title: "faults: power cut during an update and during the install, then a boot from the flash state",

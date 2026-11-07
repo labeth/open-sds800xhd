@@ -14,8 +14,10 @@ echo a >$S/open/current
 
 payload() { L4_GUEST=1 $F/installtest -test.run '^TestGuestPayload$' >/dev/null 2>&1; }
 
-for base in empty installed; do
-	for d in 0 30 60 100 150 220 300 450 700; do
+# l4-install.conf: the base (empty or installed) and the cut points in ms
+read -r base cuts <$F/l4-install.conf
+for base in $base; do
+	for d in $cuts; do
 		stop_app
 		rm -rf "$P"/* "$P"/.[!.]* 2>/dev/null
 		if [ $base = installed ]; then
