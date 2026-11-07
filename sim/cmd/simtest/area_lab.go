@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labeth/open-sds800xhd/sim/harness"
 	"github.com/labeth/open-sds800xhd/sim/lab"
 )
 
@@ -27,20 +26,9 @@ import (
 // the app measures, a key the app lights and reports over SCPI, a knob turn
 // that moves the selected channel's V/div, a touch, and a protocol on two
 // channels.
-func init() { //nolint:dupl // each host-driven area's spec is its own
-	register(area{
-		name: "lab", title: "simlab bench: generator, keys, knobs, touch, screen through its API",
-		runs: func(e *env) []harness.Spec {
-			return []harness.Spec{{
-				Name: e.prefix + "lab", Secs: 180, Ports: true, SimdArgs: signals,
-				App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
-				Host: func(ctx context.Context, dir string) { labHost(ctx, dir) },
-			}}
-		},
-		check: func(_ *env, runs []*harness.Run) []harness.Result {
-			return hostResultsOf(runs[0], "lab", labHostFile)
-		},
-	})
+func init() {
+	register(appHostArea("lab", "simlab bench: generator, keys, knobs, touch, screen through its API", 180, signals, labHostFile,
+		func(ctx context.Context, dir string) { labHost(ctx, dir) }))
 }
 
 // labHostFile is where the host's checks of the lab run land.

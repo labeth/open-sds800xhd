@@ -8,8 +8,15 @@ import (
 )
 
 func init() {
-	register(boardArea("trigger", "triggers: edge, pulse/slope/video/window/runt/pattern/serial",
-		"Trigger", 120, "", nil, refTriggerParity))
+	b := boardArea("trigger", "", "Trigger", 120, "", nil, refTriggerParity)
+	register(area{
+		name:  "trigger",
+		title: "triggers: the board's goldens and reference parity; every type set from SCPI and the web through the app",
+		runs:  func(e *env) []harness.Spec { return append(b.runs(e), trigAppRun(e)) },
+		check: func(e *env, runs []*harness.Run) []harness.Result {
+			return append(b.check(e, runs[:1]), trigAppCheck(e, runs[1])...)
+		},
+	})
 }
 
 // triggerParity pairs a board-test case with the reference run of the
