@@ -26,7 +26,8 @@ install)
 	;;
 esac
 usleep $((ms * 1000))
-say "power cut: $mode after $ms ms, layout $(layout)"
-# the power goes: every process but this one and init, at once
+# the power goes: every process but this one and init, at once (before
+# anything slow: the report below takes seconds under the emulator)
 kill -9 -1 2>/dev/null
+say "power cut: $mode after $ms ms, layout $(layout)"
 say "reboot-cut first boot ends"
