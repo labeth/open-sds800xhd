@@ -55,7 +55,7 @@ func init() {
 		name: "l4-reboot", title: "faults: power cut during an update and during the install, then a boot from the flash state",
 		runs: func(e *env) []harness.Spec {
 			var specs []harness.Spec
-			for _, cut := range []string{"update 150", "install 120"} {
+			for _, cut := range []string{"update 230", "install 160"} {
 				what := strings.Fields(cut)[0]
 				conf := filepath.Join(e.root, "build", "l4", "cut-"+what+".conf")
 				_ = os.MkdirAll(filepath.Dir(conf), 0o755)      //nolint:gosec // G301: a build output directory of the repository
