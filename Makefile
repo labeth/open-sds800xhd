@@ -16,6 +16,9 @@
 #                    a page (http://127.0.0.1:8090/) with the scope's front
 #                    panel, live screen, a signal generator on its inputs and
 #                    the firmware's web UI; Ctrl-C stops (sim/README.md)
+#   make simlab-e2e - browser end-to-end suites over simlab (sim/e2e/README):
+#                    the bench page, the core's operator workflows and a
+#                    bounded fuzz run against the simulated web UI
 #   make fpga-sim     - the open PL's iverilog testbenches (fpga/sim.sh)
 #   make fpga-lint    - verilator --lint-only -Wall on every PL module
 #   make fpga-neutral - yosys generic synthesis of the shareable PL blocks
@@ -27,7 +30,7 @@
 
 GO ?= go
 
-.PHONY: test app vet boardtest ota sim-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth
+.PHONY: test app vet boardtest ota sim-test simlab simlab-e2e cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth
 
 test:
 	cd app && $(GO) test ./...
@@ -72,6 +75,14 @@ cosim-test: app boardtest ota cosim-build
 simlab: app
 	cd sim && $(GO) build -o ../build/simlab ./cmd/simlab
 	./build/simlab $(SIMLAB_ARGS)
+
+# SUITES=simlab,operator,fuzz picks suites; REPEAT=N repeats each. A simlab
+# already serving on :8090 is used; else one is started for the run.
+simlab-e2e: app
+	cd sim && $(GO) build -o ../build/simlab ./cmd/simlab
+	node sim/e2e/run.mjs $(subst $(comma), ,$(or $(SUITES),simlab$(comma)operator$(comma)fuzz))
+
+comma := ,
 
 fpga-sim:
 	fpga/sim.sh
