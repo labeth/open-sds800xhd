@@ -47,7 +47,7 @@ func fakeScope(t *testing.T) webserver.Scope {
 	pc := panel.New(us.Engine(), us.Analog(), us.Levels(), us.Hardware(), us.Tdivs(), st.TimeDivS, t.Logf)
 	pc.SetFrameSource(frames.WithFrame)
 	go us.Watch(frames, ctx.Done())
-	return Scope(b, ctl, frames, "test", pc, nil, scopeweb.Parts{Bode: us.Bode()})
+	return Scope(b, ctl, frames, "test", pc, nil, scopeweb.Parts{Bode: us.Bode()}, func() []byte { return []byte("\x89PNG") })
 }
 
 // The page's web scope over a fake of this scope's shape passes the core's

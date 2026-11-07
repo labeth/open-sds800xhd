@@ -56,7 +56,7 @@ func Run() int {
 		SCPIHost: host.Config{Raw: rawPort, Telnet: telnetPort, VXI11: true, Register: true},
 		Listen:   web.Port,
 		Web: func(env *scopeapp.Env) (webserver.Scope, error) {
-			return web.Scope(b, env.Model, env.Frames, version, env.UI, scopeapp.WebSetups{SharedSetups: env.Setups}, scopeapp.WebParts(env)), nil
+			return web.Scope(b, env.Model, env.Frames, version, env.UI, scopeapp.WebSetups{SharedSetups: env.Setups}, scopeapp.WebParts(env), env.ScreenPNG), nil
 		},
 	})
 	if err != nil {

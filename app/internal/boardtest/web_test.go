@@ -107,7 +107,7 @@ func TestWeb(t *testing.T) {
 	go func() { loop.Run(ctx); done <- struct{}{} }()
 	go func() { frames.Run(cycle, ctx.Done()); done <- struct{}{} }()
 	defer func() { cancel(); <-done; <-done }()
-	sc := web.Scope(board, ctl, frames, "boardtest", nil, nil, scopeweb.Parts{})
+	sc := web.Scope(board, ctl, frames, "boardtest", nil, nil, scopeweb.Parts{}, nil)
 	r := &webRig{ctl: ctl, h: webserver.New(sc).Handler(), sc: sc}
 
 	c := begin(t, "web/first-frame")

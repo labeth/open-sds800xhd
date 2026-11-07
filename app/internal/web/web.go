@@ -22,11 +22,12 @@ const Port = ":80"
 // and the engine's frames, with the capabilities from the board's HAL, the
 // shared UI model ui (the sheets, the panel and the phone remote; nil for
 // none), the setup memory the panel shares (nil: the board's setups
-// store holding instrument states) and the core's parts it serves
-// (scopeapp.WebParts: the frequency response).
-func Scope(b hal.Board, ctl *instrument.Model, frames *fanout.Fanout[sample.Frame], version string, ui webserver.UIModel, setups webserver.Setups, parts scopeweb.Parts) webserver.Scope {
+// store holding instrument states), the core's parts it serves
+// (scopeapp.WebParts: the frequency response) and the device screen as a
+// PNG at its native 1024×600 (nil: none).
+func Scope(b hal.Board, ctl *instrument.Model, frames *fanout.Fanout[sample.Frame], version string, ui webserver.UIModel, setups webserver.Setups, parts scopeweb.Parts, screen func() []byte) webserver.Scope {
 	return scopeweb.New(scopeweb.Config{
-		Board: b, Instrument: ctl, Frames: frames, Version: version, UI: ui, Setups: setups, Parts: parts,
+		Board: b, Instrument: ctl, Frames: frames, Version: version, UI: ui, Setups: setups, Parts: parts, Screen: screen,
 		Probes:   probes(),
 		BWLimits: []string{"full", "20M"}, // spec 06: one 20 MHz limit
 	}).WithCaps()
