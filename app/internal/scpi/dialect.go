@@ -32,6 +32,13 @@ type Config struct {
 	// SelfCalState reports DOING or DONE; nil when the app has none.
 	SelfCal      func() error
 	SelfCalState func() string
+	// TriggerDefault is the board's default stage of a trigger node on a
+	// source (hal.Trigger.Default): the video level of the first entry into
+	// Video comes from it; nil leaves the level as set.
+	TriggerDefault func(node hal.TrigNode, src hal.Source) (hal.TrigStage, error)
+	// Mask is the mask test the owner runs on the frames; nil: the :MTESt
+	// commands are refused.
+	Mask MaskTest
 }
 
 // specHeaders are headers spec 11's text gives whose form the inventory
@@ -47,8 +54,8 @@ type dialect struct {
 	wfSource, wfStart, wfInterval, wfPoints int
 	wfWord, wfMSB                           bool
 	measSource                              int
-	holdoffType                             int // 0 OFF, 1 EVENts, 2 TIME
-	holdoffS                                float64
+	trig                                    trigState
+	mask                                    maskState
 }
 
 // maxPoints is the largest DATA? transfer (spec 11 §7.1 :WAVeform:MAXPoint?).
@@ -58,7 +65,7 @@ const maxPoints = 5_000_000
 // that are neither inventory rows nor spec 11 legacy forms.
 // TRLC-LINKS: REQ-HD-009
 func Dialect(cfg Config) (core.Dialect, error) {
-	d := &dialect{cfg: cfg, wfInterval: 1, holdoffS: 80e-9}
+	d := &dialect{cfg: cfg, wfInterval: 1, trig: newTrigState(), mask: newMaskState()}
 	dl := core.Dialect{
 		Name:    "SDS800X HD",
 		Grammar: core.IEEE,
@@ -242,6 +249,7 @@ func (d *dialect) commands() []core.Command {
 	cmds = append(cmds, d.channels()...)
 	cmds = append(cmds, d.acquire()...)
 	cmds = append(cmds, d.trigger()...)
+	cmds = append(cmds, d.maskTest()...)
 	cmds = append(cmds, d.waveform()...)
 	cmds = append(cmds, d.measure()...)
 	cmds = append(cmds, d.legacy()...)
@@ -267,7 +275,6 @@ func (d *dialect) commands() []core.Command {
 func Defaults(channels int) core.State {
 	s := core.State{
 		TimeDivS: 200e-9, Depth: 10_000_000, Sweep: hal.Auto, Running: true,
-		Trigger: core.Edge{Source: hal.Source{Kind: hal.Analog}, Slope: hal.Rising},
 	}
 	for range channels {
 		s.Channels = append(s.Channels, hal.Channel{VoltsDiv: 1, Probe: 1, Coupling: hal.DC, Impedance: 1e6})
@@ -275,6 +282,7 @@ func Defaults(channels int) core.State {
 	if channels > 0 {
 		s.Channels[0].On = true
 	}
+	triggerDefaults(&s)
 	return s
 }
 
@@ -515,155 +523,6 @@ func frameRate(c *core.Call) (float64, bool) {
 		}
 	})
 	return rate, rate > 0
-}
-
-func (d *dialect) trigger() []core.Command {
-	modes := d.choices(":TRIGger:MODE", "mode")
-	slopes := d.choices(":TRIGger:EDGE:SLOPe", "slope_type")
-	couplings := d.choices(":TRIGger:EDGE:COUPling", "mode")
-	holdoffs := d.choices(":TRIGger:EDGE:HOLDoff", "holdoff_type")
-	edge := func(header string, set func(c *core.Call) (func(*core.Edge), error)) core.Command {
-		return d.bind(header, func(c *core.Call) error {
-			fn, err := set(c)
-			if err != nil || fn == nil {
-				return err
-			}
-			return change(c, func(s *core.State) error { fn(&s.Trigger); return nil })
-		})
-	}
-	q := func(header string, reply func(c *core.Call, s core.State)) core.Command {
-		return d.bind(header, func(c *core.Call) error { reply(c, c.Instrument().State()); return nil })
-	}
-	return []core.Command{
-		d.bind(":TRIGger:MODE", func(c *core.Call) error {
-			i, err := choice(c, modes...)
-			if err != nil {
-				return err
-			}
-			if strings.EqualFold(modes[i], "FTRIG") { // one-shot: the mode stays
-				return d.force(c)
-			}
-			sw := map[string]hal.Sweep{"SINGLE": hal.Single, "NORMAL": hal.NormalSweep, "AUTO": hal.Auto}[strings.ToUpper(modes[i])]
-			return change(c, func(s *core.State) error { s.Sweep, s.Running = sw, true; return nil })
-		}),
-		q(":TRIGger:MODE?", func(c *core.Call, s core.State) {
-			c.Text(map[hal.Sweep]string{hal.Auto: "AUTO", hal.NormalSweep: "NORMal", hal.Single: "SINGle"}[sweepOf(s)])
-		}),
-		d.bind(":TRIGger:RUN", func(c *core.Call) error {
-			return change(c, func(s *core.State) error { s.Running = true; return nil })
-		}),
-		d.bind(":TRIGger:STOP", func(c *core.Call) error {
-			return change(c, func(s *core.State) error { s.Running = false; return nil })
-		}),
-		d.bind(":TRIGger:STATus?", func(c *core.Call) error {
-			c.Text(c.Instrument().Acquisition().String())
-			return nil
-		}),
-		// Edge is the trigger type the host interface sets up; the others
-		// are refused as a settings conflict.
-		d.bind(":TRIGger:TYPE", func(c *core.Call) error {
-			i, err := choice(c, d.choices(":TRIGger:TYPE", "type")...)
-			if err != nil || i == 0 {
-				return err
-			}
-			return c.Error(core.ErrSettingsConflict)
-		}),
-		q(":TRIGger:TYPE?", func(c *core.Call, _ core.State) { c.Text("EDGE") }),
-		// The sources are the channels that are on and LINE; EX, EX5 and a
-		// channel that is off are refused without an error, the source
-		// unchanged (spec 11 §6.7.1).
-		d.bind(":TRIGger:EDGE:SOURce", func(c *core.Call) error {
-			if err := one(c); err != nil {
-				return err
-			}
-			t, _, _ := c.Param(true)
-			src, ok := d.trigSource(strings.ToUpper(t.Str))
-			if !ok {
-				return c.Error(core.ErrIllegalParamValue)
-			}
-			return change(c, func(s *core.State) error {
-				if src.Kind == hal.Analog && !s.Channels[src.Index].On || src.Kind == hal.External {
-					return nil
-				}
-				s.Trigger.Source = src
-				return nil
-			})
-		}),
-		q(":TRIGger:EDGE:SOURce?", func(c *core.Call, s core.State) { c.Text(sourceName(s.Trigger.Source)) }),
-		edge(":TRIGger:EDGE:SLOPe", func(c *core.Call) (func(*core.Edge), error) {
-			i, err := choice(c, slopes...)
-			return func(e *core.Edge) { e.Slope = [...]hal.Slope{hal.Rising, hal.Falling, hal.Either}[i] }, err
-		}),
-		q(":TRIGger:EDGE:SLOPe?", func(c *core.Call, s core.State) {
-			c.Text(map[hal.Slope]string{hal.Rising: "RISing", hal.Falling: "FALLing", hal.Either: "ALTernate"}[s.Trigger.Slope])
-		}),
-		// The level is held to ±4.1 divisions about the source's centre.
-		d.bind(":TRIGger:EDGE:LEVel", func(c *core.Call) error {
-			v, ok, err := number(c)
-			if err != nil || !ok {
-				return err
-			}
-			return change(c, func(s *core.State) error {
-				if src := s.Trigger.Source; src.Kind == hal.Analog && src.Index < len(s.Channels) {
-					ch := s.Channels[src.Index]
-					v = math.Max(-4.1*ch.VoltsDiv-ch.OffsetV, math.Min(4.1*ch.VoltsDiv-ch.OffsetV, v))
-				}
-				s.Trigger.LevelV = v
-				return nil
-			})
-		}),
-		q(":TRIGger:EDGE:LEVel?", func(c *core.Call, s core.State) { c.NR3(s.Trigger.LevelV) }),
-		edge(":TRIGger:EDGE:COUPling", func(c *core.Call) (func(*core.Edge), error) {
-			i, err := choice(c, couplings...)
-			return func(e *core.Edge) {
-				e.Coupling = [...]hal.TrigCoupling{hal.TrigDC, hal.TrigAC, hal.TrigLFReject, hal.TrigHFReject}[i]
-			}, err
-		}),
-		q(":TRIGger:EDGE:COUPling?", func(c *core.Call, s core.State) {
-			c.Text(map[hal.TrigCoupling]string{hal.TrigDC: "DC", hal.TrigAC: "AC", hal.TrigLFReject: "LFREJect", hal.TrigHFReject: "HFREJect"}[s.Trigger.Coupling])
-		}),
-		edge(":TRIGger:EDGE:NREJect", func(c *core.Call) (func(*core.Edge), error) {
-			on, err := onOff(c)
-			return func(e *core.Edge) { e.NoiseReject = on }, err
-		}),
-		q(":TRIGger:EDGE:NREJect?", func(c *core.Call, s core.State) { c.Text(state(s.Trigger.NoiseReject)) }),
-		// EVENts is accepted and acts as TIME: holdoff by time with the
-		// stored HLDTime (spec 11 §6.7.1).
-		edge(":TRIGger:EDGE:HOLDoff", func(c *core.Call) (func(*core.Edge), error) {
-			i, err := choice(c, holdoffs...)
-			if err != nil {
-				return nil, err
-			}
-			d.holdoffType = i
-			return func(e *core.Edge) { e.HoldoffS = d.holdoff() }, nil
-		}),
-		q(":TRIGger:EDGE:HOLDoff?", func(c *core.Call, s core.State) {
-			if s.Trigger.HoldoffS == 0 {
-				d.holdoffType = 0
-			}
-			c.Text(holdoffs[d.holdoffType])
-		}),
-		edge(":TRIGger:EDGE:HLDTime", func(c *core.Call) (func(*core.Edge), error) {
-			v, ok, err := number(c)
-			if err != nil || !ok {
-				return nil, err
-			}
-			if v < 8e-9 || v > 30 {
-				return nil, c.Error(core.ErrDataOutOfRange)
-			}
-			d.holdoffS = v
-			return func(e *core.Edge) { e.HoldoffS = d.holdoff() }, nil
-		}),
-		q(":TRIGger:EDGE:HLDTime?", func(c *core.Call, _ core.State) { c.NR3(d.holdoffS) }),
-	}
-}
-
-// holdoff is the edge trigger's holdoff time: 0 when off.
-func (d *dialect) holdoff() float64 {
-	if d.holdoffType == 0 {
-		return 0
-	}
-	return d.holdoffS
 }
 
 // force triggers once.

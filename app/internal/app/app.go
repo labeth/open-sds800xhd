@@ -49,7 +49,11 @@ func Run() int {
 		Logf: log.Printf, Product: "open-sds800xhd " + version, Version: version,
 		Defaults: scpi.Defaults, Check: checkState,
 		Publish: func(f *sample.Frame) { report(log, f) },
-		SCPI:    func(env *scopeapp.Env) (scopeapp.SCPI, error) { return scpiEngine(env, b, log, version) },
+		// The factory PL image's pass/fail registers carry no comparison this
+		// firmware programs (spec 02, spec 07): the mask test runs in
+		// software on every frame the owner reads.
+		SoftwareMask: true,
+		SCPI:         func(env *scopeapp.Env) (scopeapp.SCPI, error) { return scpiEngine(env, b, log, version) },
 		// spec 11 §1–§3: VXI-11 registered with the system portmapper, the
 		// raw socket and the telnet line interface (its banner names the
 		// unit).
@@ -73,18 +77,29 @@ func scpiEngine(env *scopeapp.Env, b hal.Board, log *platform.Log, version strin
 	id := env.Identity
 	cal := &selfCal{b: b, ctl: env.Model, log: log}
 	dl, err := scpi.Dialect(scpi.Config{
-		Identity:     scpi.Identity{Manufacturer: id.Vendor, Model: id.Model, Serial: id.Serial, Version: version},
-		Channels:     b.Profile().Channels,
-		Measure:      measurement.Trace,
-		Extensions:   extensions(b),
-		SelfCal:      cal.start,
-		SelfCalState: cal.state,
+		Identity:       scpi.Identity{Manufacturer: id.Vendor, Model: id.Model, Serial: id.Serial, Version: version},
+		Channels:       b.Profile().Channels,
+		Measure:        measurement.Trace,
+		Extensions:     extensions(b),
+		SelfCal:        cal.start,
+		SelfCalState:   cal.state,
+		TriggerDefault: b.Trigger().Default,
+		Mask:           maskTest(env),
 	})
 	if err != nil {
 		log.Printf("%v", err)
 	}
 	eng := core.New(dl, env.Model)
 	return scopeapp.SCPI{Exec: eng.Exec, Report: eng.Report}, nil
+}
+
+// maskTest is the owner's software mask test for the dialect; nil
+// without one.
+func maskTest(env *scopeapp.Env) scpi.MaskTest {
+	if env.Mask == nil {
+		return nil
+	}
+	return env.Mask
 }
 
 // checkState refuses what the front end can tell without hardware: a probe

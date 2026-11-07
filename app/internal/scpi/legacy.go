@@ -120,23 +120,23 @@ func (d *dialect) legacy() []core.Command {
 	chq("C#:ATTN", func(_ *core.Call, ch hal.Channel) (string, string) {
 		return strconv.FormatFloat(ch.Probe, 'g', -1, 64), ""
 	})
-	// One edge level exists, the trigger source's.
+	// One level exists, the running trigger's at its source.
 	both("C#:TRLV", func(c *core.Call) error {
 		v, ok, err := number(c)
 		if err != nil || !ok {
 			return err
 		}
-		if c.Instrument().State().Trigger.Source != (hal.Source{Kind: hal.Analog, Index: c.N(0) - 1}) {
+		if c.Instrument().State().Trigger.Source() != (hal.Source{Kind: hal.Analog, Index: c.N(0) - 1}) {
 			return c.Error(core.ErrSettingsConflict)
 		}
-		return change(c, func(s *core.State) error { s.Trigger.LevelV = v; return nil })
+		return change(c, func(s *core.State) error { return s.Trigger.SetLevel(v, len(s.Channels)) })
 	})
 	both("C#:TRLV?", func(c *core.Call) error {
 		s := c.Instrument().State()
-		if s.Trigger.Source != (hal.Source{Kind: hal.Analog, Index: c.N(0) - 1}) {
+		if s.Trigger.Source() != (hal.Source{Kind: hal.Analog, Index: c.N(0) - 1}) {
 			return c.Error(core.ErrSettingsConflict)
 		}
-		c.Legacy(chHeader(c, "TRLV"), longOf(c, "C#:TRLV"), nr3(c, s.Trigger.LevelV), "V")
+		c.Legacy(chHeader(c, "TRLV"), longOf(c, "C#:TRLV"), nr3(c, s.Trigger.LevelV()), "V")
 		return nil
 	})
 	// TDIV? never carries a header but keeps its unit in SHORT and LONG.
@@ -178,15 +178,16 @@ func (d *dialect) legacy() []core.Command {
 		c.Legacy("TRMD", "TRIG_MODE", v, "")
 		return nil
 	})
-	// TRSE EDGE,SR,<source>[,HT,<holdoff>]: the edge type and its source.
+	// TRSE EDGE,SR,<source>[,HT,<holdoff>]: the edge type and its source;
+	// the query names the running type.
 	both("TRSE", d.legacyTRSE)
 	both("TRSE?", func(c *core.Call) error {
 		s := c.Instrument().State()
 		ht := "OFF"
-		if s.Trigger.HoldoffS > 0 {
-			ht = "TI,HV," + nr3(c, s.Trigger.HoldoffS)
+		if h := s.Trigger.Active().HoldoffS; h > 0 {
+			ht = "TI,HV," + nr3(c, h)
 		}
-		c.Legacy("TRSE", "", "EDGE,SR,"+sourceName(s.Trigger.Source)+",HT,"+ht, "")
+		c.Legacy("TRSE", "", strings.ToUpper(d.typeName(s.Trigger.Type))+",SR,"+sourceName(s.Trigger.Source())+",HT,"+ht, "")
 		return nil
 	})
 	both("TRST?", func(c *core.Call) error {
@@ -247,7 +248,7 @@ func (d *dialect) legacyTRSE(c *core.Call) error {
 		t, _, _ := c.Param(true)
 		toks = append(toks, strings.ToUpper(t.Str))
 	}
-	if toks[0] != "EDGE" {
+	if toks[0] != edgeName {
 		return c.Error(core.ErrSettingsConflict)
 	}
 	for i := 1; i+1 < len(toks); i += 2 {
@@ -262,8 +263,8 @@ func (d *dialect) legacyTRSE(c *core.Call) error {
 			if src.Kind == hal.Analog && !s.Channels[src.Index].On || src.Kind == hal.External {
 				return nil
 			}
-			s.Trigger.Source = src
-			return nil
+			s.Trigger.Type = core.TrigEdge
+			return s.Trigger.SetSource(src, len(s.Channels))
 		})
 	}
 	return nil

@@ -1,0 +1,640 @@
+[
+ {
+  "name": "edge-c1-rising",
+  "scpi": [
+   ":TRIG:EDGE:SOUR C1;SLOP RIS;LEV 0.5",
+   ":TRIG:TYPE EDGE"
+  ],
+  "want": {
+   "acq:0x00a": 0,
+   "acq:0x00e": 4096,
+   "acq:0x042": 26,
+   "acq:0x0b0": 0,
+   "acq:0x0b2": 62,
+   "acq:0x0b4": 2226,
+   "acq:0x0b5": 1,
+   "acq:0x0d6": 62,
+   "acq:0x0d7": 2226,
+   "acq:0x0e0": 2226,
+   "acq:0x0e1": 62,
+   "acq:0x0e4": 0,
+   "acq:0x0e7": 9
+  }
+ },
+ {
+  "name": "edge-c2-falling-ac-holdoff",
+  "scpi": [
+   ":TRIG:EDGE:SOUR C2;SLOP FALL;LEV -1;COUP AC;NREJ ON;HLDT 1.0000003E-6;HOLD TIME"
+  ],
+  "want": {
+   "acq:0x008": 250,
+   "acq:0x009": 0,
+   "acq:0x00a": 256,
+   "acq:0x00e": 4368,
+   "acq:0x011": 256,
+   "acq:0x052": 0,
+   "acq:0x0b0": 1,
+   "acq:0x0b2": 158,
+   "acq:0x0b4": 1726,
+   "acq:0x0b5": 2,
+   "acq:0x0da": 158,
+   "acq:0x0db": 1726,
+   "acq:0x0e0": 1726,
+   "acq:0x0e1": 158,
+   "acq:0x0e4": 1
+  }
+ },
+ {
+  "name": "edge-acline-either",
+  "scpi": [
+   ":TRIG:EDGE:SOUR LINE;SLOP ALT;LEV 0;COUP DC;NREJ OFF;HOLD OFF"
+  ],
+  "want": {
+   "acq:0x00a": 32768,
+   "acq:0x00e": 5392,
+   "acq:0x011": 512,
+   "acq:0x033": 256,
+   "acq:0x0b4": 2048,
+   "acq:0x0b5": 3,
+   "acq:0x0e0": 2048,
+   "acq:0x0e1": 62
+  }
+ },
+ {
+  "name": "edge-holdoff-30s",
+  "scpi": [
+   ":TRIG:EDGE:SOUR C1;SLOP RIS;HLDT 30;HOLD TIME"
+  ],
+  "want": {
+   "acq:0x008": 60160,
+   "acq:0x009": 48904,
+   "acq:0x00a": 256,
+   "acq:0x00e": 4096,
+   "acq:0x052": 1
+  }
+ },
+ {
+  "name": "slope-c1-rising-less",
+  "scpi": [
+   ":TRIG:SLOP:SOUR C1;SLOP RIS;HLEV 0.5;LLEV -0.5;LIM LESS;TUPP 20E-9",
+   ":TRIG:TYPE SLOPe"
+  ],
+  "want": {
+   "acq:0x00a": 0,
+   "acq:0x00e": 4097,
+   "acq:0x011": 0,
+   "acq:0x012": 20,
+   "acq:0x013": 0,
+   "acq:0x02c": 0,
+   "acq:0x045": 62,
+   "acq:0x0b5": 1,
+   "acq:0x0cc": 2226,
+   "acq:0x0d7": 1746,
+   "acq:0x0d9": 2226,
+   "acq:0x0e0": 1746,
+   "acq:0x0e2": 2226,
+   "acq:0x0e3": 62,
+   "acq:0x0e7": 9
+  }
+ },
+ {
+  "name": "pulse-c2-negative-inside",
+  "scpi": [
+   ":TRIG:PULS:SOUR C2;POL NEG;LEV 0.25;LIM INN;TLOW 100E-9;TUPP 1E-6",
+   ":TRIG:TYPE PULSE"
+  ],
+  "want": {
+   "acq:0x00e": 4370,
+   "acq:0x011": 2,
+   "acq:0x012": 100,
+   "acq:0x014": 1000,
+   "acq:0x0b4": 2106,
+   "acq:0x0b5": 1,
+   "acq:0x0db": 2106,
+   "acq:0x0e0": 2106
+  }
+ },
+ {
+  "name": "pulse-c1-positive-greater",
+  "scpi": [
+   ":TRIG:PULS:SOUR C1;POL POS;LEV 0;LIM GREAT;TLOW 1E-6"
+  ],
+  "want": {
+   "acq:0x00e": 4098,
+   "acq:0x011": 129,
+   "acq:0x014": 1000,
+   "acq:0x0b5": 2,
+   "acq:0x0e0": 2110
+  }
+ },
+ {
+  "name": "runt-c1-positive",
+  "web": [
+   {
+    "control": "trigtype",
+    "text": "runt",
+    "value": 0
+   },
+   {
+    "control": "trig.source",
+    "text": "C1",
+    "value": 0
+   },
+   {
+    "control": "trig.slope",
+    "text": "rising",
+    "value": 0
+   },
+   {
+    "control": "trig.level",
+    "value": 0.15
+   },
+   {
+    "control": "trig.level_low",
+    "value": 0.1
+   },
+   {
+    "control": "trig.limit",
+    "text": "less",
+    "value": 0
+   },
+   {
+    "control": "trig.upper",
+    "value": 5e-8
+   }
+  ],
+  "want": {
+   "acq:0x00e": 4103,
+   "acq:0x012": 50,
+   "acq:0x02d": 256,
+   "acq:0x0b4": 2158,
+   "acq:0x0b5": 2,
+   "acq:0x0e0": 2158,
+   "acq:0x0e2": 2182
+  }
+ },
+ {
+  "name": "window-c1",
+  "scpi": [
+   ":TRIG:WIND:SOUR C1;HLEV 0;LLEV -0.833",
+   ":TRIG:TYPE WINDow"
+  ],
+  "want": {
+   "acq:0x00e": 4096,
+   "acq:0x011": 897,
+   "acq:0x0b4": 1710,
+   "acq:0x0b5": 2,
+   "acq:0x0cc": 1986,
+   "acq:0x0cd": 1,
+   "acq:0x0d7": 1710,
+   "acq:0x0d9": 1986,
+   "acq:0x0e0": 1710,
+   "acq:0x0e2": 1986
+  }
+ },
+ {
+  "name": "interval-c1-falling-outside",
+  "scpi": [
+   ":TRIG:INT:SOUR C1;SLOP FALL;LEV 0;LIM OUT;TLOW 10E-9;TUPP 2E-6",
+   ":TRIG:TYPE INTerval"
+  ],
+  "want": {
+   "acq:0x00e": 4102,
+   "acq:0x011": 129,
+   "acq:0x012": 10,
+   "acq:0x014": 2000,
+   "acq:0x02d": 262,
+   "acq:0x0b5": 2,
+   "acq:0x0e0": 2110,
+   "acq:0x0e7": 9
+  }
+ },
+ {
+  "name": "dropout-c2-rising-edge",
+  "scpi": [
+   ":TRIG:DROP:SOUR C2;SLOP RIS;LEV 0.5;TIME 1E-6;TYPE EDGE",
+   ":TRIG:TYPE DROPout"
+  ],
+  "want": {
+   "acq:0x00e": 4373,
+   "acq:0x012": 1000,
+   "acq:0x02c": 4352,
+   "acq:0x0b5": 1,
+   "acq:0x0db": 2226,
+   "acq:0x0e0": 2226,
+   "acq:0x0e7": 10
+  }
+ },
+ {
+  "name": "dropout-c2-falling-state",
+  "scpi": [
+   ":TRIG:DROP:SLOP FALL;TIME 20E-9;TYPE STAT"
+  ],
+  "want": {
+   "acq:0x00e": 4373,
+   "acq:0x012": 20,
+   "acq:0x02c": 0,
+   "acq:0x0b5": 2,
+   "acq:0x0e0": 2350
+  }
+ },
+ {
+  "name": "nth-edge-c1",
+  "scpi": [
+   ":TRIG:NEDG:SOUR C1;SLOP RIS;LEV 0;EDGE 5;IDLE 100E-9",
+   ":TRIG:TYPE NEDGe"
+  ],
+  "want": {
+   "acq:0x00e": 4106,
+   "acq:0x011": 129,
+   "acq:0x014": 100,
+   "acq:0x087": 5,
+   "acq:0x0b5": 1,
+   "acq:0x0e0": 1986
+  }
+ },
+ {
+  "name": "video-ntsc",
+  "scpi": [
+   ":TRIG:VID:SOUR C1;LEV -0.15;STAN NTSC;SYNC SEL;LINE 10;FIEL 1",
+   ":TRIG:TYPE VIDeo"
+  ],
+  "want": {
+   "acq:0x00a": 0,
+   "acq:0x00e": 4099,
+   "acq:0x011": 1,
+   "acq:0x014": 150,
+   "acq:0x016": 4101,
+   "acq:0x017": 5088,
+   "acq:0x0b5": 1,
+   "acq:0x0e0": 1914,
+   "acq:0x0e4": 0,
+   "acq:0x0e7": 9
+  }
+ },
+ {
+  "name": "video-720p",
+  "scpi": [
+   ":TRIG:VID:STAN P720L50;LINE 2"
+  ],
+  "want": {
+   "acq:0x016": 749,
+   "acq:0x017": 416
+  }
+ },
+ {
+  "name": "video-custom",
+  "scpi": [
+   ":TRIG:VID:STAN CUST;LINE 10;FIEL 3;LCNT 300;FRAT 25Hz;INT 1;FCNT 4"
+  ],
+  "want": {
+   "acq:0x016": 12297,
+   "acq:0x017": 1023
+  }
+ },
+ {
+  "name": "pattern-and",
+  "scpi": [
+   ":TRIG:PATT:INP H,L,X,H;LEV C1,0.5;LEV C2,-0.5;LEV C4,1;LOG AND;LIM GREAT;TLOW 10E-9",
+   ":TRIG:TYPE PATTern"
+  ],
+  "want": {
+   "acq:0x00e": 4148,
+   "acq:0x014": 10,
+   "acq:0x0ac": 4609,
+   "acq:0x0ad": 16,
+   "acq:0x0b4": 2350,
+   "acq:0x0b5": 2,
+   "acq:0x0cc": 1746,
+   "acq:0x0cd": 1,
+   "acq:0x0d6": 62,
+   "acq:0x0d7": 2350,
+   "acq:0x0db": 1746,
+   "acq:0x0e4": 0,
+   "acq:0x0e7": 10,
+   "acq:0x101": 2590,
+   "acq:0x106": 2590,
+   "acq:0x107": 2,
+   "acq:0x109": 62
+  }
+ },
+ {
+  "name": "pattern-nor",
+  "scpi": [
+   ":TRIG:PATT:LOG NOR;TLOW 2E-9"
+  ],
+  "want": {
+   "acq:0x014": 2,
+   "acq:0x0ad": 19,
+   "acq:0x0b5": 1,
+   "acq:0x0cd": 2,
+   "acq:0x0d7": 2226,
+   "acq:0x0db": 1870
+  }
+ },
+ {
+  "name": "qualified-state",
+  "scpi": [
+   ":TRIG:QUAL:ES C1;ESL RIS;ELEV 0;QS C2;QLEV 0.5;TYPE STAT,HIGH",
+   ":TRIG:TYPE QUALified"
+  ],
+  "want": {
+   "acq:0x00e": 4104,
+   "acq:0x012": 2,
+   "acq:0x080": 161,
+   "acq:0x0d7": 1986,
+   "acq:0x0db": 2226,
+   "acq:0x0e4": 0,
+   "acq:0x0e7": 9
+  }
+ },
+ {
+  "name": "qualified-edge-delay",
+  "web": [
+   {
+    "control": "trig.source",
+    "text": "C4",
+    "value": 0
+   },
+   {
+    "control": "trig.slope",
+    "text": "falling",
+    "value": 0
+   },
+   {
+    "control": "trig.level",
+    "value": 0
+   },
+   {
+    "control": "trig.gate_source",
+    "text": "C3",
+    "value": 0
+   },
+   {
+    "control": "trig.gate_level",
+    "value": -0.5
+   },
+   {
+    "control": "trig.gate_form",
+    "text": "edge_delay",
+    "value": 0
+   },
+   {
+    "control": "trig.gate_high",
+    "value": 0
+   },
+   {
+    "control": "trig.limit",
+    "text": "inside",
+    "value": 0
+   },
+   {
+    "control": "trig.lower",
+    "value": 1e-8
+   },
+   {
+    "control": "trig.upper",
+    "value": 0.000001
+   }
+  ],
+  "want": {
+   "acq:0x00e": 4920,
+   "acq:0x012": 10,
+   "acq:0x014": 1000,
+   "acq:0x080": 12802,
+   "acq:0x0f1": 1870,
+   "acq:0x101": 2110
+  }
+ },
+ {
+  "name": "qualified-state-delay",
+  "scpi": [
+   ":TRIG:QUAL:ES C1;ESL RIS;ELEV 0;QS C2;QLEV 0;TYPE STATE_DLY,LOW;LIM GREAT;TLOW 50E-9"
+  ],
+  "want": {
+   "acq:0x014": 50,
+   "acq:0x080": 4481
+  }
+ },
+ {
+  "name": "qualified-edge",
+  "scpi": [
+   ":TRIG:QUAL:TYPE EDGE,RIS"
+  ],
+  "want": {
+   "acq:0x012": 2,
+   "acq:0x080": 8353
+  }
+ },
+ {
+  "name": "setup",
+  "scpi": [
+   ":TRIG:SHOL:TYPE SET;CS C1;CTHR 0;SLOP RIS;DS C2;DTHR 0.5;LEV HIGH;LIM LESS;TUPP 20E-9",
+   ":TRIG:TYPE SHOLd"
+  ],
+  "want": {
+   "acq:0x00e": 4104,
+   "acq:0x012": 20,
+   "acq:0x080": 4321,
+   "acq:0x0d7": 2110,
+   "acq:0x0db": 2350
+  }
+ },
+ {
+  "name": "hold",
+  "scpi": [
+   ":TRIG:SHOL:TYPE HOLD;SLOP FALL;LEV LOW;LIM GREAT;TLOW 5E-9"
+  ],
+  "want": {
+   "acq:0x00e": 4376,
+   "acq:0x014": 5,
+   "acq:0x080": 12736,
+   "acq:0x0d7": 1986,
+   "acq:0x0db": 2226
+  }
+ },
+ {
+  "name": "delay-pattern-then-edge",
+  "scpi": [
+   ":TRIG:DEL:SOUR H,X,X,X;LEV C1,0.5;SLOP RIS;SOUR2 C3;SLOP2 FALL;LEV2 0.05;LIM LESS;TUPP 1E-6",
+   ":TRIG:TYPE DELay"
+  ],
+  "want": {
+   "acq:0x00e": 4648,
+   "acq:0x012": 1000,
+   "acq:0x080": 28768,
+   "acq:0x0ac": 8737,
+   "acq:0x0ad": 16,
+   "acq:0x0b5": 2,
+   "acq:0x0d7": 2350,
+   "acq:0x0e4": 0,
+   "acq:0x0f1": 2134
+  }
+ },
+ {
+  "name": "i2c-addr7-read",
+  "scpi": [
+   ":TRIG:IIC:SCLS C1;SCLT 0.5;SDAS C2;SDAT 0.5;COND 7ADDR;ADDR 80;RWB READ;DATA 18;DAT2 256",
+   ":TRIG:TYPE IIC"
+  ],
+  "want": {
+   "acq:0x00e": 4649,
+   "acq:0x0e5": 62,
+   "acq:0x0e6": 2257,
+   "acq:0x0e7": 9,
+   "acq:0x0eb": 62,
+   "acq:0x0ec": 2257,
+   "map:0x030": 1,
+   "map:0x032": 0,
+   "map:0x036": 18,
+   "map:0x042": 255,
+   "map:0x043": 1,
+   "map:0x044": 0,
+   "map:0x047": 3152,
+   "map:0x048": 8148,
+   "map:0x049": 32783
+  }
+ },
+ {
+  "name": "i2c-eeprom",
+  "scpi": [
+   ":TRIG:IIC:COND EEPR;ADDR 128;RWB WRIT;LIM GRE;DATA 64"
+  ],
+  "want": {
+   "map:0x030": 33,
+   "map:0x036": 64,
+   "map:0x042": 255,
+   "map:0x043": 1,
+   "map:0x047": 3152,
+   "map:0x048": 7700
+  }
+ },
+ {
+  "name": "spi-msb",
+  "scpi": [
+   ":TRIG:SPI:CLKS C1;CLKT 0.5;LATC RIS;MISOS C2;MISOT 0.5;TTYP MISO;NCSS C3;NCST 0.5;CSTY NCS;DLEN 8;DATA 1,0,1,X,0,0,1,1;BIT MSB",
+   ":TRIG:TYPE SPI"
+  ],
+  "want": {
+   "acq:0x10b": 2257,
+   "map:0x030": 257,
+   "map:0x035": 0,
+   "map:0x036": 163,
+   "map:0x041": 0,
+   "map:0x042": 239,
+   "map:0x043": 8,
+   "map:0x044": 2,
+   "map:0x049": 32783,
+   "map:0x04e": 65535,
+   "map:0x04f": 0
+  }
+ },
+ {
+  "name": "uart-data",
+  "web": [
+   {
+    "control": "trigtype",
+    "text": "uart",
+    "value": 0
+   },
+   {
+    "control": "trig.source",
+    "text": "C1",
+    "value": 0
+   },
+   {
+    "control": "trig.level",
+    "value": 1
+   },
+   {
+    "control": "trig.condition",
+    "text": "data",
+    "value": 0
+   },
+   {
+    "control": "trig.baud",
+    "value": 115200
+   },
+   {
+    "control": "trig.bits",
+    "value": 8
+   },
+   {
+    "control": "trig.parity",
+    "text": "even",
+    "value": 0
+   },
+   {
+    "control": "trig.stop",
+    "value": 1
+   },
+   {
+    "control": "trig.idle",
+    "text": "high",
+    "value": 0
+   },
+   {
+    "control": "trig.bit_order",
+    "text": "lsb",
+    "value": 0
+   },
+   {
+    "control": "trig.compare",
+    "text": "equal",
+    "value": 0
+   },
+   {
+    "control": "trig.value",
+    "value": 85
+   }
+  ],
+  "want": {
+   "acq:0x0e6": 2497,
+   "map:0x030": 512,
+   "map:0x036": 85,
+   "map:0x042": 255,
+   "map:0x043": 8,
+   "map:0x045": 301,
+   "map:0x046": 64873,
+   "map:0x050": 1126,
+   "map:0x051": 4096,
+   "map:0x053": 298
+  }
+ },
+ {
+  "name": "can-id-data",
+  "scpi": [
+   ":TRIG:CAN:SOUR C2;THR 0.5;COND ID_AND_DATA;BAUD 500kbps;ID 291;IDL 11BITS;DATA 171;DAT2 256",
+   ":TRIG:TYPE CAN"
+  ],
+  "want": {
+   "map:0x030": 1281,
+   "map:0x031": 1164,
+   "map:0x032": 0,
+   "map:0x036": 171,
+   "map:0x03d": 8188,
+   "map:0x042": 255,
+   "map:0x043": 8,
+   "map:0x045": 1310,
+   "map:0x046": 47185,
+   "map:0x051": 4099
+  }
+ },
+ {
+  "name": "lin-id",
+  "scpi": [
+   ":TRIG:LIN:SOUR C1;THR 0.5;COND ID;BAUD 19200bps;ID 34;STAN 1;ERR:CHEC 1;SYNC 1;PAR 1",
+   ":TRIG:TYPE LIN"
+  ],
+  "want": {
+   "map:0x030": 768,
+   "map:0x032": 34,
+   "map:0x036": 0,
+   "map:0x03e": 63,
+   "map:0x043": 0,
+   "map:0x045": 50,
+   "map:0x046": 21734,
+   "map:0x052": 61
+  }
+ }
+]
