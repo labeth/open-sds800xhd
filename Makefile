@@ -92,7 +92,7 @@ cosim-test: app boardtest ota cosim-build
 	./build/simtest -cosim $(if $(AREA),-area $(AREA)) $(if $(REUSE),-reuse)
 
 # AREA=l4-acq,l4-fuzz limits the run; REUSE=1 re-checks the last runs;
-# L4_FUZZ_SEEDS=1-20 and L4_FUZZ_ITERS=25 size the fuzz lane.
+# L4_FUZZ_SEEDS=1-20 and L4_FUZZ_ITERS=60 size the fuzz lane.
 l4-test: app ota
 	cd ota && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) test -c -tags simguest -trimpath -o ../build/installtest ./internal/install
 	cd sim && $(GO) build -o ../build/simtest ./cmd/simtest

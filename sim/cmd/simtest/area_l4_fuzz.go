@@ -23,7 +23,7 @@ import (
 // DEBUG_AT=<iteration> (simtest -l4 -area l4-fuzz with L4_FUZZ_SEEDS=<seed>).
 //
 //	L4_FUZZ_SEEDS  seeds: "1-20" (default) or "3,7,11"
-//	L4_FUZZ_ITERS  actions per seed (default 25: one seed fits one run)
+//	L4_FUZZ_ITERS  actions per seed (default 60: one seed fits one run)
 //	DEBUG_AT       passed to the fuzzer: diagnostics before that iteration
 func init() {
 	l4register(area{
@@ -79,7 +79,7 @@ func fuzzIters() int {
 	if n, err := strconv.Atoi(os.Getenv("L4_FUZZ_ITERS")); err == nil && n > 0 {
 		return n
 	}
-	return 25
+	return 60
 }
 
 // fuzzHost waits for the app, then runs the fuzzer against it until it ends
