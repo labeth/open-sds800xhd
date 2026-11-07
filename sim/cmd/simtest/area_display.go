@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"image/png"
@@ -21,9 +22,28 @@ func uiPattern(x, y int) (a, r, g, b uint8) {
 	return 0xFF, uint8(x), uint8(y), uint8(x>>8 | y>>8<<2 | 0x40) //nolint:gosec // G115: the low bytes of the coordinates, as the device model's test pattern packs them
 }
 
+// The display area runs the board's display test in the guest (the UI
+// layer, the renderer and the capture through the HAL), then the app,
+// whose host side zooms and pans through the UI model and changes the
+// timebase while the device model's log records what reached the map
+// engine, and reads /api/screen.png against fb0.
 func init() {
-	register(boardArea("display", "display goldens: UI layer, renderer, capture", "Display", 120, "",
-		[]string{"@30 shotfb 0 display-fb0.png"}, checkFB0))
+	board := boardArea("display", "", "Display", 120, "", []string{"@30 shotfb 0 display-fb0.png"}, checkFB0)
+	register(area{
+		name: "display", title: "display: UI layer, renderer, capture; the UI's zoom and timebase drive the PL; screen.png",
+		runs: func(e *env) []harness.Spec {
+			return append(board.runs(e), harness.Spec{
+				Name: e.prefix + "display-app", Secs: 180, Ports: true, SimdArgs: signals,
+				App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
+				Host: func(ctx context.Context, dir string) { displayHost(ctx, dir) },
+			})
+		},
+		check: func(e *env, runs []*harness.Run) []harness.Result {
+			res := board.check(e, runs[:1])
+			res = append(res, hostResultsOf(runs[1], "display", displayHostFile)...)
+			return append(res, checkViewLog(runs[1])...)
+		},
+	})
 }
 
 // checkFB0 compares the simulator's dump of fb0 with the pattern, every
