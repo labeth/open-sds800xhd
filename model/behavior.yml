@@ -1,0 +1,87 @@
+schemaVersion: 2
+behavior:
+  relationships:
+  - type: contains
+    from: FG-HD-APP
+    to: FU-HD-APP
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-PLATFORM
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-MMIO
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-BOARD
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-SPI
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-FRONTEND
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-TIMEBASE
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-TRIGGER
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-ACQ
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-MAPENGINE
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-DISPLAY
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-PANEL
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-COUNTER
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-SCOPEBOARD
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-MEASUREMENT
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-SCPI
+  - type: contains
+    from: FG-HD-OPERATIONS
+    to: FU-HD-OTA-BOOT
+  - type: contains
+    from: FG-HD-OPERATIONS
+    to: FU-HD-OTA-INSTALL
+  - type: contains
+    from: FG-HD-OPERATIONS
+    to: FU-HD-OTA-SLOTS
+  - type: contains
+    from: FG-HD-OPERATIONS
+    to: FU-HD-OTA-BOARD
+  - type: contains
+    from: FG-HD-OPERATIONS
+    to: FU-HD-CENSUS
+  - type: contains
+    from: FG-HD-OPERATIONS
+    to: FU-HD-OTA-GUARD
+  - type: contains
+    from: FG-HD-BOARD
+    to: FU-HD-PLIMAGE
+  - type: contains
+    from: FG-HD-PL
+    to: FU-HD-PL
+  - type: contains
+    from: FG-HD-PL
+    to: FU-HD-PL-BUILD
+  - type: contains
+    from: FG-HD-PL
+    to: FU-HD-PL-TESTS
+  - type: contains
+    from: FG-HD-VERIFICATION
+    to: FU-HD-BOARDTEST
+  - type: contains
+    from: FG-HD-VERIFICATION
+    to: FU-HD-SIM

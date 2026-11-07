@@ -1,0 +1,273 @@
+schemaVersion: 2
+lintRun:
+  id: sds800xhd-requirements
+  mode: strict
+  catalogRef: ./catalog.yml
+requirements:
+- id: REQ-HD-001
+  title: Launch and takeover
+  text: The instrument shall start its app from the launch hook on p12, take the hardware over from the vendor application
+    and write no eMMC partition other than p12.
+  status: implemented
+  realizes:
+  - CAP-HD-PLATFORM
+  category: functional
+  appliesTo:
+  - FU-HD-OTA-BOOT
+  - FU-HD-PLATFORM
+  - FU-HD-APP
+  notes: Coarse requirement from spec 01 §8, §12; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-002
+  title: Disable at power-on
+  text: When the disable key is held at power-on, the instrument shall leave the vendor application running unchanged.
+  status: implemented
+  realizes:
+  - CAP-HD-PLATFORM
+  category: functional
+  appliesTo:
+  - FU-HD-OTA-BOOT
+  - FU-HD-PLATFORM
+  notes: Coarse requirement from spec 01 §12; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-003
+  title: Register access
+  text: The instrument shall access each programmable-logic register plane under one lock with shadows of its write-only
+    registers.
+  status: implemented
+  realizes:
+  - CAP-HD-ACQUISITION
+  category: functional
+  appliesTo:
+  - FU-HD-MMIO
+  - FU-HD-BOARD
+  notes: Coarse requirement from spec 02 §1; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-004
+  title: Start-up order
+  text: The instrument shall bring up the offset DACs, VGAs, ADCs, calibration, timebase banks and trigger defaults
+    in the start-up order of spec 03 before the first arm.
+  status: implemented
+  realizes:
+  - CAP-HD-ACQUISITION
+  category: functional
+  appliesTo:
+  - FU-HD-ACQ
+  - FU-HD-SPI
+  - FU-HD-FRONTEND
+  - FU-HD-TIMEBASE
+  - FU-HD-TRIGGER
+  notes: Coarse requirement from spec 03 §2, spec 06, spec 10 §7; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-005
+  title: Record readout
+  text: The instrument shall read a record out one channel and one window at a time through the AXI DMA into the
+    coherent buffer as 16-bit codes with their scale.
+  status: implemented
+  realizes:
+  - CAP-HD-ACQUISITION
+  category: functional
+  appliesTo:
+  - FU-HD-ACQ
+  notes: Coarse requirement from spec 03 §3-§5, spec 14; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-006
+  title: Board interface
+  text: The instrument shall implement the core's board interface over its hardware packages and refuse each feature
+    the board lacks.
+  status: implemented
+  realizes:
+  - CAP-HD-PLATFORM
+  category: functional
+  appliesTo:
+  - FU-HD-SCOPEBOARD
+  notes: Coarse requirement from the core's board interface; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-007
+  title: Waveform layer
+  text: The instrument shall configure the map engine to draw the waveforms and draw only the user interface into
+    the framebuffer.
+  status: implemented
+  realizes:
+  - CAP-HD-DISPLAY-PANEL
+  category: functional
+  appliesTo:
+  - FU-HD-MAPENGINE
+  - FU-HD-DISPLAY
+  notes: Coarse requirement from spec 07; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-008
+  title: Front panel
+  text: The instrument shall read the key matrix, the encoders and the touch panel and drive the key LEDs and the
+    beeper.
+  status: implemented
+  realizes:
+  - CAP-HD-DISPLAY-PANEL
+  category: functional
+  appliesTo:
+  - FU-HD-PANEL
+  notes: Coarse requirement from spec 08; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-009
+  title: Remote programming
+  text: The instrument shall serve its SCPI dialect over VXI-11, the raw socket on port 5025 and telnet on port
+    5024 through the core's SCPI engine.
+  status: implemented
+  realizes:
+  - CAP-HD-REMOTE
+  category: functional
+  appliesTo:
+  - FU-HD-SCPI
+  - FU-HD-APP
+  notes: Coarse requirement from spec 11; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-010
+  title: Measurements
+  text: The instrument shall measure each read-out frame with the core's automatic measurements.
+  status: implemented
+  realizes:
+  - CAP-HD-ACQUISITION
+  category: functional
+  appliesTo:
+  - FU-HD-MEASUREMENT
+  notes: Coarse requirement from spec 03 §5; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-011
+  title: Instrument state
+  text: The instrument shall keep its instrument state on p12, written with fsync, and recall it at power-on.
+  status: implemented
+  realizes:
+  - CAP-HD-SETTINGS
+  category: functional
+  appliesTo:
+  - FU-HD-APP
+  notes: Coarse requirement from spec 09; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-012
+  title: Supervised update
+  text: The instrument shall run its app from A/B slots on p12 under the core's supervisor and roll back an app
+    whose health token stops.
+  status: implemented
+  realizes:
+  - CAP-HD-SUPERVISION
+  category: functional
+  appliesTo:
+  - FU-HD-OTA-SLOTS
+  - FU-HD-OTA-BOARD
+  - FU-HD-OTA-INSTALL
+  notes: Coarse requirement from spec 01 §12.3-§12.4; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-013
+  title: Read-only census
+  text: When booted from the census stick, the instrument shall write nothing to the eMMC and save the census and
+    the partition backups to the stick.
+  status: implemented
+  realizes:
+  - CAP-HD-CENSUS
+  category: functional
+  appliesTo:
+  - FU-HD-CENSUS
+  notes: Coarse requirement from SAFETY.txt (first contact); nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-014
+  title: Simulator parity
+  text: The instrument shall pass the simulator parity harness for every board interface area against the start-up
+    registers of a private reference run.
+  status: implemented
+  realizes:
+  - CAP-HD-SIMULATION
+  category: functional
+  appliesTo:
+  - FU-HD-SIM
+  - FU-HD-BOARDTEST
+  notes: Coarse requirement from spec 16; nothing has run on a unit yet.
+  verificationMethods:
+  - test
+  verificationCriteria: Run the board tests and the tier-1 simulator parity harness for the area; hardware claims
+    need a unit.
+- id: REQ-HD-015
+  title: Open PL design
+  text: The instrument shall, on its open PL image, present the register ABI of spec 20 with the identity block
+    first and the compat planes the board and the unit's drivers use, decide every trigger in the PL and never write a
+    stream block in part.
+  status: implemented
+  realizes:
+  - CAP-HD-ACQUISITION
+  category: functional
+  appliesTo:
+  - FU-HD-PL
+  - FU-HD-PL-BUILD
+  - FU-HD-PL-TESTS
+  notes: Coarse requirement from spec 20; no bitstream runs on a unit until the board facts of spec 20 §14 are settled.
+  verificationMethods:
+  - test
+  verificationCriteria: Run make fpga-sim, fpga-lint and fpga-neutral; synthesis and timing with make fpga-synth;
+    hardware claims need a unit.
+- id: REQ-HD-016
+  title: Never brick
+  text: The instrument shall confine its writes to p12's root outside p12's updatefile and usr/upgrade directories,
+    never writing the boot, kernel, vendor system or factory-data partitions, a U-Boot environment, a raw eMMC block
+    device, the eFuses or the BBRAM, nor loading an open PL image whose board facts are not all verified.
+  status: implemented
+  realizes:
+  - CAP-HD-PLATFORM
+  category: functional
+  appliesTo:
+  - FU-HD-OTA-GUARD
+  - FU-HD-OTA-INSTALL
+  - FU-HD-OTA-SLOTS
+  - FU-HD-OTA-BOARD
+  - FU-HD-CENSUS
+  - FU-HD-PLATFORM
+  - FU-HD-MMIO
+  - FU-HD-FRONTEND
+  - FU-HD-SCOPEBOARD
+  - FU-HD-PLIMAGE
+  - FU-HD-PL-BUILD
+  notes: 'From spec 01 §2.2, §3, §11.3, §12 and spec 20 §13-§14: the vendor U-Boot''s USB stick route in BOOT.bin on
+    p1 is the unbrick and install path, so nothing of ours may touch what it depends on. SAFETY.txt states the rules
+    for users.'
+  verificationMethods:
+  - test
+  verificationCriteria: Run the write guard's tests (inside and outside the root, ../ escapes, symlinks, raw eMMC,
+    uboot.env, eFuse and nvmem paths), the install, slot and board tests through the guard and the PL image gate's
+    tests; hardware claims need a unit.

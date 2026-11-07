@@ -1,0 +1,8 @@
+{
+  "image": "cosm",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "build": "co-simulation of fpga/rtl (Verilator); not a bitstream",
+  "board_facts": {"U1": false, "U2": false, "U3": false, "U4": false, "U5": false, "U6": false, "U7": false,
+                  "U8": false, "U9": false, "U10": false, "U13": false, "U14": false, "U15": false},
+  "board_facts_verified": false
+}

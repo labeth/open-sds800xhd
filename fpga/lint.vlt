@@ -1,0 +1,63 @@
+`verilator_config
+// ENGMODEL-OWNER-UNIT: FU-HD-PL-BUILD
+// Waivers for `verilator --lint-only -Wall` over fpga/prim and fpga/rtl
+// (fpga/lint.sh). Each states why the pattern is intended.
+
+// Declaration initial values are the configuration-time (GSR) state the image
+// must come up in when pl_resetn0 is not pulsed after a reload (spec 20 §3).
+lint_off -rule PROCASSINIT
+// Unused instance outputs are left open by name on purpose.
+lint_off -rule PINCONNECTEMPTY
+// The generated register include defines every field; a block uses some.
+lint_off -rule UNUSEDPARAM -file "*/open_pl_regs.vh"
+lint_off -rule UNUSEDPARAM -file "*/opl_sts.vh"
+// Lane loops keep the running per-lane state in blocking temporaries inside
+// the clocked process (the chain through a clock's lanes); they are never
+// read outside it.
+lint_off -rule BLKSEQ -file "*/trig/trig_cmp.v"
+lint_off -rule BLKSEQ -file "*/stream/stream_framer.v"
+// Simulation-only bookkeeping in the synchronizer model.
+lint_off -rule BLKSEQ -file "*/prim/prim_pulse_sync.v"
+// The register buses carry 32-bit words and byte addresses; the compat planes
+// use the 16 data bits and the word index only (spec 02 §1.1).
+lint_off -rule UNUSEDSIGNAL -file "*/regs/compat_*.v" -match "*wr_addr*"
+lint_off -rule UNUSEDSIGNAL -file "*/regs/compat_*.v" -match "*rd_addr*"
+lint_off -rule UNUSEDSIGNAL -file "*/regs/compat_*.v" -match "*wr_data*"
+// Behavioural models stand for vendor primitives: they keep the primitive's
+// parameters and pins (N pad, inverted clock, input period) without using
+// them, and the DDR model samples on both clock edges.
+lint_off -rule UNUSEDPARAM -file "*/prim/prim_lvds_lane.v"
+lint_off -rule UNUSEDSIGNAL -file "*/prim/prim_lvds_lane.v"
+lint_off -rule MULTIDRIVEN -file "*/prim/prim_lvds_lane.v"
+lint_off -rule UNUSEDPARAM -file "*/prim/prim_mmcm.v"
+lint_off -rule BLKSEQ -file "*/prim/prim_mmcm.v"
+// The protocol engines are the SDS1000CML+'s RTL unchanged (a shared-RTL
+// candidate must stay identical to its other consumer): the top byte of the
+// four-byte history and the UART's spare previous-level register are unused.
+lint_off -rule UNUSEDSIGNAL -file "*/proto/*_trigger.v"
+// The scope ID is the low 64 bits of the 96-bit device DNA (spec 02 §3).
+lint_off -rule UNUSEDSIGNAL -file "*/regs/compat_acq.v" -match "*'dna'*"
+// floor(phi * P / 16): the product's low four bits are the discarded fraction.
+lint_off -rule UNUSEDSIGNAL -file "*/stack/stack_accum.v" -match "*'phi_p'*"
+// The record path, readout, stream source/writer and mean engine run their
+// lane and word loops on blocking temporaries inside the clocked process
+// (the chain through a clock's lanes or words), never read outside it.
+lint_off -rule BLKSEQ -file "*/acq/*.v"
+lint_off -rule BLKSEQ -file "*/stream/stream_source.v"
+lint_off -rule BLKSEQ -file "*/stream/stream_writer.v"
+// opl_core keeps whole 32-bit configuration and pulse words and uses the
+// fields its blocks need; the crossings' ready/valid outputs it does not
+// wait on are left unused on purpose (they are reloaded continuously or
+// bounded by the read timeout).
+lint_off -rule UNUSEDSIGNAL -file "*/top/opl_core.v"
+lint_off -rule BLKSEQ -file "*/trig/trig_counter.v"
+// Word and tick counters are 48 bits like the time base; their low 32 bits
+// address a ring or a counter register, the box quotient fits 16 bits.
+lint_off -rule UNUSEDSIGNAL -file "*/acq/acq_fsm.v" -match "*'w_next'*"
+lint_off -rule UNUSEDSIGNAL -file "*/acq/acq_decim.v" -match "*'q'*"
+lint_off -rule UNUSEDSIGNAL -file "*/trig/trig_counter.v" -match "*'pd'*"
+// opl_core includes the generated register include for the addresses it
+// takes configuration from; the rest of the include is unused there (the
+// file waiver above does not reach an include of the top module itself).
+lint_off -rule UNUSEDPARAM -file "*/open_pl_regs.vh" -match "*'OPL_*"
+lint_off -rule UNUSEDPARAM -file "*/opl_sts.vh" -match "*'STS_*"

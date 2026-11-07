@@ -1,0 +1,3 @@
+# engdoc's module cache and the lock written while a workspace replacement is active
+.engmod/
+engmod.lock.local.yml

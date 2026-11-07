@@ -1,0 +1,1096 @@
+command	query	kind	params	values	reply	sds800xhd	default
+*IDN	*IDN?	query	-	-	Siglent Technologies,<model>,<serial_number>,<firmware>; <model>=The model number of the instrument.; <serial number>=A 14-character code.; <firmware>=The software revision of the instrument	yes	Siglent Technologies,<model>,<serial>,<firmware> (spec 11 §6.6)
+*OPC	*OPC?	query	-	-	1	yes	1
+*RST	-	cmd	*RST	-	-	yes	-
+:AUToset	-	cmd	:AUToset	-	-	yes	-
+:PRINt	:PRINt? <type>[,<format>]	query	-	<type>={BMP|PNG}; <format>={NORMal|INVerted} | both formats return a complete image (spec 11 §8)	<bin>	yes	-
+:FORMat:DATA	:FORMat:DATA?	both	:FORMat:DATA <option>[,<digit>]	<option>={SINGle|DOUBle|CUSTom}; <digit>=NR1 significant digits (SINGle = 7, DOUBle = 14, default CUSTom,3)	CUSTOM,<digit>; <digit>=NR1 (always the word CUSTOM in upper case)	yes	CUSTOM,3
+:ACQuire:AMODe	:ACQuire:AMODe?	both	:ACQuire:AMODe <rate>	<rate>={FAST|SLOW} | SDS800X HD: SLOW → ACQ 0x1EE = 1, FAST → spec 04 §8.2 step 10 value, rewritten at once (spec 09 §3.3)	<rate>; <rate>={FAST|SLOW}	yes	FAST
+:ACQuire:CSWeep	-	cmd	:ACQuire:CSWeep	-	-	yes	-
+:ACQuire:INTerpolation	:ACQuire:INTerpolation?	both	:ACQuire:INTerpolation <state>	<state>={ON|OFF} | SDS800X HD: ON = sin(x)/x → ACQ 0x081 bit 0 = 1, OFF = linear → 0 (spec 09 §3.3, spec 04 §8.3)	<state>; <state>={ON|OFF}	yes	ON
+:ACQuire:MMANagement	:ACQuire:MMANagement?	both	:ACQuire:MMANagement <mem_mode>	<mem_mode>={AUTO|FSRate|FMDepth}	<mem_mode>; < mem_mode>={AUTO|FSRate|FMDepth}	yes	AUTO
+:ACQuire:MODE	:ACQuire:MODE?	both	:ACQuire:MODE <mode_type>	<mode_type>={YT|XY|ROLL}	<mode_type>; <mode_type>={YT|XY|ROLL}	yes	YT
+:ACQuire:MDEPth	:ACQuire:MDEPth?	both	:ACQuire:MDEPth <memory_size>	<memory_size>= SDS800X HD: single-channel {10k|100k|1M|10M|100M}; dual-channel {10k|100k|1M|10M|50M}; four-channel {10k|100k|1M|10M|25M} (guide table shares SDS1000X HD row; digital on or roll limit depth; AVERage/ERES do not exist as acquisition modes on SDS800X HD, spec 11 §6.7.1)	<memory_size>	yes	10M
+:ACQuire:NUMACq	:ACQuire:NUMACq?	query	-	-	<value>; <value>=NR1	yes	1
+:ACQuire:POINts	:ACQuire:POINts?	query	-	-	<point>; <point>=NR3	yes	4.00E+03
+:ACQuire:RESolution	:ACQuire:RESolution?	both	:ACQuire:RESolution <bit>	<bit>={8Bits|10Bits} | SDS2000X Plus only (8/10-bit ADC selection)	<bit>; <bit>={8Bits|10Bits}	no	-
+:ACQuire:SEQuence	:ACQuire:SEQuence?	both	:ACQuire:SEQuence <state>	<state>={ON|OFF} | ON also switches an AUTO sweep to NORMal (stays after OFF); after the N segments the acquisition stops (spec 03 §6.2, spec 11 §6.7.1)	<state>; <state>={ON|OFF}	yes	OFF
+:ACQuire:SEQuence:COUNt	:ACQuire:SEQuence:COUNt?	both	:ACQuire:SEQuence:COUNt <count>	<count>=NR1	<count_value>; <count_value>=NR1	yes	2
+:ACQuire:SRATe	:ACQuire:SRATe?	both	:ACQuire:SRATe <rate>	<type>=NR3	<sample_rate>; <sample_rate>=NR3	yes	2.00E+09
+:ACQuire:TYPE	:ACQuire:TYPE?	both	:ACQuire:TYPE <type>	<type>={NORMal|PEAK|AVERage[,<times>]|ERES[,<bits>]}; <times>={4|16|32|64|128|256|512|1024|2048|4096|8192}; <bits>={0.5|1.0|1.5|2.0|2.5|3.0|3.5|4.0}; AVERage/ERES not allowed in sequence mode | SDS800X HD: only NORMal and PEAK take effect; AVERage,<n>, ERES,<bits> and HIRES,<bits> are parsed and ignored (no error, TYPE? keeps the previous mode); without the 2nd parameter -200. Average/ERES exist only as math operators (spec 11 §6.7.1, spec 03 §6.1)	<type>; <type>={NORMal|PEAK|AVERage[,<times>]|ERES[,<bits>]}; <times>={4|16|32|64|128|256|512|1024|2048|4096|8192}; <bits>={0.5|1.0|1.5|2.0|2.5|3.0|3.5|4.0}	yes	NORMal
+:CHANnel:REFerence	:CHANnel:REFerence?	both	:CHANnel:REFerence <type>	<type>={OFFSet|POSition}	<type>; <type>={OFFSet|POSition}	yes	POSition
+:CHANnel<n>:BWLimit	:CHANnel<n>:BWLimit?	both	:CHANnel<n>:BWLimit <bwlimit>	<n>=1..number of analog channels (2 or 4); <bwlimit>={FULL|20M|200M} (guide generic; SDS800X HD hardware offers FULL|20M - 200M filter UNVERIFIED for this model)	<bwlimit>; <bwlimit>={FULL|20M|200M}	yes	FULL
+:CHANnel<n>:COUPling	:CHANnel<n>:COUPling?	both	:CHANnel<n>:COUPling <coupling_mode>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <coupling_mode>={DC|AC|GND}	<coupling_mode>; <coupling_mode>={DC|AC|GND}	yes	DC
+:CHANnel<n>:IMPedance	:CHANnel<n>:IMPedance?	both	:CHANnel<n>:IMPedance <impedance>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <impedance>={ONEMeg|FIFTy}	<impedance>; <impedance>={ONEMeg|FIFTy}	yes	ONEMeg
+:CHANnel<n>:INVert	:CHANnel<n>:INVert?	both	:CHANnel<n>:INVert <state>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:CHANnel<n>:LABel	:CHANnel<n>:LABel?	both	:CHANnel<n>:LABel <state>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:CHANnel<n>:LABel:TEXT	:CHANnel<n>:LABel:TEXT?	both	:CHANnel<n>:LABel:TEXT <qstring>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <qstring>=Quoted string of ASCII text. The length of the	<string>	yes	"1"
+:CHANnel<n>:OFFSet	:CHANnel<n>:OFFSet?	both	:CHANnel<n>:OFFSet <offset_value>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <offset_value>=NR3	<offset_value>; <offset_value>=NR3	yes	0.00E+00
+:CHANnel<n>:PROBe	:CHANnel<n>:PROBe?	both	:CHANnel<n>:PROBe <attenuation>[,<value>]	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <attenuation>={DEFault|VALue}; <value>=Probe attenuation ratio in NR3 format when	<value>; <value>=NR3	yes	1.00E+00
+:CHANnel<n>:SCALe	:CHANnel<n>:SCALe?	both	:CHANnel<n>:SCALe <scale>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <scale>=NR3	<scale>; <scale>=NR3	yes	1.00E+00
+:CHANnel<n>:SKEW	:CHANnel<n>:SKEW?	both	:CHANnel<n>:SKEW <skew_value>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <skew_value>=NR3 range [-1.00E-07, 1.00E-07]	<value>; <value>=NR3	yes	0.00E+00
+:CHANnel<n>:SWITch	:CHANnel<n>:SWITch?	both	:CHANnel<n>:SWITch <state>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:CHANnel<n>:UNIT	:CHANnel<n>:UNIT?	both	:CHANnel<n>:UNIT <unit>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <unit>={V|A}	<unit>; <unit>={V|A}	yes	V
+:CHANnel<n>:VISible	:CHANnel<n>:VISible?	both	:CHANnel<n>:VISible <display_state>	<n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <display_state>={ON|OFF}	<display_state>; <display_state>={ON|OFF}	yes	ON
+:COUNter	:COUNter?	both	:COUNter <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:COUNter:CURRent	:COUNter:CURRent?	query	-	-	<value>; <value>=NR3	yes	0.00E+00
+:COUNter:LEVel	:COUNter:LEVel?	both	:COUNter: LEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>:; <value>=NR3	yes	0.00E+00
+:COUNter:MODE	:COUNter:MODE?	both	:COUNter: MODE <type>	<type>={FREQuency|PERiod|TOTalizer}	<type>:= {FREQuency|PERiod|TOTalizer}	yes	FREQuency
+:COUNter:SOURce	:COUNter:SOURce?	both	:COUNter: SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	C1
+:COUNter:STATistics	:COUNter:STATistics?	both	:COUNter: STATistics <state>	<state>={ON|OFF}	<state>:; <state>={ON|OFF}	yes	OFF
+:COUNter:STATistics:RESet	-	cmd	:COUNter: STATistics:RESet	-	-	yes	-
+:COUNter:STATistics:VALue	:COUNter:STATistics:VALue?	query	-	-	<current>,<mean>,<min>,<max>,<stdev>,<count>; <current>=NR3; <mean>=NR3; <min>=NR3; <max>=NR3; <stdev>=NR3; <count>=NR1	yes	OFF
+:COUNter:TOTalizer:GATE	:COUNter:TOTalizer:GATE?	both	:COUNter:TOTalizer:GATE <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:COUNter:TOTalizer:GATE:LEVel	:COUNter:TOTalizer:GATE:LEVel?	both	:COUNter: TOTalizer:GATE:LEVel <value>	<value>=NR3	<value>; <value>=NR3	yes	0.00E+00
+:COUNter:TOTalizer:GATE:SLOPe	:COUNter:TOTalizer:GATE:SLOPe?	both	:COUNter: TOTalizer:GATE:SLOPe <slope>	<slope>={RISing|FALLing}	<slope>; <slope>={RISing|FALLing}	yes	RISing
+:COUNter:TOTalizer:GATE:TYPE	:COUNter:TOTalizer:GATE:TYPE?	both	:COUNter: TOTalizer:GATE:TYPE <style>	<style>={LEVel|AEDGe}	<style>; <style>={LEVel|AEDGe}	yes	LEVel
+:COUNter:TOTalizer:RESet	-	cmd	:COUNter: TOTalizer:RESet	-	-	yes	-
+:COUNter:TOTalizer:SLOPe	:COUNter:TOTalizer:SLOPe?	both	:COUNter: TOTalizer:SLOPe <slope>	<slope>={RISing|FALLing}	<slope>; <slope>={RISing|FALLing}	yes	RISing
+:CURSor	:CURSor?	both	:CURSor <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:CURSor:TAGStyle	:CURSor:TAGStyle?	both	:CURSor:TAGStyle <type>	<type>={FIXed|FOLLowing}	<type>; <type>={FIXed|FOLLowing}	yes	FOLLowing
+:CURSor:XREFerence	:CURSor:XREFerence?	both	:CURSor:XREFerence <type>	<type>={DELay|POSition}	<type>; < type >={DELay|POSition}	yes	DELay
+:CURSor:YREFerence	:CURSor:YREFerence?	both	:CURSor:YREFerence <type>	<type>={OFFSet|POSition}	<type>; <type>={OFFSet|POSition}	yes	OFFSet
+:CURSor:IXDelta	:CURSor:IXDelta?	query	-	-	<value>; <value>=NR3	yes	(no reply)
+:CURSor:MITem	:CURSor:MITem?	both	:CURSor:MITem <type>,<source1>[,<source2>]	<type>=the type of the selected measurement item in advanced measurement,see the table Description of Parameters for details.; <source1>=the source of the selected measurement item in; <source2>=when the type is CH Delay type, source2 needs	<type>,<source1>[,<source2>]	yes	ALL,C1
+:CURSor:MODE	:CURSor:MODE?	both	:CURSor:MODE <type>	<type>={TRACk|MANual[,<mode>]|MEASure}; <mode>={X|Y|XY}	<type>; <type>={TRACk|MANual[,<mode>]}; <mode>={X|Y|XY}	yes	MANual,X
+:CURSor:SOURce1	:CURSor:SOURce1?	both	:CURSor:SOURce1 <source>	<source>= {C<n>|Z<n>|F<x>|M<m>|REF<r>|DIGital|HISTOGram}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1); <r>={A|B|C|D}	<source>; <source>= {C<n>|Z<n>|F<x>|M<m>|REF<r>|DIGital|HISTOGram}	yes	C1
+:CURSor:SOURce2	:CURSor:SOURce2?	both	:CURSor:SOURce2 <source>	<source>= {C<n>|Z<n>|F<x>|M<m>|REF<r>|DIGital|HISTOGram}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1); <r>={A|B|C|D}	<source>; <source>= {C<n>|Z<n>|F<x>|M<m>|REF<r>|DIGital|HISTOGram}	yes	(no reply)
+:CURSor:X1	:CURSor:X1?	both	:CURSor:X1 <value>	<value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:CURSor:X2	:CURSor:X2?	both	:CURSor:X2 <value>	<value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:CURSor:XDELta	:CURSor:XDELta?	query	-	-	<value>; <value>=NR3	yes	(no reply)
+:CURSor:Y1	:CURSor:Y1?	both	:CURSor:Y1 <value>	<value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:CURSor:Y2	:CURSor:Y2?	both	:CURSor:Y2 <value>	<value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:CURSor:YDELta	:CURSor:YDELta?	query	-	-	<value>; <value>=NR3	yes	(no reply)
+:CURSor:MANual:X<n>	:CURSor:MANual:X<n>?	both	:CURSor:MANual:X<n> <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:MANual:X<n>:COLor	:CURSor:MANual:X<n>:COLor?	both	:CURSor:MANual:X<n>:COLor <color>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <color>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of hexadecimal RGB color code.	<string>; <string>=Quoted string of hexadecimal RGB color code.	guide-only	-
+:CURSor:MANual:X<n>:DFOLlow	:CURSor:MANual:X<n>:DFOLlow?	both	:CURSor:MANual:X<n>:DFOLlow <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:MANual:X<n>:DTCursor	:CURSor:MANual:X<n>:DTCursor?	both	:CURSor:MANual:X<n>:DTCursor <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <source>={MX<m>|TRACK<t>|NONE}	<source>; <source>={MX<m>|TRACK<t>|NONE}	guide-only	-
+:CURSor:MANual:X<n>:DVALue	:CURSor:MANual:X<n>:DVALue?	both	:CURSor:MANual:X<n>:DVALue <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:MANual:X<n>:LABel	:CURSor:MANual:X<n>:LABel?	both	:CURSor:MANual:X<n>:LABel <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <state>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of ASCII text. The length of the string	<string>; <string>=Quoted string of ASCII text.	guide-only	-
+:CURSor:MANual:X<n>:POSition	:CURSor:MANual:X<n>:POSition?	both	:CURSor:MANual:X<n>:POSition <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:MANual:X<n>:SOURce	:CURSor:MANual:X<n>:SOURce?	both	:CURSor:MANual:X<n>:SOURce <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the X cursor that is affected by the command.; <source>= {C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|DIGital|ZDIGital|HISTOGram}	<source>; <source>= {C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|DIGital|ZDIGital|HISTOGram}	guide-only	-
+:CURSor:MANual:Y<n>	:CURSor:MANual:Y<n>?	both	:CURSor:MANual:Y<n> <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:MANual:Y<n>:COLor	:CURSor:MANual:Y<n>:COLor?	both	:CURSor:MANual:Y<n>:COLor <color>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <color>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of hexadecimal RGB color code.	<string>; <string>=Quoted string of hexadecimal RGB color code.	guide-only	-
+:CURSor:MANual:Y<n>:DFOLlow	:CURSor:MANual:Y<n>:DFOLlow?	both	:CURSor:MANual:Y<n>:DFOLlow <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:MANual:Y<n>:DTCursor	:CURSor:MANual:Y<n>:DTCursor?	both	:CURSor:MANual:Y<n>:DTCursor <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <source>={MY<m>|NONE}	<source>; <source>={MY<m>|NONE}	guide-only	-
+:CURSor:MANual:Y<n>:DVALue	:CURSor:MANual:Y<n>:DVALue?	both	:CURSor:MANual:Y<n>:DVALue <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:MANual:Y<n>:LABel	:CURSor:MANual:Y<n>:LABel?	both	:CURSor:MANual:Y<n>:LABel <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <state>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of ASCII text. The length of the string	<string>; <string>=Quoted string of ASCII text.	guide-only	-
+:CURSor:MANual:Y<n>:POSition	:CURSor:MANual:Y<n>:POSition?	both	:CURSor:MANual:Y<n>:POSition <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:MANual:Y<n>:SOURce	:CURSor:MANual:Y<n>:SOURce?	both	:CURSor:MANual:Y<n>:SOURce <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the Y cursor that is affected by the command.; <source>= {C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|HISTOGram}	<source>; <source>= {C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|HISTOGram}	guide-only	-
+:CURSor:MEASure<n>	:CURSor:MEASure<n>?	both	:CURSor:MEASure<n> <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to MEASure and defines the measure cursor that is affected by the command.; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:MEASure<n>:COLor	:CURSor:MEASure<n>:COLor?	both	:CURSor:MEASure<n>:COLor <color>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to MEASure and defines the measure cursor that is affected by; <color>={DEFault|CUSTom[,<string>]}; <string>=Quoted string of hexadecimal RGB color code.	<string>; <string>=Quoted string of hexadecimal RGB color code.	guide-only	-
+:CURSor:MEASure<n>:LABel	:CURSor:MEASure<n>:LABel?	both	:CURSor:MEASure<n>:LABel <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to MEASure and defines the measure cursor that is affected by the command.; <state>={DEFault|CUSTom[,<string>]}; <string>=Quoted string of ASCII text. The length of the string	<string>; <string>=Quoted string of ASCII text.	guide-only	-
+:CURSor:MEASure<n>:MITem	:CURSor:MEASure<n>:MITem?	both	:CURSor:MEASure<n>:MITem <type>,<src1>[,<src2>]	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to MEASure and defines the measure cursor that is affected by the command.; <type>=The parameters are the same as the measurement; <source1>=the source of the selected measurement item in; <source2>=when the type is CH Delay type, source2 needs	<type>,<source1>[,<source2>]	guide-only	-
+:CURSor:TRACk<n>	:CURSor:TRACk<n>?	both	:CURSor:TRACk<n> <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <state>={ON|OFF}	{ON|OFF}	guide-only	-
+:CURSor:TRACk<n>:COLor	:CURSor:TRACk<n>:COLor?	both	:CURSor:TRACk<n>:COLor <color>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <color>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of hexadecimal RGB color code.	<string>; <string>=Quoted string of hexadecimal RGB color code.	guide-only	-
+:CURSor:TRACk<n>:DFOLlow	:CURSor:TRACk<n>:DFOLlow?	both	:CURSor:TRACk<n>:DFOLlow <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:TRACk<n>:DTCursor	:CURSor:TRACk<n>:DTCursor?	both	:CURSor:TRACk<n>:DTCursor <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <source>={MX<m>|TRACK<t>|NONE}	<source>; <source>={MX<m>|TRACK<t>|NONE}	guide-only	-
+:CURSor:TRACk<n>:DVALue	:CURSor:TRACk<n>:DVALue?	both	:CURSor:TRACk<n>:DVALue <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:TRACk<n>:LABel	:CURSor:TRACk<n>:LABel?	both	:CURSor:TRACk<n>:LABel <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <state>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of ASCII text. The length of the string	<string>; <string>=Quoted string of ASCII text.	guide-only	-
+:CURSor:TRACk<n>:POSition	:CURSor:TRACk<n>:POSition?	both	:CURSor:TRACk<n>:POSition <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:TRACk<n>:SOURce	:CURSor:TRACk<n>:SOURce?	both	:CURSor:TRACk<n>:SOURce <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by; <source>={C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>}	<source>; <source>={C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>}	guide-only	-
+:CURSor:TRACk<n>:VALue	:CURSor:TRACk<n>:VALue?	query	-	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to TRACk and defines the track cursor that is affected by	<value>; <value>=NR3	guide-only	-
+:CURSor:XY:X<n>	:CURSor:XY:X<n>?	both	:CURSor:XY:X<n> <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:XY:X<n>:COLor	:CURSor:XY:X<n>:COLor?	both	:CURSor:XY:X<n>:COLor <color>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <color>={DEFault|CUSTom[,<string>]}; <string>=Quoted string of hexadecimal RGB color code.	<string>; <string>=Quoted string of hexadecimal RGB color code.	guide-only	-
+:CURSor:XY:X<n>:DFOLlow	:CURSor:XY:X<n>:DFOLlow?	both	:CURSor:XY:X<n>:DFOLlow <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:XY:X<n>:DTCursor	:CURSor:XY:X<n>:DTCursor?	both	:CURSor:XY:X<n>:DTCursor <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <source>={XY_X<m>|NONE}	<source>; <source>={XY_X<m>|NONE}	guide-only	-
+:CURSor:XY:X<n>:DVALue	:CURSor:XY:X<n>:DVALue?	both	:CURSor:XY:X<n>:DVALue <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:XY:X<n>:LABel	:CURSor:XY:X<n>:LABel?	both	:CURSor:XY:X<n>:LABel <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <state>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of ASCII text. The length of the string	<string>; <string>=Quoted string of ASCII text.	guide-only	-
+:CURSor:XY:X<n>:POSition	:CURSor:XY:X<n>:POSition?	both	:CURSor:XY:X<n>:POSition <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to X and defines the XY X cursor that is affected by the; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:XY:Y<n>	:CURSor:XY:Y<n>?	both	:CURSor:XY:Y<n> <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:XY:Y<n>:COLor	:CURSor:XY:Y<n>:COLor?	both	:CURSor:XY:Y<n>:COLor <color>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <color>={DEFault|CUSTom[,<string>]}; <string>=Quoted string of hexadecimal RGB color code.	<string>; <string>=Quoted string of hexadecimal RGB color code.	guide-only	-
+:CURSor:XY:Y<n>:DFOLlow	:CURSor:XY:Y<n>:DFOLlow?	both	:CURSor:XY:Y<n>:DFOLlow <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	guide-only	-
+:CURSor:XY:Y<n>:DTCursor	:CURSor:XY:Y<n>:DTCursor?	both	:CURSor:XY:Y<n>:DTCursor <source>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <source>={XY_Y<m>|NONE}	<source>; <source>={XY_Y<m>|NONE}	guide-only	-
+:CURSor:XY:Y<n>:DVALue	:CURSor:XY:Y<n>:DVALue?	both	:CURSor:XY:Y<n>:DVALue <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:CURSor:XY:Y<n>:LABel	:CURSor:XY:Y<n>:LABel?	both	:CURSor:XY:Y<n>:LABel <state>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <state>={DEFault|DELTa|CUSTom[,<string>]}; <string>=Quoted string of ASCII text. The length of the string	<string>; <string>=Quoted string of ASCII text.	guide-only	-
+:CURSor:XY:Y<n>:POSition	:CURSor:XY:Y<n>:POSition?	both	:CURSor:XY:Y<n>:POSition <value>	<n>=1 to (# cursor index) in NR1 format, is attached as a suffix to Y and defines the XY Y cursor that is affected by the; <value>=NR3	<value>; <value>=NR3	guide-only	-
+:DECode	:DECode?	both	:DECode <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DECode:LIST	:DECode:LIST?	both	:DECode:LIST <state>	<state>={OFF|D1|D2}	<state>; <state>={OFF|D1|D2}	yes	OFF
+:DECode:LIST:LINE	:DECode:LIST:LINE?	both	:DECode:LIST:LINE <value>	<value>=NR1 range [1, 7]	<value>; <value>=NR1	yes	7
+:DECode:LIST:SCRoll	:DECode:LIST:SCRoll?	both	:DECode:LIST:SCRoll <value>	<value>=NR1	<value>; <value>=NR1	yes	1
+:DECode:LIST<n>:RESult	:DECode:LIST<n>:RESult?	query	-	<n>={1|2}	<ascii_text>	yes	I2C, Time, Address, R/W, Data 
+:DECode:BUS<n>	:DECode:BUS<n>?	both	:DECode:BUS<n> <state>	<n>={1|2}; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DECode:BUS<n>:COPY	-	cmd	:DECode:BUS<n>:COPY <operation>	<n>={1|2}; <operation>={FROMtrigger|TOTRigger}	-	yes	-
+:DECode:BUS<n>:FORMat	:DECode:BUS<n>:FORMat?	both	:DECode:BUS<n>:FORMat <format>	<n>={1|2}; <format>={BINary|DECimal|HEX|ASCii}	<format>; <format>={BINary|DECimal|HEX|ASCii}	yes	HEX
+:DECode:BUS<n>:PROTocol	:DECode:BUS<n>:PROTocol?	both	:DECode:BUS<n>:PROTocol <protocol>	<n>={1|2}; <protocol>= {IIC|SPI|UART|CAN|LIN|FLEXray|CANFd|IIS|M1553|SENT|MANChester|A429|USB20}	<protocol>; <protocol>= {IIC|SPI|UART|CAN|LIN|FLEXray|CANFd|IIS|M1553}	yes	IIC
+:DECode:BUS<n>:RESult	:DECode:BUS<n>:RESult?	query	-	<n>={1|2}	<ascii_text>	yes	i2c,address,data;
+:DECode:BUS<n>:IIC:RWBit	:DECode:BUS<n>:IIC:RWBit?	both	:DECode:BUS<n>:IIC:RWBit <state>	<n>={1|2}; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DECode:BUS<n>:IIC:SCLSource	:DECode:BUS<n>:IIC:SCLSource?	both	:DECode:BUS<n>:IIC:SCLSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:DECode:BUS<n>:IIC:SCLThreshold	:DECode:BUS<n>:IIC:SCLThreshold?	both	:DECode:BUS<n>:IIC:SCLThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	2.00E-01
+:DECode:BUS<n>:IIC:SDASource	:DECode:BUS<n>:IIC:SDASource?	both	:DECode:BUS<n>:IIC:SDASource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C2
+:DECode:BUS<n>:IIC:SDAThreshold	:DECode:BUS<n>:IIC:SDAThreshold?	both	:DECode:BUS<n>:IIC:SDAThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row); ignored without error while the SDA source channel is off (spec 11 §6.7)	<value>; <value>=NR3	yes	2.00E-01
+:DECode:BUS<n>:SPI:BITorder	:DECode:BUS<n>:SPI:BITorder?	both	:DECode:BUS<n>:SPI:BITorder <order>	<n>={1|2}; <order>={LSB|MSB}	<order>; <order>={LSB|MSB}	yes	MSB
+:DECode:BUS<n>:SPI:CLKSource	:DECode:BUS<n>:SPI:CLKSource?	both	:DECode:BUS<n>:SPI:CLKSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:DECode:BUS<n>:SPI:CLKThreshold	:DECode:BUS<n>:SPI:CLKThreshold?	both	:DECode:BUS<n>:SPI:CLKThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	2.00E-01
+:DECode:BUS<n>:SPI:CSSource	:DECode:BUS<n>:SPI:CSSource?	both	:DECode:BUS<n>:SPI:CSSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:DECode:BUS<n>:SPI:CSThreshold	:DECode:BUS<n>:SPI:CSThreshold?	both	:DECode:BUS<n>:SPI:CSThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	2.00E-01
+:DECode:BUS<n>:SPI:CSTYpe	:DECode:BUS<n>:SPI:CSTYpe?	both	:DECode:BUS<n>:SPI:CSTYpe <type>	<n>={1|2}; <type>={NCS|CS|TIMeout[,<time>]}; <time>=NR3	<type>; <type>={NCS|CS|TIMeout[,<time>]}; <time>=NR3	yes	NCS
+:DECode:BUS<n>:SPI:DLENgth	:DECode:BUS<n>:SPI:DLENgth?	both	:DECode:BUS<n>:SPI:DLENgth <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	yes	8
+:DECode:BUS<n>:SPI:LATChedge	:DECode:BUS<n>:SPI:LATChedge?	both	:DECode:BUS<n>:SPI:LATChedge <slope>	<n>={1|2}; <slope>={RISing|FALLing}	<slope>; <slope>={RISing|FALLing}	yes	RISing
+:DECode:BUS<n>:SPI:MISOSource	:DECode:BUS<n>:SPI:MISOSource?	both	:DECode:BUS<n>:SPI:MISOSource <source>	<n>={1|2}; <source>={C<n>|D<d>|DIS}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>|DIS}	yes	DIS
+:DECode:BUS<n>:SPI:MISOThreshold	:DECode:BUS<n>:SPI:MISOThreshold?	both	:DECode:BUS<n>:SPI:MISOThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:DECode:BUS<n>:SPI:MOSISource	:DECode:BUS<n>:SPI:MOSISource?	both	:DECode:BUS<n>:SPI:MOSISource <source>	<n>={1|2}; <source>={C<n>|D<d>|DIS}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>|DIS}	yes	DIS
+:DECode:BUS<n>:SPI:MOSIThreshold	:DECode:BUS<n>:SPI:MOSIThreshold?	both	:DECode:BUS<n>:SPI:MOSIThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:DECode:BUS<n>:SPI:NCSSource	:DECode:BUS<n>:SPI:NCSSource?	both	:DECode:BUS<n>:SPI:NCSSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:DECode:BUS<n>:SPI:NCSThreshold	:DECode:BUS<n>:SPI:NCSThreshold?	both	:DECode:BUS<n>:SPI:NCSThreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	2.00E-01
+:DECode:BUS<n>:UART:BAUD	:DECode:BUS<n>:UART:BAUD?	both	:DECode:BUS<n>:UART:BAUD <baud>	<n>={1|2}; <baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|38400 bps|57600bps|115200bps|CUSTom[,<value>]}; <value>=NR1; ignored without error while the decode bus is off (spec 11 §6.7)	<baud>; <baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|38400 bps|57600bps|115200bps|CUSTom[,<value>]}; <value>=NR1	yes	9600bps
+:DECode:BUS<n>:UART:BITorder	:DECode:BUS<n>:UART:BITorder?	both	:DECode:BUS<n>:UART:BITorder <order>	<order>={LSB|MSB}	<order>; <order>={LSB|MSB}	yes	MSB
+:DECode:BUS<n>:UART:DLENgth	:DECode:BUS<n>:UART:DLENgth?	both	:DECode:BUS<n>:UART:DLENgth <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	yes	8
+:DECode:BUS<n>:UART:IDLE	:DECode:BUS<n>:UART:IDLE?	both	:DECode:BUS<n>:UART:IDLE <idle>	<n>={1|2}; <idle>={LOW|HIGH}	<idle>; <idle>={LOW|HIGH}	yes	HIGH
+:DECode:BUS<n>:UART:PARity	:DECode:BUS<n>:UART:PARity?	both	:DECode:BUS<n>:UART:PARity <parity>	<n>={1|2}; <parity>={NONE|ODD|EVEN|MARK|SPACe}	<parity>; <parity>={NONE|ODD|EVEN|MARK|SPACe}	yes	ODD
+:DECode:BUS<n>:UART:RXSource	:DECode:BUS<n>:UART:RXSource?	both	:DECode:BUS<n>:UART:RXSource <source>	<n>={1|2}; <source>={C<n>|D<d>|DIS}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>|DIS}	yes	DIS
+:DECode:BUS<n>:UART:RXTHreshold	:DECode:BUS<n>:UART:RXTHreshold?	both	:DECode:BUS<n>:UART:RXTHreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:DECode:BUS<n>:UART:STOP	:DECode:BUS<n>:UART:STOP?	both	:DECode:BUS<n>:UART:STOP <bit>	<n>={1|2}; <bit>={1|1.5|2}	<bit>; <bit>={1|1.5|2}	yes	1
+:DECode:BUS<n>:UART:TXSource	:DECode:BUS<n>:UART:TXSource?	both	:DECode:BUS<n>:UART:TXSource <source>	<n>={1|2}; <source>={C<n>|D<d>|DIS}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>|DIS}	yes	DIS
+:DECode:BUS<n>:UART:TXTHreshold	:DECode:BUS<n>:UART:TXTHreshold?	both	:DECode:BUS<n>:UART:TXTHreshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:DECode:BUS<n>:CAN:BAUD	:DECode:BUS<n>:CAN:BAUD?	both	:DECode:BUS<n>:CAN:BAUD <baud>	<n>={1|2}; <baud>= {5kbps|10kbps|20kbps|50kbps|100kbps|125kbps|250kbps|500 kbps|800kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {5kbps|10kbps|20kbps|50kbps|100kbps|125kbps|250kbps|500 kbps|800kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	yes	50kbps
+:DECode:BUS<n>:CAN:SOURce	:DECode:BUS<n>:CAN:SOURce?	both	:DECode:BUS<n>:CAN:SOURce <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:DECode:BUS<n>:CAN:THReshold	:DECode:BUS<n>:CAN:THReshold?	both	:DECode:BUS<n>:CAN:THReshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	3.00E+00
+:DECode:BUS<n>:LIN:BAUD	:DECode:BUS<n>:LIN:BAUD?	both	:DECode:BUS<n>:LIN:BAUD <baud>	<n>={1|2}; <baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|CUSTom[,<value>]}; <value>=NR1	yes	9600bps
+:DECode:BUS<n>:LIN:SOURce	:DECode:BUS<n>:LIN:SOURce?	both	:DECode:BUS<n>:LIN:SOURce <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:DECode:BUS<n>:LIN:THReshold	:DECode:BUS<n>:LIN:THReshold?	both	:DECode:BUS<n>:LIN:THReshold <value>	<n>={1|2}; <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	2.00E-01
+:DECode:BUS<n>:FLEXray:BAUD	:DECode:BUS<n>:FLEXray:BAUD?	both	:DECode:BUS<n>:FLEXray:BAUD <baud>	<n>={1|2}; <baud>={2500kbps|5Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>={2500kbps|5Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	unclear	-
+:DECode:BUS<n>:FLEXray:SOURce	:DECode:BUS<n>:FLEXray:SOURce?	both	:DECode:BUS<n>:FLEXray:SOURce <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:FLEXray:THReshold	:DECode:BUS<n>:FLEXray:THReshold?	both	:DECode:BUS<n>:FLEXray:THReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:CANFd:BAUDData	:DECode:BUS<n>:CANFd:BAUDData?	both	:DECode:BUS<n>:CANFd:BAUDData <baud>	<n>={1|2}; <baud>= {500kbps|1Mbps|2Mbps|5Mbps|8Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {500kbps|1Mbps|2Mbps|5Mbps|8Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	unclear	-
+:DECode:BUS<n>:CANFd:BAUDNominal	:DECode:BUS<n>:CANFd:BAUDNominal?	both	:DECode:BUS<n>:CANFd:BAUDNominal <baud>	<n>={1|2}; <baud>= {10kbps|25kbps|50kbps|100kbps|250kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {10kbps|25kbps|50kbps|100kbps|250kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	unclear	-
+:DECode:BUS<n>:CANFd:SOURce	:DECode:BUS<n>:CANFd:SOURce?	both	:DECode:BUS<n>:CANFd:SOURce <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:CANFd:THReshold	:DECode:BUS<n>:CANFd:THReshold?	both	:DECode:BUS<n>:CANFd:THReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:IIS:ANNotate	:DECode:BUS<n>:IIS:ANNotate?	both	:DECode:BUS<n>:IIS:ANNotate <type>	<n>={1|2}; <type>={ALL|LEFT|RIGHt}	<type>; <type>={ALL|LEFT|RIGHt}	unclear	-
+:DECode:BUS<n>:IIS:AVARiant	:DECode:BUS<n>:IIS:AVARiant?	both	:DECode:BUS<n>:IIS:AVARiant <type>	<n>={1|2}; <type>={I2S|LJ|RJ}	<type>; <type>={I2S|LJ|RJ}	unclear	-
+:DECode:BUS<n>:IIS:BCLKSource	:DECode:BUS<n>:IIS:BCLKSource?	both	:DECode:BUS<n>:IIS:BCLKSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:IIS:BCLKThreshold	:DECode:BUS<n>:IIS:BCLKThreshold?	both	:DECode:BUS<n>:IIS:BCLKThreshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:IIS:BITorder	:DECode:BUS<n>:IIS:BITorder?	both	:DECode:BUS<n>:IIS:BITorder <order>	<n>={1|2}; <order>={LSB|MSB}	<order>; <order>={LSB|MSB}	unclear	-
+:DECode:BUS<n>:IIS:DLENgth	:DECode:BUS<n>:IIS:DLENgth?	both	:DECode:BUS<n>:IIS:DLENgth <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:IIS:DSource	:DECode:BUS<n>:IIS:DSource?	both	:DECode:BUS<n>:IIS:DSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:IIS:DTHReshold	:DECode:BUS<n>:IIS:DTHReshold?	both	:DECode:BUS<n>:IIS:DTHReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:IIS:LATChedge	:DECode:BUS<n>:IIS:LATChedge?	both	:DECode:BUS<n>:IIS:LATChedge <slope>	<n>={1|2}; <slope>={RISing|FALLing}	<slope>; <slope>={RISing|FALLing}	unclear	-
+:DECode:BUS<n>:IIS:LCH	:DECode:BUS<n>:IIS:LCH?	both	:DECode:BUS<n>:IIS:LCH <left>	<n>={1|2}; <left>={LOW|HIGH}	<left>; <left>={LOW|HIGH}	unclear	-
+:DECode:BUS<n>:IIS:SBIT	:DECode:BUS<n>:IIS:SBIT?	both	:DECode:BUS<n>:IIS:SBIT <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:IIS:WSSource	:DECode:BUS<n>:IIS:WSSource?	both	:DECode:BUS<n>:IIS:WSSource <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:IIS:WSTHreshold	:DECode:BUS<n>:IIS:WSTHreshold?	both	:DECode:BUS<n>:IIS:WSTHreshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:M1553:LTHReshold	:DECode:BUS<n>:M1553:LTHReshold?	both	:DECode:BUS<n>:M1553:LTHReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:M1553:SOURce	:DECode:BUS<n>:M1553:SOURce?	both	:DECode:BUS<n>:M1553:SOURce <source>	<n>={1|2}; <source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	unclear	-
+:DECode:BUS<n>:M1553:UTHReshold	:DECode:BUS<n>:M1553:UTHReshold?	both	:DECode:BUS<n>:M1553:UTHReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:SENT:SOURce	:DECode:BUS<n>:SENT:SOURce?	both	:DECode:BUS<n>:SENT:SOURce <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:SENT:THReshold	:DECode:BUS<n>:SENT:THReshold?	both	:DECode:BUS<n>:SENT:THReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:SENT:FORMat	:DECode:BUS<n>:SENT:FORMat?	both	:DECode:BUS<n>:SENT:FORMat <format>	<n>={1|2}; <format>={NIBBles|FSIGnal|SSERial|ESERial}	<format>; <format>={NIBBles|FSIGnal|SSERial|ESERial}	unclear	-
+:DECode:BUS<n>:SENT:CLOCk	:DECode:BUS<n>:SENT:CLOCk?	both	:DECode:BUS<n>:SENT:CLOCk <value>	<n>={1|2}; <value>=NR3	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:SENT:TOLerance	:DECode:BUS<n>:SENT:TOLerance?	both	:DECode:BUS<n>:SENT:TOLerance <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:SENT:IDLE	:DECode:BUS<n>:SENT:IDLE?	both	:DECode:BUS<n>:SENT:IDLE <idle>	<n>={1|2}; <idle>={LOW|HIGH}	<idle>; <idle>={LOW|HIGH}	unclear	-
+:DECode:BUS<n>:SENT:LENGth	:DECode:BUS<n>:SENT:LENGth?	both	:DECode:BUS<n>:SENT:LENGth <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:SENT:CRC	:DECode:BUS<n>:SENT:CRC?	both	:DECode:BUS<n>:SENT:CRC <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	unclear	-
+:DECode:BUS<n>:SENT:PPULse	:DECode:BUS<n>:SENT:PPULse?	both	:DECode:BUS<n>:SENT:PPULse <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	unclear	-
+:DECode:BUS<n>:MANChester:SOURce	:DECode:BUS<n>:MANChester:SOURce?	both	:DECode:BUS<n>:MANChester:SOURce <source>	<n>={1|2}; <source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:DECode:BUS<n>:MANChester:THReshold	:DECode:BUS<n>:MANChester:THReshold?	both	:DECode:BUS<n>:MANChester:THReshold <value>	<n>={1|2}; <value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:DECode:BUS<n>:MANChester:BAUD	:DECode:BUS<n>:MANChester:BAUD?	both	:DECode:BUS<n>:MANChester:BAUD <baud>	<n>={1|2}; <value>=NR1	<baud>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:POLarity	:DECode:BUS<n>:MANChester:POLarity?	both	:DECode:BUS<n>:MANChester:PULarity <polar>	<n>={1|2}; <polar>={RISing|FALLing}	<polar>; <polar>={RISing|FALLing}	unclear	-
+:DECode:BUS<n>:MANChester:IDLE	:DECode:BUS<n>:MANChester:IDLE?	both	:DECode:BUS<n>:MANChester:IDLE <idle>	<n>={1|2}; <idle>={LOW|HIGH}	<idle>; <idle>={LOW|HIGH}	unclear	-
+:DECode:BUS<n>:MANChester:IBITs	:DECode:BUS<n>:MANChester:IBITs?	both	:DECode:BUS<n>:MANChester:IBITs <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:STARt	:DECode:BUS<n>:MANChester:STARt?	both	:DECode:BUS<n>:MANChester:STARt <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:SSIZe	:DECode:BUS<n>:MANChester:SSIZe?	both	:DECode:BUS<n>:MANChester:SSIZe <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:HSIZe	:DECode:BUS<n>:MANChester:HSIZe?	both	:DECode:BUS<n>:MANChester:HSIZe <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:TSIZe	:DECode:BUS<n>:MANChester:TSIZe?	both	:DECode:BUS<n>:MANChester:TSIZe <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:WSIZe	:DECode:BUS<n>:MANChester:WSIZe?	both	:DECode:BUS<n>:MANChester:WSIZe <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:DSIZe	:DECode:BUS<n>:MANChester:DSIZe?	both	:DECode:BUS<n>:MANChester:DSIZe <value>	<n>={1|2}; <value>=NR1	<value>; <value>=NR1	unclear	-
+:DECode:BUS<n>:MANChester:DISPlay	:DECode:BUS<n>:MANChester:DISPlay?	both	:DECode:BUS<n>:MANChester:DISPlay <format>	<n>={1|2}; <format>={WORD|BIT}	<format>; <format>={WORD|BIT}	unclear	-
+:DECode:BUS<n>:MANChester:BITorder	:DECode:BUS<n>:MANChester:BITorder?	both	:DECode:BUS<n>:MANChester:BITorder <order>	<n>={1|2}; <order>={LSB|MSB}	<order>; <order>={LSB|MSB}	unclear	-
+:DIGital	:DIGital?	both	:DIGital <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DIGital:ACTive	:DIGital:ACTive?	both	:DIGital:ACTive <digital>	<digital>={D<d>}; <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<digital>; <digital>={D<d>}	yes	D0
+:DIGital:BUS<n>:DISPlay	:DIGital:BUS<n>:DISPlay?	both	:DIGital:BUS<n>:DISPlay <state>	<n>={1|2}; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DIGital:BUS<n>:DEFault	-	cmd	:DIGital:BUS<n>:DEFault	<n>={1|2}	-	yes	-
+:DIGital:BUS<n>:FORMat	:DIGital:BUS<n>:FORMat?	both	:DIGital:BUS<n>:FORMat <format>	<n>={1|2}; <format>={BINary|DECimal|UDECimal|HEX}	<format>; <format>={BINary|DECimal|UDECimal|HEX}	yes	BINary
+:DIGital:BUS<n>:MAP	:DIGital:BUS<n>:MAP?	both	:DIGital:BUS<n>:MAP <source>[...[,<source>]]	<n>={1|2}; <source>={D<d>}; <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>[...[,<source>]]; <source>={D<d>}	yes	D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12,D13,D14,D15
+:DIGital:D<d>	:DIGital:D<d>?	both	:DIGital:D<d> <state>	<d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1); <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	SUPPORT_OFF
+:DIGital:HEIGht	:DIGital:HEIGht?	both	:DIGital:HEIGht <value>	<value>=NR3	<value>; <value>=NR3	yes	HIG
+:DIGital:LABel<d>	:DIGital:LABel<d>?	both	:DIGital:LABel<d> <string>	<d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1); <string>=Quoted string of ASCII text. The length of the string	<string>	yes	"CUST[0]"
+:DIGital:POINts	:DIGital:POINts?	query	-	-	<value>; <value>=NR3	yes	2.00E+03
+:DIGital:POSition	:DIGital:POSition?	both	:DIGital:POSition <value>	<value>=NR3	<value>; <value>=NR3	yes	0.00E+00
+:DIGital:SKEW	:DIGital:SKEW?	both	:DIGital:SKEW <value>	<value>=NR3	<value>; <value>=NR3	yes	0.00E+00
+:DIGital:SRATe	:DIGital:SRATe?	query	-	-	<value>; <value>=NR3	yes	1.00E+09
+:DIGital:THReshold<n>	:DIGital:THReshold<n>?	both	:DIGital:THReshold<n> <type>	<n>={1 (D0-D7)|2 (D8-D15)}; <type>={TTL|CMOS|LVCMOS33|LVCMOS25|CUSTom[,<value>]}; <value> NR3; SDS800X HD row of the custom-range table is ambiguous in the text dump (neighbouring rows: [-8E-1,8E-1] and [-1E+01,1E+01])	<type>; <type>= {TTL|CMOS|LVCMOS33|LVCMOS25|CUSTom[,<value>]}; <value>=NR3	yes	TTL
+:DISPlay:AXIS	:DISPlay:AXIS?	both	:DISPlay:AXIS <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DISPlay:AXIS:MODE	:DISPlay:AXIS:MODE?	both	:DISPlay:AXIS:MODE <mode>	<mode>={FIXed|MOVing}	<mode>; <mode>={FIXed|MOVing}	yes	FIXed
+:DISPlay:AXIS:POSition	:DISPlay:AXIS:POSition?	both	:DISPlay:AXIS:POSition <pos>	<pos>={LEFT|MIDDle|RIGHt}	<pos>; <pos>={LEFT|MIDDle|RIGHt}	yes	LEFT
+:DISPlay:BACKlight	:DISPlay:BACKlight?	both	:DISPlay:BACKlight <value>	<value>=NR1 range [0, 100]	<value>; <value>=NR1	yes	50
+:DISPlay:CLEar	-	cmd	:DISPlay:CLEar	-	-	yes	-
+:DISPlay:COLor	:DISPlay:COLor?	both	:DISPlay:COLor <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:DISPlay:GRATicule	:DISPlay:GRATicule?	both	:DISPlay:GRATicule <value>	<value>=NR1 range [0, 100]	<value>; <value>=NR1	yes	20
+:DISPlay:GRIDstyle	:DISPlay:GRIDstyle?	both	:DISPlay:GRIDstyle <type>	<type>={FULL|LIGHt|NONE}	<type>; <type>={FULL|LIGHt|NONE}	yes	FULL
+:DISPlay:HIDemenu	-	both	:DISPlay:HIDemenu	-	-	yes	-
+:DISPlay:INTensity	:DISPlay:INTensity?	both	:DISPlay:INTensity <value>	<value>=NR1 range [0, 100]	<value>; <value>=NR1	yes	50
+:DISPlay:MENU	:DISPlay:MENU?	both	:DISPlay:MENU <type>	<type>={EMBedded|FLOating}	<type>; <type>={EMBedded|FLOating}	yes	EMBedded
+:DISPlay:MENU:HIDE	:DISPlay:MENU:HIDE?	both	:DISPlay:MENU:HIDE <time>	<time>={OFF|3S|5S|10S|30S|60S}	<time>; <time>={OFF|3S|5S|10S|30S|60S}	yes	10S
+:DISPlay:PERSistence	:DISPlay:PERSistence?	both	:DISPlay:PERSistence <time>	<time>= SDS800X HD: {OFF|INFinite|1S|5S|10S|30S}	<time>	yes	OFF
+:DISPlay:TRANsparence	:DISPlay:TRANsparence?	both	:DISPlay:TRANsparence <value>	<value>=NR1 range [0, 100] | SHS800X/SHS1000X only	<value>; <value>=NR1	no	-
+:DISPlay:TYPE	:DISPlay:TYPE?	both	:DISPlay:TYPE <type>	<type>={VECTor|DOT}	<type>; <type>={VECTor|DOT}	yes	VECTor
+:DVM	:DVM?	both	:DVM <state>	<state>={ON|OFF} (no DVM on this product; see spec 15)	<state>; <state>={ON|OFF}	unclear	-
+:DVM:ALARm	:DVM:ALARm?	both	:DVM:ALARm <state>	<state>={ON|OFF} (no DVM on this product; see spec 15)	<state>; <state>={ON|OFF}	unclear	-
+:DVM:ARANge	:DVM:ARANge?	both	:DVM:ARANge <state>	<state>={ON|OFF} (no DVM on this product; see spec 15)	<state>; <state>={ON|OFF}	unclear	-
+:DVM:CURRent	:DVM:CURRent?	query	-	- (no DVM on this product; see spec 15)	<value>; <value>=NR3	unclear	-
+:DVM:HOLD	:DVM:HOLD?	both	:DVM:HOLD <state>	<state>={ON|OFF} (no DVM on this product; see spec 15)	<state>; <state>={ON|OFF}	unclear	-
+:DVM:MODE	:DVM:MODE?	both	:DVM:MODE <mode>	<mode>={DCavg|DCRMs|ACRMs|PKPK|AMPLitude} (no DVM on this product; see spec 15)	<mode>; <mode>={DCavg|DCRMs|ACRMs|PKPK|AMPLitude}	unclear	-
+:DVM:SOURce	:DVM:SOURce?	both	:DVM:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1) (no DVM on this product; see spec 15)	<source>; <source>={Cn}	unclear	-
+:FUNCtion:FFTDisplay	:FUNCtion:FFTDisplay?	both	:FUNCtion:FFTDisplay <mode>	<mode>={SPLit|FULL|EXCLusive}	<mode>; <mode>={SPLit|FULL|EXCLusive}	yes	SPLit
+:FUNCtion:GVALue	:FUNCtion:GVALue?	both	:FUNCtion:GVALue <valueA>,<valueB>	<value>=NR3	<valueA>,<valueB>; <value>=NR3	yes	-7.00E-07,1.00E-07
+:FUNCtion<x>	:FUNCtion<x>?	both	:FUNCtion<x> <state>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:FUNCtion<x>:AVERage:NUM	:FUNCtion<x>:AVERage:NUM?	both	:FUNCtion<x>:AVERage:NUM <num>	<num>= SDS800X HD: {4|16|32|64|128|256|512|1024}	<num>	yes	4
+:FUNCtion<x>:DIFF:DX	:FUNCtion<x>:DIFF:DX?	both	:FUNCtion<x>:DIFF:DX <dx>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <dx>=NR1	<dx>; <dx>=NR1	yes	4
+:FUNCtion<x>:ERES:BITS	:FUNCtion<x>:ERES:BITS?	both	:FUNCtion<n>:ERES:BITS <bits>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <bits>={0.5|1.0|1.5|2.0|2.5|3.0}	<bits>:= {0.5|1.0|1.5|2.0|2.5|3.0}	yes	0.5
+:FUNCtion<x>:FFT:AUToset	-	cmd	:FUNCtion<x>:FFT:AUToset <mode>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to on FUNCtion and defines the math that is affected by; <mode>={SPAN|PEAK|NORMal}	-	yes	-
+:FUNCtion<x>:FFT:HCENter	:FUNCtion<x>:FFT:HCENter?	both	:FUNCtion<x>:FFT:HCENter <center>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <center>=NR3	<center>; <center>=NR3	yes	1.25E+08
+:FUNCtion<x>:FFT:HSCale	:FUNCtion<x>:FFT:HSCale?	query	-	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the	<scale>; <scale>=NR3	yes	2.50E+07
+:FUNCtion<x>:FFT:SPAN	:FUNCtion<x>:FFT:SPAN?	both	:FUNCtion<x>:FFT:SPAN <span>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <span>=NR3	<span>; <span>=NR3	yes	2.50E+08
+:FUNCtion<x>:FFT:LOAD	:FUNCtion<x>:FFT:LOAD?	both	:FUNCtion<x>:FFT:LOAD <load>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <load>=NR1	<load>; <load>=NR1	yes	50
+:FUNCtion<x>:FFT:MODE	:FUNCtion<x>:FFT:MODE?	both	:FUNCtion<x>:FFT:MODE <mode>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <mode>={NORMal|MAXHold|AVERage[,<num>]}; <num>=NR1	<mode>; <mode>={NORMal|MAXHold|AVERage[,<num>]}; <num>=NR1	yes	NORMal
+:FUNCtion<x>:FFT:POINts	:FUNCtion<x>:FFT:POINts?	both	:FUNCtion<x>:FFT:POINts <point>	<point>= SDS800X HD: {1k|2k|4k|8k|16k|32k|64k|128k|256k|512k|1M|2M}; ignored without error while the math channel is off (spec 11 §6.7)	<point>	yes	1M
+:FUNCtion<x>:FFT:RESET	-	cmd	:FUNCtion<x>:FFT:RESET	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the	-	yes	-
+:FUNCtion<x>:FFT:RLEVel	:FUNCtion<x>:FFT:RLEVel?	both	:FUNCtion<x>:FFT:RLEVel <level>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <level>=NR3	<level>; <level>=NR3	yes	1.67E+01
+:FUNCtion<x>:FFT:SCALe	:FUNCtion<x>:FFT:SCALe?	both	:FUNCtion<x>:FFT:SCALe <scale>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <scale>=NR3	<scale>; <scale>=NR3	yes	2.00E+01
+:FUNCtion<x>:FFT:SEARch	:FUNCtion<x>:FFT:SEARch?	both	:FUNCtion<x>:FFT:SEARch <type>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <type>={OFF|PEAK|MARKer}	<type>; <type>={OFF|PEAK|MARKer}	yes	PEAK
+:FUNCtion<x>:FFT:SEARch:EXCursion	:FUNCtion<x>:FFT:SEARch:EXCursion?	both	:FUNCtion<x>:FFT:SEARch:EXCursion <value>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <value>=NR3	<value>; <value>=NR3	yes	0.00E+00
+:FUNCtion<x>:FFT:SEARch:MARKer<n>	-	cmd	:FUNCtion<x>:FFT:SEARch:MARKer<n> <freq>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to on FUNCtion and defines the math that is affected by; <n>=1 to (# marker index) in NR1 format, is attached as a; <freq>={NPeak|NAMPlitude|<value>}	-	yes	-
+:FUNCtion<x>:FFT:SEARch:MARKer<n>:SHOW	-	cmd	:FUNCtion<x>:FFT:SEARch:MARKer<n>:SHOW <state>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to on FUNCtion and defines the math that is affected by; <n>=1 to (# marker index) in NR1 format, is attached as a; <state>={ON|OFF}	-	yes	-
+:FUNCtion<x>:FFT:SEARch:MON	-	cmd	:FUNCtion<x>:FFT:SEARch:MON <type>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to on FUNCtion and defines the math that is affected by; <type>={PEAK|HARMonics}	-	yes	-
+:FUNCtion<x>:FFT:SEARch:PORDer	:FUNCtion<x>:FFT:SEARch:PORDer?	both	:FUNCtion<x>:FFT:SEARch:PORDer <type>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to on FUNCtion and defines the math that is affected by; <type>={AMPLitude|FREQuency}	<type>; <type>={AMPLitude|FREQuency}	yes	AMPLitude
+:FUNCtion<x>:FFT:SEARch:RESult	:FUNCtion<x>:FFT:SEARch:RESult?	query	-	-	<type>,<no>,<freq>,<ampl>;; <type>={Markers|Peaks}; <no>=NR1; <freq>=NR3; <ampl>=NR3	yes	Peaks,
+:FUNCtion<x>:FFT:SEARch:TABLe	:FUNCtion<x>:FFT:SEARch:TABLe?	both	:FUNCtion<x>:FFT:SEARch:TABLe <state>	<x>=1 to (# math functions) in NR1 format is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:FUNCtion<x>:FFT:SEARch:TABLe:DELTa	:FUNCtion<x>:FFT:SEARch:TABLe:DELTa?	both	:FUNCtion<x>:FFT:SEARch:TABLe:DELTa <state>	<x>=1 to (# math functions) in NR1 format is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:FUNCtion<x>:FFT:SEARch:TABLe:FREQuency	:FUNCtion<x>:FFT:SEARch:TABLe:FREQuency?	both	:FUNCtion<x>:FFT:SEARch:TABLe:FREQuency <state>	<x>=1 to (# math functions) in NR1 format is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:FUNCtion<x>:FFT:SEARch:THReshold	:FUNCtion<x>:FFT:SEARch:THReshold?	both	:FUNCtion<x>:FFT:SEARch:THReshold <value>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <value>=NR3	<value>; <value>=NR3	yes	0.00E+00
+:FUNCtion<x>:FFT:UNIT	:FUNCtion<x>:FFT:UNIT?	both	:FUNCtion<x>:FFT:UNIT <unit>	<x>=1 to (# math functions) in NR1 format is attached as a suffix to FUNCtion and defines the math that is affected by the; <unit>={DBVrms|Vrms|DBm}	<unit>; <unit>={DBVrms|Vrms|DBm}	yes	DBVrms
+:FUNCtion<x>:FFT:WINDow	:FUNCtion<x>:FFT:WINDow?	both	:FUNCtion<x>:FFT:WINDow <window>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <window>= {RECTangle|BLACkman|HANNing|HAMMing|FLATtop}	<window>; <window>= {RECTangle|BLACkman|HANNing|HAMMing|FLATtop}	yes	RECTangle
+:FUNCtion<x>:FILTer:TYPe	:FUNCtion<x>:FILTer:TYPe?	both	:FUNCtion<x>:FILTer:TYPe <type>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <type>={LPASs|HPASs|BPASs|BREJect}	<type>; <type>={LPASs|HPASs|BPASs|BREJect}	yes	LPASs
+:FUNCtion<x>:FILTer:HFRequency	:FUNCtion<x>:FILTer:HFRequency?	both	:FUNCtion<x>:FILTer:HFRequency <value>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:FUNCtion<x>:FILTer:LFRequency	:FUNCtion<x>:FILTer:LFRequency?	both	:FUNCtion<x>:FILTer:LFRequency <value>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <value>=NR3	<value>; <value>=NR3	yes	2.50E+07
+:FUNCtion<x>:INTegrate:GATE	:FUNCtion<x>:INTegrate:GATE?	both	:FUNCtion<x>:INTegrate:GATE <state>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:FUNCtion<x>:INTegrate:OFFSet	:FUNCtion<x>:INTegrate:OFFSet?	both	:FUNCtion<x>:INTegrate:OFFSet <offset>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <offset>=NR3	<offset>; <offset>=NR3	yes	0.00E+00
+:FUNCtion<x>:INTErpolate:COEF	:FUNCtion<x>:INTErpolate:COEF?	both	:FUNCtion<x>:INTErpolate:COEF <coef>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <coef>={2|5|10|20}	<coef>:= {2|5|10|20}	yes	2
+:FUNCtion<x>:INVert	:FUNCtion<x>:INVert?	both	:FUNCtion<x>:INVert <state>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	(no reply)
+:FUNCtion<x>:LABel	:FUNCtion<x>:LABel?	both	:FUNCtion<x>:LABel <state>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:FUNCtion<x>:LABel:TEXT	:FUNCtion<x>:LABel:TEXT?	both	:FUNCtion<x>:LABel:TEXT <string>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <string>=Quoted string of ASCII text. The length of the string	<string>	yes	"F1"
+:FUNCtion<x>:MAXHold:SWeeps	:FUNCtion<x>:MAXHold:Sweeps?	both	:FUNCtion<x>:MAXHold:Sweeps <value>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <value>=NR1	<value>; <value>=NR1	yes	0
+:FUNCtion<x>:MINHold:SWeeps	:FUNCtion<x>:MINHold:Sweeps?	both	:FUNCtion<x>:MINHold:SWeeps <value>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <value>=NR1	<value>; <value>=NR1	yes	0
+:FUNCtion<x>:OPERation	:FUNCtion<x>:OPERation?	both	:FUNCtion<x>:OPERation <operation>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <operation>= {ADD|SUBTract|MULTiply|DIVision|INTegrate|DIFF|FFT|SQRT|ERES|AVERage|ABSolute|SIGN|IDENtity|NEGation|EXP|TEN|LN|LOG|INTErpolate|MAXHold|MINHold|FILTer}	<operation>; <operation>= {ADD|SUBTract|MULTiply|DIVision|INTegrate|DIFF|FFT|SQRT|ERES|AVERage|ABSolute|SIGN|IDENtity|NEGation|EXP|TEN|LN|LOG|INTErpolate|MAXHold|MINHold|FILTer}	yes	FFT
+:FUNCtion<x>:POSition	:FUNCtion<x>:POSition?	both	:FUNCtion<x>:POSition <offset>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <offset>=NR3	<offset>; <offset>=NR3	yes	0.00E+00
+:FUNCtion<x>:SCALe	:FUNCtion<x>:SCALe?	both	:FUNCtion<x>:SCALe <scale>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <scale>=NR3	<scale>; <scale>=NR3	yes	1.00E+00
+:FUNCtion<x>:SOURce1	:FUNCtion<x>:SOURce1?	both	:FUNCtion<x>:SOURce1 <source>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <source>={C<n>|Z<n>|F<x>|M<m>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1)	<source>; <source>={C<n>|Z<n>|F<x>|M<m>}	yes	C1
+:FUNCtion<x>:SOURce2	:FUNCtion<x>:SOURce2?	both	:FUNCtion<x>:SOURce2 <source>	<x>=1 to (# math functions) in NR1 format, is attached as a suffix to FUNCtion and defines the math that is affected by the; <source>={C<n>|Z<n>|F<x>|M<m>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1)	<source>; <source>={C<n>|Z<n>|F<x>|M<m>}	yes	C1
+:HISTORy	:HISTORy?	both	:HISTORy <state>	<state>={ON|OFF} | ON stops the acquisition (held frame shown), OFF resumes run mode (spec 03 §6.3)	<state>; <state>={ON|OFF}	yes	OFF
+:HISTORy:FRAMe	:HISTORy:FRAMe?	both	:HISTORy:FRAMe <value>	<value>=NR1	<value>; <value>=NR1	yes	0
+:HISTORy:INTERval	:HISTORy:INTERval?	both	:HISTORy:INTERval <value>	<value>=NR3 range [1.00E-06,1]	<value>; <value>=NR3	yes	1.00E-06
+:HISTORy:LIST	:HISTORy:LIST?	both	:HISTORy:LIST <state>	<state>={OFF|ON[,<type>]}; <type>={TIME|DELTa}	<state>; <state>={OFF|ON[,<type>]}; <type>={TIME|DELTa}	yes	-
+:HISTORy:PLAY	:HISTORy:PLAY?	both	:HISTORy:PLAY <state>	<state>={BACKWards|PAUSe|FORWards}	<state>; <state>={BACKWards|PAUSe|FORWards}	yes	-
+:HISTORy:TIME	:HISTORy:TIME?	query	-	-	<time>; <time>="hh: mm: ss. uuuuuu" (two-digit hours, minutes and seconds, six-digit microseconds, a space after each separator), time of day of the shown frame; only while history is on (spec 11 §6.7.1)	yes	-
+:MEASure	:MEASure?	both	:MEASure <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MEASure:ADVanced:CLEar	-	cmd	:MEASure:ADVanced:CLEar	-	-	yes	-
+:MEASure:ADVanced:LINenumber	:MEASure:ADVanced:LINenumber?	both	:MEASure:ADVanced:LINenumber <value>	<value>=NR1 range [1, 12]	<value>; <value>=NR1	yes	12
+:MEASure:ADVanced:P<n>	:MEASure:ADVanced:P<n>?	both	:MEASure:ADVanced:P<n> <state>	<n>=1 to 12; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MEASure:ADVanced:P<n>:SOURce1	:MEASure:ADVanced:P<n>:SOURce1?	both	:MEASure:ADVanced:P<n>:SOURce1 <source>	<n>=1 to 12; <source>={C<n>|Z<n>|F<x>|M<m>|D<d>|ZD<d>|REF<r>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1); <r>={A|B|C|D}	<source>; <source>={C<n>|Z<n>|F<x>|M<m>|D<d>|ZD<d>|REF<r>}	yes	C1
+:MEASure:ADVanced:P<n>:SOURce2	-	both	:MEASure:ADVanced:P<n>:SOURce2 <source>	<n>=1 to 12; <source>={C<n>|F<x>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1)	<source>; <source>={C<n>|F<x>}	yes	-
+:MEASure:ADVanced:P<n>:STATistics	:MEASure:ADVanced:P<n>:STATistics? <type>	query	-	<n>=1 to 12; <type>= {ALL|CURRent|MEAN|MAXimum|MINimum|STDev|COUNt}	<value>; <value>=NR3	yes	-
+:MEASure:ADVanced:P<n>:SHIStory	:MEASure:ADVanced:P<n>:SHIStory? [ <count>]	query	-	<n>=1 to 12; <count>=The number and range of historical statistical data	Count =<value>,<value1>,<value2>,…,<valueN>; <value>=Number of statistical data.; <valueN>=Statistical data values.	yes	-
+:MEASure:ADVanced:P<n>:TYPE	:MEASure:ADVanced:P<n>:TYPE?	both	:MEASure:ADVanced:P<n>:TYPE <parameter>	<n>=1 to 12; <parameter>= {PKPK|MAX|MIN|AMPL|TOP|BASE|LEVELX|CMEAN|MEAN|STDEV|VSTD|RMS|CRMS|MEDIAN|CMEDIAN|OVSN|FPRE|OVSP|RPRE|ULOWer|PER|FREQ|TMAX|TMIN|PWID|NWID|DUTY|NDUTY|WID|NBWID|DELAY|TIMEL|RISE|FALL|RISE10T90|FALL90T10|CCJ|PAREA|NAREA|AREA|ABSAREA|CYCLES|REDGES|FEDGES|EDGES|PPULSES|NPULSES|PHA|SKEW|FRR|FRF|FFR|FFF|LRR|LRF|LFR|LFF|PACArea|NACArea|ACArea|ABSACArea|PSLOPE|NSLOPE|TSR|TSF|THR|THF|DTIMe1|DTIMe2|DTIMe3|DTIMe4}	<parameter>	yes	MAX
+:MEASure:ADVanced:P<n>:VALue	:MEASure:ADVanced:P<n>:VALue?	query	-	<n>=1 to 12	<value>; <value>=NR3	yes	0.000000E+00
+:MEASure:ADVanced:STATistics	:MEASure:ADVanced:STATistics?	both	:MEASure:ADVanced:STATistics <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MEASure:ADVanced:STATistics:AIMLimit	:MEASure:ADVanced:STATistics:AIMLimit?	both	:MEASure:ADVanced:STATistics:AIMLimit <value>	<value>=NR1	<value>; <value>=NR1	yes	1000
+:MEASure:ADVanced:STATistics:HISTOGram	:MEASure:ADVanced:STATistics:HISTOGram?	both	:MEASure:ADVanced:STATistics:HISTOGram <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MEASure:ADVanced:STATistics:MAXCount	:MEASure:ADVanced:STATistics:MAXCount?	both	:MEASure:ADVanced:STATistics:MAXCount <value>	<value>=NR1 range [0, 1024]	<value>; <value>=NR1	yes	0
+:MEASure:ADVanced:STATistics:RESet	-	cmd	:MEASure:ADVanced:STATistics:RESet	-	-	yes	-
+:MEASure:ADVanced:STYLe	:MEASure:ADVanced:STYLe?	both	:MEASure:ADVanced:STYLe <type>	<type>={M1|M2}	<type>; <type>={M1|M2}	yes	M1
+:MEASure:ASTRategy	:MEASure:ASTRategy?	both	:MEASure:ASTRategy <type>	<type>={AUTO|MANual}	<type>; <type>={AUTO|MANual}	yes	AUTO
+:MEASure:ASTRategy:BASE	:MEASure:ASTRategy:BASE?	both	:MEASure:ASTRategy:BASE <type>	<type>={HISTogram|MIN}	<type>; <type>={HISTogram|MIN}	yes	HISTogram
+:MEASure:ASTRategy:TOP	:MEASure:ASTRategy:TOP?	both	:MEASure:ASTRategy:TOP <type>	<type>={HISTogram|MAX}	<type>; <type>={HISTogram|MAX}	yes	HISTogram
+:MEASure:DITMe<n>:EDGE1	:MEASure:DITMe<n>:EDGE1?	both	:MEASure:DITMe<n>:EDGE1 <value>	<n>=delta time index, the range is [1,4]; <value>=start edge in NR1 format. The value range is limited	<value>	guide-only	-
+:MEASure:DITMe<n>:EDGE2	:MEASure:DITMe<n>:EDGE2?	both	:MEASure:DITMe<n>:EDGE2 <value>	<n>=delta time index, the range is [1,4].; <value>=end edge in NR1 format. The value range is limited	<value>	guide-only	-
+:MEASure:DITMe<n>:SLOPe1	:MEASure:DITMe<n>:SLOPe1?	both	:MEASure:DITMe<n>:SLOPe1 <slope_type>	<n>=delta time index, the range is [1,4]; <slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	guide-only	-
+:MEASure:DITMe<n>:SLOPe2	:MEASure:DITMe<n>:SLOPe2?	both	:MEASure:DITMe<n>:SLOPe2 <slope_type>	<n>=delta time index, the range is [1,4].; <slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	guide-only	-
+:MEASure:DITMe<n>:THReshold1	:MEASure:DITMe<n>:THReshold1?	both	:MEASure:DITMe<n>:THReshold1 <type>	<n>=delta time index, the range is [1,4].; <type>={UPPer|MIDDle|LOWer}	<type>; <type>={UPPer|MIDDle|LOWer}	guide-only	-
+:MEASure:DITMe<n>:THReshold2	:MEASure:DITMe<n>:THReshold2?	both	:MEASure:DITMe<n>:THReshold2 <type>	<n>=delta time index, the range is [1,4].; <type>={UPPer|MIDDle|LOWer}	<type>; <type>={UPPer|MIDDle|LOWer}	guide-only	-
+:MEASure:GATE	:MEASure:GATE?	both	:MEASure:GATE <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MEASure:GATE:GA	:MEASure:GATE:GA?	both	:MEASure:GATE:GA <value>	<value>=NR3 range [-horizontal_grid/2*timebase, horizontal_grid/2*timebase]	<value>; <value>=NR3	yes	-7.00E-07
+:MEASure:GATE:GB	:MEASure:GATE:GB?	both	:MEASure:GATE:GB <value>	<value>=NR3 range [-horizontal_grid/2*timebase, horizontal_grid/2*timebase]; clamped (rule UNVERIFIED, spec 11 §6.7)	<value>; <value>=NR3	yes	1.00E-07
+:MEASure:MODE	:MEASure:MODE?	both	:MEASure:MODE <type>	<type>={SIMPle|ADVanced}	<type>; <type>={SIMPle|ADVanced}	yes	SIMPle
+:MEASure:RDISplay	:MEASure:RDISplay?	both	:MEASure:RDISplay <type>	<type>={EMBedded|FLOating}	<type>; <type>={EMBedded|FLOating}	yes	EMBedded
+:MEASure:SIMPle:CLEar	-	cmd	:MEASure:SIMPle:CLEar	-	-	yes	-
+:MEASure:SIMPle:ITEM	-	cmd	:MEASure:SIMPle:ITEM <parameter>,<state>	<parameter>= {PKPK|MAX|MIN|AMPL|TOP|BASE|LEVELX|CMEAN|MEAN|STDEV|VSTD|RMS|CRMS|MEDIAN|CMEDIAN|OVSN|ULOWer|FPRE|OVSP|RPRE|PER|FREQ|TMAX|TMIN|PWID|NWID|DUTY|NDUTY|WID|NBWID|DELAY|TIMEL|RISE|FALL|RISE20T80|FALL80T20|CCJ|PAREA|NAREA|AREA|ABSAREA|CYCLES|REDGES|FEDGES|EDGES|PPULSES|NPULSES|PACArea|NACArea|ACArea|ABSACArea}; <state>={ON|OFF}	-	yes	-
+:MEASure:SIMPle:SOURce	:MEASure:SIMPle:SOURce?	both	:MEASure:SIMPle:SOURce <source>	<source>={C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|D<d>|ZD<d>|REF<r>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1); <r>={A|B|C|D}	<source>; <source>={C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|D<d>|ZD<d>|REF<r>}	yes	C1
+:MEASure:SIMPle:VALue	:MEASure:SIMPle:VALue? <type>	query	-	<type>= {PKPK|MAX|MIN|AMPL|TOP|BASE|LEVELX|CMEAN|MEAN|STDEV|VSTD|RMS|CRMS|MEDIAN|CMEDIAN|OVSN|FPRE|OVSP|RPRE|ULOWer|PER|FREQ|TMAX|TMIN|PWID|NWID|DUTY|NDUTY|WID|NBWID|DELAY|TIMEL|RISE|FALL|RISE20T80|FALL80T20|CCJ|PAREA|NAREA|AREA|ABSAREA|CYCLES|REDGES|FEDGES|EDGES|PPULSES|NPULSES|PACArea|NACArea|ACArea|ABSACArea|ALL}	<value>; <value>=NR3	yes	-
+:MEASure:THReshold:SOURce	:MEASure:THReshold:SOURce?	both	:MEASure:THReshold:SOURce <source>	<source>={C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|REF<r>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1) integer; <m>=1 to (# memory waveforms) (NR1); <r>={A|B|C|D}	<source>:= {C<n>|Z<n>|F<x>|ZF<x>|M<m>|ZM<m>|REF<r>}	yes	C1
+:MEASure:THReshold:TYPE	:MEASure:THReshold:TYPE?	both	:MEASure:THReshold:TYPE <type>	<type>={PERCent|ABSolute}	<type>; <type>={PERCent|ABSolute}	yes	PERCent
+:MEASure:THReshold:ABSolute	:MEASure:THReshold:ABSolute?	both	:MEASure:THReshold:ABSolute <high>,<mid>,<low>	-	<high>,<mid>,<low>	yes	9.00E+01,5.00E+01,1.00E+01
+:MEASure:THReshold:PERCent	:MEASure:THReshold:PERCent?	both	:MEASure:THReshold:PERCent <high>,<mid>,<low>	-	<high>,<mid>,<low>	yes	9.00E+01,5.00E+01,1.00E+01
+:MEMory<m>:HORizontal:POSition	:MEMory<m>:HORizontal:POSition?	both	:MEMory<m>:HORizontal:POSition <val>	<m>=1 to (# memory waveforms) (NR1); <val>=NR3	<val>; <val>=NR3	yes	(no reply)
+:MEMory<m>:HORizontal:SCALe	:MEMory<m>:HORizontal:SCALe?	both	:MEMory<m>:HORizontal:SCALe <value>	<m>=1 to (# memory waveforms) (NR1); <value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:MEMory<m>:HORizontal:SYNC	:MEMory<m>:HORizontal:SYNC?	both	:MEMory<m>:HORizontal:SYNC <state>	<m>=1 to (# memory waveforms) (NR1); <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	(no reply)
+:MEMory<m>:IMPort	-	cmd	:MEMory<m>:IMPort <source>	<m>=1 to (# memory waveforms) (NR1); <source>={C<n>|Z<n>|F<x>|M<m>|<path>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <m>=1 to (# memory waveforms) (NR1)	-	yes	-
+:MEMory<m>:LABel	:MEMory<m>:LABel?	both	:MEMory<m>:LABel <state>	<m>=1 to (# memory waveforms) (NR1); <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	(no reply)
+:MEMory<m>:LABel:TEXT	:MEMory<m>:LABel:TEXT?	both	:MEMory<m>:LABel:TEXT <string>	<m>=1 to (# memory waveforms) (NR1); <string>=Quoted string of ASCII text. The length of the string	<string>	yes	(no reply)
+:MEMory<m>:SWITch	:MEMory<m>:SWITch?	cmd	:MEMory<m>:SWITch <state>	<m>=1 to (# memory waveforms) (NR1); <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	(no reply)
+:MEMory<m>:VERTical:POSition	:MEMory<m>:VERTical:POSition?	both	:MEMory<m>:VERTical:POSition <offset>	<m>=1 to (# memory waveforms) (NR1); <offset>=NR3	<offset>; <offset>=NR3	yes	(no reply)
+:MEMory<m>:VERTical:SCALe	:MEMory<m>:VERTical:SCALe?	both	:MEMory<m>:VERTical:SCALe <scale>	<m>=1 to (# memory waveforms) (NR1); <scale>=NR3	<scale>; <scale>=NR3	yes	(no reply)
+:MTESt	:MTESt?	both	:MTESt <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MTESt:COUNt	:MTESt:COUNt?	query	-	-	FAIL,<num>,PASS,<num>,TOTAL,<num>; <num>=NR1	yes	FAIL,0,PASS,0,TOTAL,0
+:MTESt:FUNCtion:BUZZer	:MTESt:FUNCtion:BUZZer?	both	:MTESt:FUNCtion:BUZZer <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MTESt:FUNCtion:COF	:MTESt:FUNCtion:COF?	both	:MTESt:FUNCtion:COF <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:MTESt:FUNCtion:FTH	:MTESt:FUNCtion:FTH?	both	:MTESt:FUNCtion:FTH <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MTESt:FUNCtion:SOF	:MTESt:FUNCtion:SOF?	both	:MTESt:FUNCtion:SOF <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MTESt:IDISplay	:MTESt:IDISplay?	both	:MTESt:IDISplay <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MTESt:MASK:CREate	-	cmd	:MTESt:MASK:CREate <XMARgin>,<YMARgin>	<XMARgin>=NR2 range [0.08, 4.00]; <YMARgin>=NR2 range [0.08, 4.00]	-	yes	-
+:MTESt:MASK:LOAD	-	cmd	:MTESt:MASK:LOAD <location>	<location>={INTernal,<num>|EXTernal,<path>}; <num>={1|2|3|4}; <path>=Quoted string of path name with an extension	-	yes	-
+:MTESt:OPERate	:MTESt:OPERate?	both	:MTESt:OPERate <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:MTESt:RESet	-	cmd	:MTESt:RESet	-	-	yes	-
+:MTESt:SOURce	:MTESt:SOURce?	both	:MTESt:SOURce <source>	<source>={C<n>|Z<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>|Z<n>}	yes	C1
+:MTESt:TYPE	:MTESt:TYPE?	both	:MTESt:TYPE <type>	<type>={ALL_IN|ALL_OUT|ANY_IN|ANY_OUT}	<type>; <type>={ALL_IN|ALL_OUT|ANY_IN|ANY_OUT}	yes	ALL_IN
+:RECall:FDEFault	-	cmd	:RECall:FDEFault	-	-	yes	-
+:RECall:REFerence	-	cmd	:RECall:REFerence <location>,<path>	<location>={REF<r>}; <r>={A|B|C|D}; <path>=Quoted string of path with an extension “.ref”	-	yes	-
+:RECall:SERase	-	cmd	:RECall:SERase	-	-	yes	-
+:RECall:SETup	-	cmd	:RECall:SETup <state>	<state>={INTernal,<num>|EXTernal,<path>}; <num>=NR1; <path>=Quoted string of path with an extension “.xml”. Users	-	yes	-
+:REF<r>:LABel	:REF<r>:LABel?	both	:REF<r>:LABel <state>	<r>={A|B|C|D}; <state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	(no reply)
+:REF<r>:LABel:TEXT	:REF<r>:LABel:TEXT?	both	:REF<r>:LABel:TEXT <string>	<r>={A|B|C|D}; <string>=Quoted string of ASCII text. The length of the string	<string>	yes	(no reply)
+:REF<r>:DATA	-	cmd	:REF<r>:DATA <operation>	<r>={A|B|C|D}; <operation>={LOAD|UNLoad|SAVE,<source>}; <source>={C<n>|F<x>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	-	yes	-
+:REF<r>:DATA:SOURce	:REF<r>:DATA:SOURce?	query	-	<r>={A|B|C|D} (letter suffix); query only: no set form	<source>; <source>={C<n>|F<x>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1) integer; <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	yes	(no reply)
+:REF<r>:DATA:SCALe	:REF<r>:DATA:SCALe?	both	:REF<r>:DATA:SCALe <value>	<r>={A|B|C|D}; <value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:REF<r>:DATA:POSition	:REF<r>:DATA:POSition?	both	:REF<r>:DATA:POSition <value>	<r>={A|B|C|D}; <value>=NR3	<value>; <value>=NR3	yes	(no reply)
+:SAVE:BINary	-	cmd	:SAVE:BINary <path>,<src>	<path>=Quoted string of path with an extension “.bin” Users can save to local, net storage or U-disk according to requirements; <src>={C<n>|Z<n>|F<x>|M<m>|D0_D15|ZD0_ZD15}	-	yes	-
+:SAVE:CSV	-	cmd	:SAVE:CSV <path>,<source>,<state>	<path>=Quoted string of path with an extension “.csv”. Users can save to local, net storage or U-disk according to requirements; <source>= {C<n>|Z<n>|F<x>|M<m>|D0_D15|DIGital|ZD0_ZD15|ZDIGital}; <state>={OFF|ON}	-	yes	-
+:SAVE:DEFault	-	cmd	:SAVE:DEFault <set>	<set>={CUSTom|FACTory}	-	yes	-
+:SAVE:IMAGe	-	cmd	:SAVE:IMAGe <path>,<type>,<invert>[,<menu>]	<path>=Quoted string of path with an extension “.bmp” or ”.jpg” or”.png”. Users can save to local, net storage or U-disk according to; <type>={BMP|JPG|PNG}; <invert>={OFF|ON}; <menu>={MOFf|MON}	-	yes	-
+:SAVE:MATLab	-	cmd	:SAVE:MATLab <path>,<source>	<path>=Quoted string of path with an extension “.mat”. Users can save to local, net storage or U-disk according to requirements; <source>={C<n>|Z<n>|F<x>|M<m>|D0_D15|DIGital|ZD0_ZD15|ZDIGital}	-	yes	-
+:SAVE:REFerence	-	cmd	:SAVE:REFerence <path>,<source>	<path>=Quoted string of path with an extension “.ref”. Users can save to local, net storage or U-disk according to requirements; <source>={C<n>|F<x>|D<d>}	-	yes	-
+:SAVE:SETup	-	cmd	:SAVE:SETup <setup_num>	<setup_num>={INTernal,<num>|EXTernal,<path>}; <num>=NR1; <path>=Quoted string of path with an extension “.xml”. Users	-	yes	-
+:SEARch	:SEARch?	both	:SEARch <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:SEARch:MODE	:SEARch:MODE?	both	:SEARch:MODE <mode>	<mode>={EDGE|SLOPe|PULSE|INTerval|RUNT}	<mode>; <mode>={EDGE|SLOPe|PULSE|INTerval|RUNT}	yes	EDGE
+:SEARch:COUNt	:SEARch:COUNt?	query	-	-	<value>; <value>=NR1	yes	0
+:SEARch:EVENt	:SEARch:EVENt?	query	-	-	<value>; <value>=NR1	yes	0
+:SEARch:COPY	-	cmd	:SEARch:COPY <operation>	<operation>={FROMtrigger|TOTRigger|CANCel}	-	yes	-
+:SEARch:EDGE:SOURce	:SEARch:EDGE:SOURce?	both	:SEARch:EDGE:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	***
+:SEARch:EDGE:SLOPe	:SEARch:EDGE:SLOPe?	both	:SEARch:EDGE:SLOPe <slope_type>	<slope_type>={RISing|FALLing|ALTernate}	<slope_type>; <slope_type>={RISing|FALLing|ALTernate}	yes	RISing
+:SEARch:EDGE:LEVel	:SEARch:EDGE:LEVel?	both	:SEARch:EDGE:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:SEARch:SLOPe:SOURce	:SEARch:SLOPe:SOURce?	both	:SEARch:SLOPe:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	***
+:SEARch:SLOPe:SLOPe	:SEARch:SLOPe:SLOPe?	both	:SEARch:SLOPe:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:SEARch:SLOPe:HLEVel	:SEARch:SLOPe:HLEVel?	both	:SEARch:SLOPe:HLEVel <high_level_value>	<high_level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<high_level_value>; <high_level_value>=NR3	yes	0.00E+00
+:SEARch:SLOPe:LLEVel	:SEARch:SLOPe:LLEVel?	both	:SEARch:SLOPe:LLEVel <low_level_value>	<low_level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<low_level_value>; <low_level_value>=NR3	yes	0.00E+00
+:SEARch:SLOPe:LIMit	:SEARch:SLOPe:LIMit?	both	:SEARch:SLOPe:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:SEARch:SLOPe:TUPPer	:SEARch:SLOPe:TUPPer?	both	:SEARch:SLOPe:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	3.00E-09
+:SEARch:SLOPe:TLOWer	:SEARch:SLOPe:TLOWer?	both	:SEARch:SLOPe:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:SEARch:PULSe:SOURce	:SEARch:PULSe:SOURce?	both	:SEARch:PULSe:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	***
+:SEARch:PULSe:POLarity	:SEARch:PULSe:POLarity?	both	:SEARch:PULSe:POLarity <polarity_type>	<polarity_type>={POSitive|NEGative}	<polarity_type>; <polarity_type>={POSitive|NEGative}	yes	NEGative
+:SEARch:PULSe:LEVel	:SEARch:PULSe:LEVel?	both	:SEARch:PULSe:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:SEARch:PULSe:LIMit	:SEARch:PULSe:LIMit?	both	:SEARch:PULSe:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:SEARch:PULSe:TUPPer	:SEARch:PULSe:TUPPer?	both	:SEARch:PULse:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	3.00E-09
+:SEARch:PULSe:TLOWer	:SEARch:PULSe:TLOWer?	both	:SEARch:PULSe:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:SEARch:INTerval:SOURce	:SEARch:INTerval:SOURce?	both	:SEARch:INTerval:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	***
+:SEARch:INTerval:SLOPe	:SEARch:INTerval:SLOPe?	both	:SEARch:INTerval:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:SEARch:INTerval:LEVel	:SEARch:INTerval:LEVel?	both	:SEARch:INTerval:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:SEARch:INTerval:LIMit	:SEARch:INTerval:LIMit?	both	:SEARch:INTerval:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:SEARch:INTerval:TUPPer	:SEARch:INTerval:TUPPer?	both	:SEARch:INTerval:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<tupper_value>; <tupper_value>=NR3	yes	3.00E-09
+:SEARch:INTerval:TLOWer	:SEARch:INTerval:TLOWer?	both	:SEARch:INTerval:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:SEARch:RUNT:SOURce	:SEARch:RUNT:SOURce?	both	:SEARch:RUNT:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	***
+:SEARch:RUNT:POLarity	:SEARch:RUNT:POLarity?	both	:SEARch:RUNT:POLarity <polarity_type>	<polarity_type>={POSitive|NEGative}	<polarity_type>; <polarity_type>={POSitive|NEGative}	yes	NEGative
+:SEARch:RUNT:HLEVel	:SEARch:RUNT:HLEVel?	both	:SEARch:RUNT:HLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:SEARch:RUNT:LLEVel	:SEARch:RUNT:LLEVel?	both	:SEARch:RUNT:LLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:SEARch:RUNT:LIMit	:SEARch:RUNT:LIMit?	both	:SEARch:RUNT:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:SEARch:RUNT:TUPPer	:SEARch:RUNT:TUPPer?	both	:SEARch:RUNT:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	3.00E-09
+:SEARch:RUNT:TLOWer	:SEARch:RUNT:TLOWer?	both	:SEARch:RUNT:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:SYSTem:BUZZer	:SYSTem:BUZZer?	both	:SYSTem:BUZZer <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	ON
+:SYSTem:CLOCk	:SYSTem:CLOCk?	both	:SYSTem:CLOCk <source>	<source>={EXT|IN_ON|IN_OFF}	<source>; <source>={EXT|IN_ON|IN_OFF}	yes	IN_ON
+:SYSTem:COMMunicate:LAN:GATeway	:SYSTem:COMMunicate:LAN:GATeway?	both	:SYSTem:COMMunicate:LAN:GATeway <string>	<string>=quoted string of ASCII text.	<string>	yes	"10.11.13.1"
+:SYSTem:COMMunicate:LAN:IPADdress	:SYSTem:COMMunicate:LAN:IPADdress?	both	:SYSTem:COMMunicate:LAN:IPADdress <string>	<string>=quoted string of ASCII text.	<string>	yes	"10.11.13.220"
+:SYSTem:COMMunicate:LAN:MAC	:SYSTem:COMMunicate:LAN:MAC?	query	-	-	<byte1>:<byte2>:<byte3>:<byte4>:<byte5>:<byte6>	yes	1F862C5:00:FE46EEB0:7F1B:1CDC12C:00
+:SYSTem:COMMunicate:LAN:SMASk	:SYSTem:COMMunicate:LAN:SMASk?	both	:SYSTem:COMMunicate:LAN:SMASk <string>	<string>=quoted string of ASCII text.	<string>	yes	"255.255.255.0"
+:SYSTem:COMMunicate:LAN:TYPE	:SYSTem:COMMunicate:LAN:TYPE?	both	:SYSTem:COMMunicate:LAN:TYPE <state>	<state>={STATIC|DHCP}	<state>; <state>={STATIC|DHCP}	yes	STATIC
+:SYSTem:COMMunicate:VNCPort	:SYSTem:COMMunicate:VNCPort?	both	:SYSTem:COMMunicate:VNCPort <value>	<value>=NR1 range [5900, 5999]	<value>; <value>=NR1	yes	5900
+:SYSTem:DATE	:SYSTem:DATE?	both	:SYSTem:DATE <date>	<date>=8-digit NR1 format, from high to low, is expressed as a 4-digit year, 2-digit month, and 2-digit day.	<date>	yes	- (clock-dependent)
+:SYSTem:EDUMode	:SYSTem:EDUMode? :SYSTem:EDUMode? <func>	both	:SYSTem:EDUMode <func>,<lock>	<func>={AUTOSet|MEASure|CURSor}; <lock>={ON|OFF}	Format 1:; <lock>={ON|OFF}	yes	-
+:SYSTem:LANGuage	:SYSTem:LANGuage?	both	:SYSTem:LANGuage <language>	<language>= {SCHinese|TCHinese|ENGLish|FRENch|JAPanese|KORean|DEUTsch|ESPan|RUSSian|ITALiana|PORTuguese}	<language>; <language>= {SCHinese|TCHinese|ENGLish|FRENch|JAPanese|KORean|DEUTsch|ESPan|RUSSian|ITALiana|PORTuguese}	yes	ENGLish
+:SYSTem:MENU	:SYSTem:MENU?	both	:SYSTem:MENU <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	ON
+:SYSTem:NSTorage	:SYSTem:NSTorage?	both	:SYSTem:NSTorage <path>,<user>,<pwd>,<anon>,<auto_con>,<rem_path>,<rem_ user>,<rem_pwd>	<path>=Quoted string of the server path to be mounted; <user>=Quoted string of the user name.; <pwd>=Quoted string of the user password; <anon>=Anonymous flag, 1 for ON while 0 for OFF; <auto_con>=Automatic connection flag, 1 for ON while 0 for; <rem_path>=Remember path flag, 1 for ON while 0 for OFF; <rem_user>=Remember user flag, 1 for ON while 0 for OFF; <rem pwd>=Remember password flag, 1 for ON while 0 for	<path>,<user>,<pwd>,<anon>,<auto_con>,<rem_path>,<rem_	yes	"","","***",0,0,0,0,0
+:SYSTem:NSTorage:CONNect	-	cmd	:SYSTem:NSTorage:CONNect	-	-	yes	-
+:SYSTem:NSTorage:DISConnect	-	cmd	:SYSTem:NSTorage:DISConnect	-	-	yes	-
+:SYSTem:NSTorage:STATus	:SYSTem:NSTorage:STATus?	query	-	-	<status>; <status>={ON|OFF}	yes	OFF
+:SYSTem:PON	:SYSTem:PON?	both	:SYSTem:PON <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:SYSTem:REBoot	-	cmd	:SYSTem:REBoot	-	-	yes	-
+:SYSTem:REMote	:SYSTem:REMote?	both	:SYSTem:REMote <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:SYSTem:SELFCal	:SYSTem:SELFCal?	both	:SYSTem:SELFCal	-	<state>; <state>={DOING|DONE}	yes	DONE
+:SYSTem:SHUTdown	-	cmd	:SYSTem:SHUTdown	-	-	yes	-
+:SYSTem:SSAVer	:SYSTem:SSAVer?	both	:SYSTem:SSAVer <time>	<time>={OFF|1MIN|5MIN|10MIN|30MIN|60MIN}	<time>; <time>={OFF|1MIN|5MIN|10MIN|30MIN|60MIN}	yes	OFF
+:SYSTem:TIME	:SYSTem:TIME?	both	:SYSTem:TIME <time>	<time>=8-digit NR1 format, from high to low, is expressed as 2-digit hour, 2-digit minute, and 2-digit second.	<time>	yes	231730
+:SYSTem:TOUCh	:SYSTem:TOUCh?	both	:SYSTem:TOUCh <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	ON
+:TIMebase:DELay	:TIMebase:DELay?	both	:TIMebase:DELay <delay_value>	<delay_value>=NR3 range [-5000div*timebase, 5div*timebase] | SDS800X HD: clamped while running to −5 div … +10 000 div × timebase in the sign of spec 04 §9; other limits while a record is held; no error (spec 09 §3.3)	<value>; <value>=NR3	yes	0.00E+00
+:TIMebase:REFerence	:TIMebase:REFerence?	both	:TIMebase:REFerence <type>	<type>={DELay|POSition}	<type>; <type>={DELay|POSition}	yes	DELay
+:TIMebase:REFerence:POSition	:TIMebase:REFerence:POSition?	both	:TIMebase:REFerence:POSition <value>	<value>=NR1 range [0, 100]	<value>; <value>=NR3 (e.g. 5.00E+01)	yes	5.00E+01
+:TIMebase:SCALe	:TIMebase:SCALe?	both	:TIMebase:SCALe <value>	<value>=NR3 | SDS800X HD: a jump from a slow time base can land above the requested value (minimum rule evaluated at the current rate too, spec 04 §2, spec 11 §6.7.1)	<value>; <value>=NR3	yes	2.00E-07
+:TIMebase:WINDow	:TIMebase:WINDow?	both	:TIMebase:WINDow <state>	<state>={ON|OFF}	<state>; <state>={ON|OFF}	yes	OFF
+:TIMebase:WINDow:DELay	:TIMebase:WINDow:DELay?	both	:TIMebase:WINDow:DELay <delay_value>	<delay_value>=NR3	<delay_value>; <delay_value>=NR3	yes	0.00E+00
+:TIMebase:WINDow:SCALe	:TIMebase:WINDow:SCALe?	both	:TIMebase:WINDow:SCALe <scale_value>	<scale_value>=NR3	<scale_value>; <scale_value>=NR3	yes	2.00E-07
+:TRIGger:FREQuency	:TRIGger:FREQuency?	query	-	-	<val>; <val>=NR3	yes	0.00E+00
+:TRIGger:MODE	:TRIGger:MODE?	both	:TRIGger:MODE <mode>	<mode>={SINGle|NORMal|AUTO|FTRIG} | FTRIG is one-shot: forces one trigger, then the previous mode is restored; MODE? never answers FTRIG (spec 11 §6.7.1)	<mode>; <mode>={SINGle|NORMal|AUTO|FTRIG}	yes	AUTO
+:TRIGger:RUN	-	cmd	:TRIGger:RUN	-	-	yes	-
+:TRIGger:STATus	:TRIGger:STATus?	query	-	- | reply = trigger state: Arm, Ready, Auto, Trig'd, Stop, Roll, FStop, Run, Pause (spec 11 §6.7.1)	<status>; <status>={Arm|Ready|Auto|Trig'd|Stop|Roll}	yes	Arm
+:TRIGger:STOP	-	cmd	:TRIGger:STOP	-	-	yes	-
+:TRIGger:TYPE	:TRIGger:TYPE?	both	:TRIGger:TYPE <type>	<type>={EDGE|PULSE|SLOPe|INTerval|PATTern|RUNT|WINDow|DROPout|VIDeo|QUALified|NEDGe|DELay|SHOLd|IIC|SPI|UART|LIN|CAN|FLEXray|CANFd|IIS|M1553|SENT|A429}	<type>; <type>={EDGE|PULSE|SLOPe|INTerval|PATTern|RUNT|WINDow|DROPout|VIDeo|QUALified|NEDGe|DELay|SHOLd|IIC|SPI|UART|LIN|CAN|FLEXray|CANFd|IIS|M1553|SENT||A429}	yes	EDGE
+:TRIGger:EDGE:COUPling	:TRIGger:EDGE:COUPling?	both	:TRIGger:EDGE:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:EDGE:HLDEVent	:TRIGger:EDGE:HLDEVent?	both	:TRIGger:EDGE:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:EDGE:HLDTime	:TRIGger:EDGE:HLDTime?	both	:TRIGger:EDGE:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:EDGE:HOLDoff	:TRIGger:EDGE:HOLDoff?	both	:TRIGger:EDGE:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; <holdoff_type>={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:EDGE:HSTart	:TRIGger:EDGE:HSTart?	both	:TRIGger:EDGE:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:EDGE:IMPedance	:TRIGger:EDGE:IMPedance?	both	:TRIGger:EDGE:IMPedance <ohm>	<ohm>={ONEMeg|FIFTy} | no EXT input on SDS800X HD: stored and echoed by the query, no hardware effect	<ohm >; <ohm>={ONEMeg|FIFTy}	yes	ONEMeg
+:TRIGger:EDGE:LEVel	:TRIGger:EDGE:LEVel?	both	:TRIGger:EDGE:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:EDGE:NREJect	:TRIGger:EDGE:NREJect?	both	:TRIGger:EDGE:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:EDGE:SLOPe	:TRIGger:EDGE:SLOPe?	both	:TRIGger:EDGE:SLOPe <slope_type>	<slope_type>={RISing|FALLing|ALTernate}	<slope_type>; <slope_type>={RISing|FALLing|ALTernate}	yes	RISing
+:TRIGger:EDGE:SOURce	:TRIGger:EDGE:SOURce?	both	:TRIGger:EDGE:SOURce <source>	<source>={C<n>|D<d>|EX|EX5|LINE}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1) | SDS800X HD: valid sources are channels that are on and LINE; EX/EX5 (no EXT input) and channels that are off are refused without error (e.g. EX from C1 keeps C1; C2 with C2 off gives LINE); spec 11 §6.7.1	<source>; <source>={C<n>|D<d>|EX|EX5|LINE}	yes	C1
+:TRIGger:SLOPe:COUPling	:TRIGger:SLOPe:COUPling?	both	:TRIGger:SLOPe:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:SLOPe:HLDEVent	:TRIGger:SLOPe:HLDEVent?	both	:TRIGger:SLOPe:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:SLOPe:HLDTime	:TRIGger:SLOPe:HLDTime?	both	:TRIGger:SLOPe:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:SLOPe:HLEVel	:TRIGger:SLOPe:HLEVel?	both	:TRIGger:SLOPe:HLEVel <high_level_value>	<high_level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<high_level_value>; <high_level_value>=NR3	yes	0.00E+00
+:TRIGger:SLOPe:HOLDoff	:TRIGger:SLOPe:HOLDoff?	both	:TRIGger:SLOPe:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type>={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:SLOPe:HSTart	:TRIGger:SLOPe:HSTart?	both	:TRIGger:SLOPe:HSTart <type>	<start_type>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<type>; <type>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:SLOPe:LIMit	:TRIGger:SLOPe:LIMit?	both	:TRIGger:SLOPe:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:SLOPe:LLEVel	:TRIGger:SLOPe:LLEVel?	both	:TRIGger:SLOPe:LLEVel <low_level_value>	<low_level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<low_level_value>; <low_level_value>=NR3	yes	-5.00E-02
+:TRIGger:SLOPe:NREJect	:TRIGger:SLOPe:NREJect?	both	:TRIGger:SLOPe:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:SLOPe:SLOPe	:TRIGger:SLOPe:SLOPe?	both	:TRIGger:SLOPe:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:SLOPe:SOURce	:TRIGger:SLOPe:SOURce?	both	:TRIGger:SLOPe:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	C1
+:TRIGger:SLOPe:TLOWer	:TRIGger:SLOPe:TLOWer?	both	:TRIGger:SLOPe:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:SLOPe:TUPPer	:TRIGger:SLOPe:TUPPer?	both	:TRIGger:SLOPe:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:PULSe:COUPling	:TRIGger:PULSe:COUPling?	both	:TRIGger:PULSe:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:PULSe:HLDEVent	:TRIGger:PULSe:HLDEVent?	both	:TRIGger:PULSe:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:PULSe:HLDTime	:TRIGger:PULSe:HLDTime?	both	:TRIGger:PULSe:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:PULSe:HOLDoff	:TRIGger:PULSe:HOLDoff?	both	:TRIGger:PULSe:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type >={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:PULSe:HSTart	:TRIGger:PULSe:HSTart?	both	:TRIGger:PULSe:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:PULSe:LEVel	:TRIGger:PULSe:LEVel?	both	:TRIGger:PULSe:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:PULSe:LIMit	:TRIGger:PULSe:LIMit?	both	:TRIGger:PULSe:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:PULSe:NREJect	:TRIGger:PULSe:NREJect?	both	:TRIGger:PULSe:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:PULSe:POLarity	:TRIGger:PULSe:POLarity?	both	:TRIGger:PULSe:POLarity <polarity_type>	<polarity_type>={POSitive|NEGative}	<polarity_type>; <polarity_type>={POSitive|NEGative}	yes	POSitive
+:TRIGger:PULSe:SOURce	:TRIGger:PULSe:SOURce?	both	:TRIGger:PULSe:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:PULSe:TLOWer	:TRIGger:PULSe:TLOWer?	both	:TRIGger:PULSe:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:PULSe:TUPPer	:TRIGger:PULSe:TUPPer?	both	:TRIGger:PULse:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:VIDeo:FCNT	:TRIGger:VIDeo:FCNT?	both	:TRIGger:VIDeo:FCNT <field_cnt>	<field_cnt>={1|2|4|8}	<field_cnt>; <field_cnt>={1|2|4|8}	yes	1
+:TRIGger:VIDeo:FIELd	:TRIGger:VIDeo:FIELd?	both	:TRIGger:VIDeo:FIELd <field>	<field>={1|2}	<field>; <field>={1|2}	yes	1
+:TRIGger:VIDeo:FRATe	:TRIGger:VIDeo:FRATe?	both	:TRIGger:VIDeo:FRATe <frate>	<frate>={25Hz|30Hz|50Hz|60Hz}	<frate>; <frate>={25Hz|30Hz|50Hz|60Hz}	yes	25Hz
+:TRIGger:VIDeo:INTerlace	:TRIGger:VIDeo:INTerlace?	both	:TRIGger:VIDeo:INTerlace <interlace>	<interlace>={1|2|4|8}	<interlace>; <interlace>={1|2|4|8}	yes	1
+:TRIGger:VIDeo:LCNT	:TRIGger:VIDeo:LCNT?	both	:TRIGger:VIDeo:LCNT <line_cnt>	<line_cnt>=NR1 range [300, 2000]	<line_cnt>; <line_cnt>=NR1	yes	300
+:TRIGger:VIDeo:LEVel	:TRIGger:VIDeo:LEVel?	both	:TRIGger:VIDeo:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:VIDeo:LINE	:TRIGger:VIDeo:LINE?	both	:TRIGger:VIDeo:LINE <line>	<line>=NR1	<line>; <line>=NR1	yes	1
+:TRIGger:VIDeo:SOURce	:TRIGger:VIDeo:SOURce?	both	:TRIGger:VIDeo:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	C1
+:TRIGger:VIDeo:STANdard	:TRIGger:VIDeo:STANdard?	both	:TRIGger:VIDeo:STANdard <standard>	<standard>= {NTSC|PAL|P720L50|P720L60|P1080L50|P1080L60|I1080L50|I1080L60|CUSTom}	<standard>; <standard>= {NTSC|PAL|P720L50|P720L60|P1080L50|P1080L60|I1080L50|I1080L60|CUSTom}	yes	NTSC
+:TRIGger:VIDeo:SYNC	:TRIGger:VIDeo:SYNC?	both	:TRIGger:VIDeo:SYNC <sync>	<sync>={SELect|ANY}	<sync>; <sync>={SELect|ANY}	yes	ANY
+:TRIGger:WINDow:CLEVel	:TRIGger:WINDow:CLEVel?	both	:TRIGger:WINDow:CLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	-4.17E-01
+:TRIGger:WINDow:COUPling	:TRIGger:WINDow:COUPling?	both	:TRIGger:WINDow:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:WINDow:DLEVel	:TRIGger:WINDow:DLEVel?	both	:TRIGger:WINDow:DLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	4.17E-01
+:TRIGger:WINDow:HLDEVent	:TRIGger:WINDow:HLDEVent?	both	:TRIGger:WINDow:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:WINDow:HLDTime	:TRIGger:WINDow:HLDTime?	both	:TRIGger:WINDow:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:WINDow:HLEVel	:TRIGger:WINDow:HLEVel?	both	:TRIGger:WINDow:HLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:TRIGger:WINDow:HOLDoff	:TRIGger:WINDow:HOLDoff?	both	:TRIGger:WINDow:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type >={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:WINDow:HSTart	:TRIGger:WINDow:HSTart?	both	:TRIGger:WINDow:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:WINDow:LLEVel	:TRIGger:WINDow:LLEVel?	both	:TRIGger:WINDow:LLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	-8.33E-01
+:TRIGger:WINDow:NREJect	:TRIGger:WINDow:NREJect?	both	:TRIGger:WINDow:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:WINDow:SOURce	:TRIGger:WINDow:SOURce?	both	:TRIGger:WINDow:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	C1
+:TRIGger:WINDow:TYPE	:TRIGger:WINDow:TYPE?	both	:TRIGger:WINDow:TYPE <type>	<type>={ABSolute|RELative} | RELative is UI-only (CLEVel/DLEVel converted to absolute levels); writes no register	<type>; <type>={ABSolute|RELative}	yes	ABSolute
+:TRIGger:INTerval:COUPling	:TRIGger:INTerval:COUPling?	both	:TRIGger:INTerval:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:INTerval:HLDEVent	:TRIGger:INTerval:HLDEVent?	both	:TRIGger:INTerval:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:INTerval:HLDTime	:TRIGger:INTerval:HLDTime?	both	:TRIGger:INTerval:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:INTerval:HOLDoff	:TRIGger:INTerval:HOLDoff?	both	:TRIGger:INTerval:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type >={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:INTerval:HSTart	:TRIGger:INTerval:HSTart?	both	:TRIGger:INTerval:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:INTerval:LEVel	:TRIGger:INTerval:LEVel?	both	:TRIGger:INTerval:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:INTerval:LIMit	:TRIGger:INTerval:LIMit?	both	:TRIGger:INTerval:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:INTerval:NREJect	:TRIGger:INTerval:NREJect?	both	:TRIGger:INTerval:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:INTerval:SLOPe	:TRIGger:INTerval:SLOPe?	both	:TRIGger:INTerval:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:INTerval:SOURce	:TRIGger:INTerval:SOURce?	both	:TRIGger:INTerval:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:INTerval:TLOWer	:TRIGger:INTerval:TLOWer?	both	:TRIGger:INTerval:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:INTerval:TUPPer	:TRIGger:INTerval:TUPPer?	both	:TRIGger:INTerval:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<tupper_value>; <tupper_value>=NR3	yes	2.00E-09
+:TRIGger:DROPout:COUPling	:TRIGger:DROPout:COUPling?	both	:TRIGger:DROPout:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:DROPout:HLDEVent	:TRIGger:DROPout:HLDEVent?	both	:TRIGger:DROPout:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:DROPout:HLDTime	:TRIGger:DROPout:HLDTime?	both	:TRIGger:DROPout:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:DROPout:HOLDoff	:TRIGger:DROPout:HOLDoff?	both	:TRIGger:DROPout:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type>={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:DROPout:HSTart	:TRIGger:DROPout:HSTart?	both	:TRIGger:DROPout:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:DROPout:LEVel	:TRIGger:DROPout:LEVel?	both	:TRIGger:DROPout:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:DROPout:NREJect	:TRIGger:DROPout:NREJect?	both	:TRIGger:DROPout:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:DROPout:SLOPe	:TRIGger:DROPout:SLOPe?	both	:TRIGger:DROPout:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:DROPout:SOURce	:TRIGger:DROPout:SOURce?	both	:TRIGger:DROPout:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:DROPout:TIME	:TRIGger:DROPout:TIME?	both	:TRIGger:DROPout:TIME <time>	<time>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<time>; <time>=NR3	yes	2.00E-08
+:TRIGger:DROPout:TYPE	:TRIGger:DROPout:TYPE?	both	:TRIGger:DROPout:TYPE <type>	<type>={EDGE|STATe}	<type>; <type>={EDGE|STATe}	yes	STATe
+:TRIGger:RUNT:COUPling	:TRIGger:RUNT:COUPling?	both	:TRIGger:RUNT:COUPling <mode>	<mode>={DC|AC|LFREJect|HFREJect}	<mode>; <mode>={DC|AC|LFREJect|HFREJect}	yes	DC
+:TRIGger:RUNT:HLDEVent	:TRIGger:RUNT:HLDEVent?	both	:TRIGger:RUNT:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:RUNT:HLDTime	:TRIGger:RUNT:HLDTime?	both	:TRIGger:RUNT:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:RUNT:HLEVel	:TRIGger:RUNT:HLEVel?	both	:TRIGger:RUNT:HLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:TRIGger:RUNT:HOLDoff	:TRIGger:RUNT:HOLDoff?	both	:TRIGger:RUNT:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type>={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:RUNT:HSTart	:TRIGger:RUNT:HSTart?	both	:TRIGger:RUNT:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:RUNT:LIMit	:TRIGger:RUNT:LIMit?	both	:TRIGger:RUNT:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:RUNT:LLEVel	:TRIGger:RUNT:LLEVel?	both	:TRIGger:RUNT:LLEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	-5.00E-02
+:TRIGger:RUNT:NREJect	:TRIGger:RUNT:NREJect?	both	:TRIGger:RUNT:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:RUNT:POLarity	:TRIGger:RUNT:POLarity?	both	:TRIGger:RUNT:POLarity <polarity_type>	<polarity_type>={POSitive|NEGative}	<polarity_type>; <polarity_type>={POSitive|NEGative}	yes	POSitive
+:TRIGger:RUNT:SOURce	:TRIGger:RUNT:SOURce?	both	:TRIGger:RUNT:SOURce <source>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1)	<source>; <source>={C<n>}	yes	C1
+:TRIGger:RUNT:TLOWer	:TRIGger:RUNT:TLOWer?	both	:TRIGger:RUNT:TLOWer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:RUNT:TUPPer	:TRIGger:RUNT:TUPPer?	both	:TRIGger:RUNT:TUPPer <value>	<value>=NR3 range SDS800X HD: [2.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:PATTern:HLDEVent	:TRIGger:PATTern:HLDEVent?	both	:TRIGger:PATTern:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:PATTern:HLDTime	:TRIGger:PATTern:HLDTime?	both	:TRIGger:PATTern:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:PATTern:HOLDoff	:TRIGger:PATTern:HOLDoff?	both	:TRIGger:PATTern:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; < holdoff_type >={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:PATTern:HSTart	:TRIGger:PATTern:HSTart?	both	:TRIGger:PATTern:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:PATTern:INPut	:TRIGger:PATTern:INPut?	both	:TRIGger:PATTern:INPut <logic>[...[,<logic>]]	<logic>={X|L|H}	<input>; <input>={X|L|H}	yes	X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+:TRIGger:PATTern:LEVel	:TRIGger:PATTern:LEVel? <source>	both	:TRIGger:PATTern:LEVel <source>,<value>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<source>,<value>; <source>={C<n>}; <value>=NR3	yes	C1,0.00E+00
+:TRIGger:PATTern:LIMit	:TRIGger:PATTern:LIMit?	both	:TRIGger:PATTern:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	GREATerthan
+:TRIGger:PATTern:LOGic	:TRIGger:PATTern:LOGic?	both	:TRIGger:PATTern:LOGic <type>	<type>={AND|OR|NAND|NOR}	<logic_type>; <logic_type>={AND|OR|NAND|NOR}	yes	AND
+:TRIGger:PATTern:TLOWer	:TRIGger:PATTern:TLOWer?	both	:TRIGger:PATTern:TLOWer <value>	<value>=NR3 range [2.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:PATTern:TUPPer	:TRIGger:PATTern:TUPPer?	both	:TRIGger:PATTern:TUPPer <value>	<value>=NR3 range [3.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:QUALified:ELEVel	:TRIGger:QUALified:ELEVel?	both	:TRIGger:QUALified:ELEVel <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:TRIGger:QUALified:ESLope	:TRIGger:QUALified:ESLope?	both	:TRIGger:QUALified:ESLope <type>	<type>={RISing|FALLing}	<type>; <type>={RISing|FALLing}	yes	RISing
+:TRIGger:QUALified:ESource	:TRIGger:QUALified:ESource?	both	:TRIGger:QUALified:ESource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:QUALified:LIMit	:TRIGger:QUALified:LIMit?	both	:TRIGger:QUALified:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:QUALified:QLEVel	:TRIGger:QUALified:QLEVel?	both	:TRIGger:QUALified:QLEVel <level>	<level>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level>; <level>=NR3	yes	0.00E+00
+:TRIGger:QUALified:QSource	:TRIGger:QUALified:QSource?	both	:TRIGger:QUALified:QSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:QUALified:TLOWer	:TRIGger:QUALified:TLOWer?	both	:TRIGger:QUALified:TLOWer <value>	<value>=NR3 range [2.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:QUALified:TUPPer	:TRIGger:QUALified:TUPPer?	both	:TRIGger:QUALified:TUPPer <value>	<value>=NR3 range [3.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:QUALified:TYPE	:TRIGger:QUALified:TYPE?	both	:TRIGger:QUALified:TYPE <type>[,<option>]	<type>={STATe|STATE_DLY|EDGE|EDGE_DLY}; <option>={LOW|HIGH}; <option>={RISing|FALLing}	<type>[,<option>]; <type>={STATe|STATE_DLY|EDGE|EDGE_DLY}; <option>={LOW|HIGH}; <option>={RISing|FALLing}	yes	STATE,LOW
+:TRIGger:DELay:SOURce	:TRIGger:DELay:SOURce?	both	:TRIGger:DELay:SOURce <state>[...[,<state>]]	<state>={X|L|H} | Delay A source is a pattern state list, one state per source C1..Cn then D0..D15 (only sources that are on are applied); a channel name (C2) gives -224; the B source is :TRIGger:DELay:SOURce2	<state>; <state>={X|L|H}	yes	X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+:TRIGger:DELay:SOURce2	:TRIGger:DELay:SOURce2?	both	:TRIGger:DELay:SOURce2 <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C2
+:TRIGger:DELay:SLOPe	:TRIGger:DELay:SLOPe?	both	:TRIGger:DELay:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:DELay:SLOPe2	:TRIGger:DELay:SLOPe2?	both	:TRIGger:DELay:SLOPe2 <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:DELay:LEVel	:TRIGger:DELay:LEVel? <source>	both	:TRIGger:DELay:LEVel <source>,<value>	<source>={C<n>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<source>,<value>; <source>={C<n>}; <value>=NR3	yes	0.00E+00
+:TRIGger:DELay:LEVel2	:TRIGger:DELay:LEVel2?	both	:TRIGger:DELay:LEVel2 <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:DELay:LIMit	:TRIGger:DELay:LIMit?	both	:TRIGger:DELay:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:DELay:TUPPer	:TRIGger:DELay:TUPPer?	both	:TRIGger:DELay:TUPPer <value>	<value>=NR3 range [3.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:DELay:TLOWer	:TRIGger:DELay:TLOWer?	both	:TRIGger:DELay:TLOWer <value>	<value>=NR3 range [2.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:NEDGe:SOURce	:TRIGger:NEDGe:SOURce?	both	:TRIGger:NEDGe:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:NEDGe:SLOPe	:TRIGger:NEDGe:SLOPe?	both	:TRIGger:NEDGe:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:NEDGe:IDLE	:TRIGger:NEDGe:IDLE?	both	:TRIGger:NEDGe:IDLE <value>	<value> NR3, SDS800X HD: [8.00E-09, 2.00E+01] s	<value>; <value>=NR3	yes	8.00E-09
+:TRIGger:NEDGe:EDGE	:TRIGger:NEDGe:EDGE?	both	:TRIGger:NEDGe:EDGE <value>	<value>=NR1 range [1, 65535]	<value>; <value>=NR1	yes	1
+:TRIGger:NEDGe:LEVel	:TRIGger:NEDGe:LEVel?	both	:TRIGger:NEDGe:LEVel <level_value>	<level_value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<level_value>; <level_value>=NR3	yes	0.00E+00
+:TRIGger:NEDGe:HOLDoff	:TRIGger:NEDGe:HOLDoff?	both	:TRIGger:NEDGe:HOLDoff <holdoff_type>	<holdoff_type>={OFF|EVENts|TIME} | EVENts is accepted but acts as TIME (time holdoff with the stored HLDTime; no event-count holdoff in this FPGA, spec 05 §6)	<holdoff_type>; <holdoff_type>={OFF|EVENts|TIME}	yes	OFF
+:TRIGger:NEDGe:HLDTime	:TRIGger:NEDGe:HLDTime?	both	:TRIGger:NEDGe:HLDTime <value>	<value>=NR3 range SDS800X HD: [8.00E-09, 3.00E+01] s	<value>; <value>=NR3	yes	8.00E-08
+:TRIGger:NEDGe:HLDEVent	:TRIGger:NEDGe:HLDEVent?	both	:TRIGger:NEDGe:HLDEVent <value>	<value>=NR1 range [1, 100000000] | accepted and stored, no hardware effect (no event holdoff, spec 05 §6)	<value>; <value>=NR1	yes	1
+:TRIGger:NEDGe:HSTart	:TRIGger:NEDGe:HSTart?	both	:TRIGger:NEDGe:HSTart <start_holdoff>	<start_holdoff>={LAST_TRIG|ACQ_START} | accepted and stored, no hardware effect (spec 05 §6)	<start_holdoff>; <start_holdoff>={LAST_TRIG|ACQ_START}	yes	ACQ_START
+:TRIGger:NEDGe:NREJect	:TRIGger:NEDGe:NREJect?	both	:TRIGger:NEDGe:NREJect <state>	<state>={OFF|ON}	<state>; <state>={OFF|ON}	yes	OFF
+:TRIGger:SHOLd:TYPE	:TRIGger:SHOLd:TYPE?	both	:TRIGger:SHOLd:TYPE <type>	<type>={SETup|HOLD}	<slope>; <slope>={SETup|HOLD}	yes	SETup
+:TRIGger:SHOLd:CSource	:TRIGger:SHOLd:CSource?	both	:TRIGger:SHOLd:CSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:SHOLd:CTHReshold	:TRIGger:SHOLd:CTHReshold?	both	:TRIGger:SHOLd:CTHReshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:TRIGger:SHOLd:SLOPe	:TRIGger:SHOLd:SLOPe?	both	:TRIGger:SHOLd:SLOPe <slope_type>	<slope_type>={RISing|FALLing}	<slope_type>; <slope_type>={RISing|FALLing}	yes	RISing
+:TRIGger:SHOLd:DSource	:TRIGger:SHOLd:DSource?	both	:TRIGger:SHOLd:DSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C2
+:TRIGger:SHOLd:DTHReshold	:TRIGger:SHOLd:DTHReshold?	both	:TRIGger:SHOLd:DTHReshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	0.00E+00
+:TRIGger:SHOLd:LEVel	:TRIGger:SHOLd:LEVel?	both	:TRIGger:SHOLd:LEVel <level_state>	<level_value>={LOW|HIGH}	<level_state>; <level_value>={LOW|HIGH}	yes	LOW
+:TRIGger:SHOLd:LIMit	:TRIGger:SHOLd:LIMit?	both	:TRIGger:SHOLd:LIMit <type>	<type>={LESSthan|GREATerthan|INNer|OUTer}	<type>; <type>={LESSthan|GREATerthan|INNer|OUTer}	yes	LESSthan
+:TRIGger:SHOLd:TUPPer	:TRIGger:SHOLd:TUPPer?	both	:TRIGger:SHOLd:TUPPer <value>	<value>=NR3 range [2.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:SHOLd:TLOWer	:TRIGger:SHOLd:TLOWer?	both	:TRIGger:SHOLd:TLOWer <value>	<value>=NR3 range [2.00E-09, 2.00E+01]	<value>; <value>=NR3	yes	2.00E-09
+:TRIGger:IIC:ADDRess	:TRIGger:IIC:ADDRess?	both	:TRIGger:IIC:ADDRess <addr>	<addr>=NR1 range [0, 1024]	<addr>; <addr>=NR1	yes	128
+:TRIGger:IIC:ALENgth	:TRIGger:IIC:ALENgth?	both	:TRIGger:IIC:ALENgth <length>	<length>={7BIT|10BIT}	<addr_length>; <addr_length>={7BIT|10BIT}	yes	7BIT
+:TRIGger:IIC:CONDition	:TRIGger:IIC:CONDition?	both	:TRIGger:IIC:CONDition <condition>	<condition>= {STARt|STOP|RESTart|NACK|EEPRom|7ADDRess|10ADDRess|DLENgth}	<condition>; <condition>= {STARt|STOP|RESTart|NACK|EEPRom|7ADDRess|10ADDRess|DLENgth}	yes	STARt
+:TRIGger:IIC:DAT2	:TRIGger:IIC:DAT2?	both	:TRIGger:IIC:DAT2 <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	yes	256
+:TRIGger:IIC:DATA	:TRIGger:IIC:DATA?	both	:TRIGger:IIC:DATA <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	yes	256
+:TRIGger:IIC:DLENgth	:TRIGger:IIC:DLENgth?	both	:TRIGger:IIC:DLENgth <length>	<length>=NR1 range [1, 12]	<length>; <length>=NR1	yes	1
+:TRIGger:IIC:LIMit	:TRIGger:IIC:LIMit?	both	:TRIGger:IIC:LIMit <limit_type>	<limit_type>={EQUal|GREaterthan|LESSthan}	<limit_type>; <limit_type>={EQUal|GREaterthan|LESSthan}	yes	EQUal
+:TRIGger:IIC:RWBit	:TRIGger:IIC:RWBit?	both	:TRIGger:IIC:RWBit <type>	<type>={WRITe|READ|ANY}	<type>; <type>={WRITe|READ|ANY}	yes	WRITe
+:TRIGger:IIC:SCLSource	:TRIGger:IIC:SCLSource?	both	:TRIGger:IIC:SCLSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:IIC:SCLThreshold	:TRIGger:IIC:SCLThreshold?	both	:TRIGger:IIC:SCLThreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:IIC:SDASource	:TRIGger:IIC:SDASource?	both	:TRIGger:IIC:SDASource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C2
+:TRIGger:IIC:SDAThreshold	:TRIGger:IIC:SDAThreshold?	both	:TRIGger:IIC:SDAThreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:SPI:BITorder	:TRIGger:SPI:BITorder?	both	:TRIGger:SPI:BITorder <bit_order>	<bit_order>={LSM|MSB}	<bit_order>; <bit_order>={LSM|MSB}	yes	LSB
+:TRIGger:SPI:CLKSource	:TRIGger:SPI:CLKSource?	both	:TRIGger:SPI:CLKSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:SPI:CLKThreshold	:TRIGger:SPI:CLKThreshold?	both	:TRIGger:SPI:CLKThreshold <clk_threshold>	<clk_threshold>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<clk_threshold>; <clk_threshold>=NR3	yes	1.60E+00
+:TRIGger:SPI:CSSource	:TRIGger:SPI:CSSource?	both	:TRIGger:SPI:CSSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:SPI:CSThreshold	:TRIGger:SPI:CSThreshold?	both	:TRIGger:SPI:CSThreshold <threshold>	<threshold>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<threshold>; <threshold>=NR3	yes	1.60E+00
+:TRIGger:SPI:CSTYpe	:TRIGger:SPI:CSTYpe?	both	:TRIGger:SPI:CSTYpe <type>	<type>={NCS|CS|TIMeout[,<time>]}; <time>=NR3	<type>; <type>={NCS|CS|TIMeout[,<time>]}; <time>=NR3	yes	NCS
+:TRIGger:SPI:DATA	-	cmd	:TRIGger:SPI:DATA <data>[,<data>[...[,<data>]]]	<data>={0|1|X}	-	yes	-
+:TRIGger:SPI:DLENgth	:TRIGger:SPI:DLENgth?	both	:TRIGger:SPI:DLENgth <data_length>	<data_length>=NR1 range [4, 96]	<data_length>; <data_length>=NR1	yes	8
+:TRIGger:SPI:LATChedge	:TRIGger:SPI:LATC?	both	:TRIGger:SPI:LATChedge <slope>	<slope>={RISing|FALLing} | guide spells :TRIGger:SPI:CLK:LATChedge; the instrument accepts only :TRIGger:SPI:LATChedge, the CLK form gives -113	<slope>; <slope>={RISing|FALLing}	yes	RISing
+:TRIGger:SPI:MISOSource	:TRIGger:SPI:MISOSource?	both	:TRIGger:SPI:MISOSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:SPI:MISOThreshold	:TRIGger:SPI:MISOThreshold?	both	:TRIGger:SPI:MISOThreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:SPI:MOSISource	:TRIGger:SPI:MOSISource?	both	:TRIGger:SPI:MOSISource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:SPI:MOSIThreshold	:TRIGger:SPI:MOSIThreshold?	both	:TRIGger:SPI:MOSIThreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:SPI:NCSSource	:TRIGger:SPI:NCSSource?	both	:TRIGger:SPI:NCSSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:SPI:NCSThreshold	:TRIGger:SPI:NCSThreshold?	both	:TRIGger:SPI:NCSThreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:SPI:TTYPe	:TRIGger:SPI:TTYPe?	both	:TRIGger:SPI:TTYPe <trigger_type>	<trigger_type>={MISO|MOSI}	<trigger_type>; <trigger_type>={MISO|MOSI}	yes	MISO
+:TRIGger:UART:BAUD	:TRIGger:UART:BAUD?	both	:TRIGger:UART:BAUD <baud>	<baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|38400 bps|57600bps|115200bps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|38400 bps|57600bps|115200bps|CUSTom[,<value>]}; <value>=NR1	yes	9600bps
+:TRIGger:UART:BITorder	:TRIGger:UART:BITorder?	both	:TRIGger:UART:BITorder <order>	<order>={LSM|MSB}	<order>; <order>={LSM|MSB}	yes	LSB
+:TRIGger:UART:CONDition	:TRIGger:UART:CONDition?	both	:TRIGger:UART:CONDition <condition>	<condition>={STARt|STOP|DATA|ERRor}	<condition>; <condition>={STARt|STOP|DATA|ERRor}	yes	STARt
+:TRIGger:UART:DATA	:TRIGger:UART:DATA?	both	:TRIGger:UART:DATA <data>	<data>=NR1	<data>; <data>=NR1	yes	256
+:TRIGger:UART:DLENgth	:TRIGger:UART:DLENgth?	both	:TRIGger:UART:DLENgth <value>	<value>=NR1 range [5, 8]	<value>; <value>=NR1	yes	8
+:TRIGger:UART:IDLE	:TRIGger:UART:IDLE?	both	:TRIGger:UART:IDLE <idle>	<idle>={LOW|HIGH}	<idle>; <idle>={LOW|HIGH}	yes	LOW
+:TRIGger:UART:LIMit	:TRIGger:UART:LIMit?	both	:TRIGger:UART:LIMit <limit_type>	<limit_type>={EQUal|GREaterthan|LESSthan}	<limit_type>; <limit_type>={EQUal|GREaterthan|LESSthan}	yes	EQUal
+:TRIGger:UART:PARity	:TRIGger:UART:PARity?	both	:TRIGger:UART:PARity <parity>	<parity>={NONE|ODD|EVEN|MARK|SPACe}	<parity_check>; <parity_check>={NONE|ODD|EVEN|MARK|SPACe}	yes	NONE
+:TRIGger:UART:RXSource	:TRIGger:UART:RXSource?	both	:TRIGger:UART:RXSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:UART:RXTHreshold	:TRIGger:UART:RXTHreshold?	both	:TRIGger:UART:RXTHreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:UART:STOP	:TRIGger:UART:STOP?	both	:TRIGger:UART:STOP <bit>	<bit>={1|1.5|2}	<bit>; <bit>={1|1.5|2}	yes	1
+:TRIGger:UART:TTYPe	:TRIGger:UART:TTYPe?	both	:TRIGger:UART:TTYPe <trigger_type>	<trigger_type>={RX|TX}	<trigger_type>; <trigger_type>={RX|TX}	yes	RX
+:TRIGger:UART:TXSource	:TRIGger:UART:TXSource?	both	:TRIGger:UART:TXSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:UART:TXTHreshold	:TRIGger:UART:TXTHreshold?	both	:TRIGger:UART:TXTHreshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:CAN:BAUD	:TRIGger:CAN:BAUD?	both	:TRIGger:CAN:BAUD <baud>	<baud>= {5kbps|10kbps|20kbps|50kbps|100kbps|125kbps|250kbps|500 kbps|800kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {5kbps|10kbps|20kbps|50kbps|100kbps|125kbps|250kbps|500 kbps|800kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	yes	100kbps
+:TRIGger:CAN:CONDition	:TRIGger:CAN:CONDition?	both	:TRIGger:CAN:CONDition <condition>	<condition>={STARt|REMote|ID|ID_AND_DATA|ERRor}	<condition>; <condition>={STARt|REMote|ID|ID_AND_DATA|ERRor}	yes	STARt
+:TRIGger:CAN:DAT2	:TRIGger:CAN:DAT2?	both	:TRIGger:CAN:DAT2 <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	yes	256
+:TRIGger:CAN:DATA	:TRIGger:CAN:DATA?	both	:TRIGger:CAN:DATA <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	yes	256
+:TRIGger:CAN:ID	:TRIGger:CAN:ID?	both	:TRIGger:CAN:ID <id>	<id>=NR1	<id>; <id>=NR1	yes	2048
+:TRIGger:CAN:IDLength	:TRIGger:CAN:IDLENgth?	both	:TRIGger:CAN:IDLENgth <id_length>	<id_length>={11BITS|29BITS}	<id_length>; <id_length>={11BITS|29BITS}	yes	11BITS
+:TRIGger:CAN:SOURce	:TRIGger:CAN:SOURce?	both	:TRIGger:CAN:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:CAN:THReshold	:TRIGger:CAN:THReshold?	both	:TRIGger:CAN:THReshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:LIN:BAUD	:TRIGger:LIN:BAUD?	both	:TRIGger:LIN:BAUD <baud>	<baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {600bps|1200bps|2400bps|4800bps|9600bps|19200bps|CUSTom[,<value>]}; <value>=NR1	yes	19200bps
+:TRIGger:LIN:CONDition	:TRIGger:LIN:CONDition?	both	:TRIGger:LIN:CONDition <condition>	<condition>={BReak|ID|ID_AND_DATA|DATA_ERROR}	<condition>; <condition>={BReak|ID|ID_AND_DATA|DATA_ERROR}	yes	BReak
+:TRIGger:LIN:DAT2	:TRIGger:LIN:DAT2?	both	:TRIGger:LIN:DAT2 <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	yes	256
+:TRIGger:LIN:DATA	:TRIGger:LIN:DATA?	both	:TRIGger:LIN:DATA <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	yes	256
+:TRIGger:LIN:ERRor:CHECksum	:TRIGger:LIN:ERRor:CHECksum?	both	:TRIGger:LIN:ERRor:CHECksum <state>	<state>={0|1}	<state>; <state>={0|1}	yes	1
+:TRIGger:LIN:ERRor:DLENgth	:TRIGger:LIN:ERRor:DLENgth?	both	:TRIGger:LIN:ERRor:DLENgth <length>	<length>=NR1 range [1, 8]	<length>; <length>=NR1	yes	1
+:TRIGger:LIN:ERRor:ID	:TRIGger:LIN:ERRor:ID?	both	:TRIGger:LIN:ERRor:ID <id>	<id>=NR1 range [0, 63]	<id>; <id>=NR1	yes	0
+:TRIGger:LIN:ERRor:PARity	:TRIGger:LIN:ERRor:PARity?	both	:TRIGger:LIN:ERRor:PARity <state>	<state>={0|1}	<state>; <state>={0|1}	yes	1
+:TRIGger:LIN:ERRor:SYNC	:TRIGger:LIN:ERRor:SYNC?	both	:TRIGger:LIN:ERRor:SYNC <state>	<state>={0|1}	<state>; <state>={0|1}	yes	1
+:TRIGger:LIN:ID	:TRIGger:LIN:ID?	both	:TRIGger:LIN:ID <id>	<id>=NR1 range [0, 64]	<id>; <id>=NR1	yes	64
+:TRIGger:LIN:SOURce	:TRIGger:LIN:Source?	both	:TRIGger:LIN:Source <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	yes	C1
+:TRIGger:LIN:STANdard	:TRIGger:LIN:STANdard?	both	:TRIGger:LIN:STANdard <version>	<version>={0|1}	<version>; <version>={0|1}	yes	1
+:TRIGger:LIN:THReshold	:TRIGger:LIN:THReshold?	both	:TRIGger:LIN:THReshold <value>	<value>=NR3 range [-4.1*vertical_scale-vertical_offset, 4.1*vertical_scale-vertical_offset] (SDS800X HD row)	<value>; <value>=NR3	yes	1.60E+00
+:TRIGger:FLEXray:BAUD	:TRIGger:FLEXray:BAUD?	both	:TRIGger:FLEXray:BAUD <baud>	<baud>={2500kbps|5Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>={2500kbps|5Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	unclear	-
+:TRIGger:FLEXray:CONDition	:TRIGger:FLEXray:CONDition?	both	:TRIGger:FLEXray:CONDition <condition>	<condition>={TSS|FRAMe|SYMBol|ERRor}	<condition>; <condition>={TSS|FRAMe|SYMBol|ERRor}	unclear	-
+:TRIGger:FLEXray:FRAMe:COMPare	:TRIGger:FLEXray:FRAMe:COMPare?	both	:TRIGger:FLEXray:FRAMe:COMPare <type>	<type >={ANY|EQUal|GREaterthan|LESSthan}	<type >; <type >={ANY|EQUal|GREaterthan|LESSthan}	unclear	-
+:TRIGger:FLEXray:FRAMe:CYCLe	:TRIGger:FLEXray:FRAMe:CYCLe?	both	:TRIGger:FLEXray:FRAMe:CYCLe <cycle>	<cycle>=NR1 range [0, 63]	<cycle>; <cycle>=NR1	unclear	-
+:TRIGger:FLEXray:FRAMe:ID	:TRIGger:FLEXray:FRAMe:ID?	both	:TRIGger:FLEXray:FRAMe:ID <id>	<id>=NR1 range [0, 2048]	<id>; <id>=NR1	unclear	-
+:TRIGger:FLEXray:FRAMe:REPetition	:TRIGger:FLEXray:FRAMe:REPetition?	both	:TRIGger:FLEXray:FRAMe:REPetition <times>	<times>={1|2|4|8|16|32|64}	<times>; <times>={1|2|4|8|16|32|64}	unclear	-
+:TRIGger:FLEXray:SOURce	:TRIGger:FLEXray:Source?	both	:TRIGger:FLEXray:Source <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:TRIGger:FLEXray:THReshold	:TRIGger:FLEXray:THReshold?	both	:TRIGger:FLEXray:THReshold <value>	<value>=NR3 | guide threshold table lists other models but not SDS800X HD	< value>; < value>=NR3	unclear	-
+:TRIGger:CANFd:BAUDData	:TRIGger:CANFd:BAUDData?	both	:TRIGger:CANFd:BAUDData <baud>	<baud>= {500kbps|1Mbps|2Mbps|5Mbps|8Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {500kbps|1Mbps|2Mbps|5Mbps|8Mbps|10Mbps|CUSTom[,<value>]}; <value>=NR1	unclear	-
+:TRIGger:CANFd:BAUDNominal	:TRIGger:CANFd:BAUDNominal?	both	:TRIGger:CANFd:BAUDNominal <baud>	<baud>= {10kbps|25kbps|50kbps|100kbps|250kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	<baud>; <baud>= {10kbps|25kbps|50kbps|100kbps|250kbps|1Mbps|CUSTom[,<value>]}; <value>=NR1	unclear	-
+:TRIGger:CANFd:CONDition	:TRIGger:CANFd:CONDition?	both	:TRIGger:CANFd:CONDition <condition>	<condition>={STARt|REMote|ID|ID_AND_DATA|ERRor}	<condition>; <condition>={STARt|REMote|ID|ID_AND_DATA|ERRor}	unclear	-
+:TRIGger:CANFd:DAT2	:TRIGger:CANFd:DAT2?	both	:TRIGger:CANFd:DAT2 <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	unclear	-
+:TRIGger:CANFd:DATA	:TRIGger:CANFd:DATA?	both	:TRIGger:CANFd:DATA <data>	<data>=NR1 range [0, 256]	<data>; <data>=NR1	unclear	-
+:TRIGger:CANFd:FTYPe	:TRIGger:CANFd:FTYPe?	both	:TRIGger:CANFd:FTYPe <frame_type>	<frame_type>={BOTH|CAN|CANFd}	<frame_type>; <frame_type>={BOTH|CAN|CANFd}	unclear	-
+:TRIGger:CANFd:ID	:TRIGger:CANFd:ID?	both	:TRIGger:CANFd:ID <id>	<id>=NR1	<id>; <id>=NR1	unclear	-
+:TRIGger:CANFd:IDLength	:TRIGger:CANFd:IDLENgth?	both	:TRIGger:CANFd:IDLENgth <length>	<length>={11BITS|29BITS}	<length>; <length>={11BITS|29BITS}	unclear	-
+:TRIGger:CANFd:SOURce	:TRIGger:CANFd:SOURce?	both	:TRIGger:CANFd:SOURce <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:TRIGger:CANFd:THReshold	:TRIGger:CANFd:THReshold?	both	:TRIGger:CANFd:THReshold <threshold>	<threshold>=NR3 | guide threshold table lists other models but not SDS800X HD	<threshold>; <threshold>=NR3	unclear	-
+:TRIGger:IIS:AVARiant	:TRIGger:IIS:AVARiant?	both	:TRIGger:IIS:AVARiant <type>	<type>={I2S|LJ|RJ}	<type>; <type>={I2S|LJ|RJ}	unclear	-
+:TRIGger:IIS:BCLKSource	:TRIGger:IIS:BCLKSource?	both	:TRIGger:IIS:BCLKSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:TRIGger:IIS:BCLKThreshold	:TRIGger:IIS:BCLKThreshold?	both	:TRIGger:IIS:BCLKThreshold <value>	<value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:TRIGger:IIS:BITorder	:TRIGger:IIS:BITorder?	both	:TRIGger:IIS:BITorder <order>	<order>={LSM|MSB}	<order>; <order>={LSM|MSB}	unclear	-
+:TRIGger:IIS:CHANnel	:TRIGger:IIS:CHANnel?	both	:TRIGger:IIS:CHANnel <channel>	<channel>={LEFT|RIGHT}	<channel>; <channel>={LEFT|RIGHT}	unclear	-
+:TRIGger:IIS:COMPare	:TRIGger:IIS:COMPare?	both	:TRIGger:IIS:COMPare <type>	<type>={EQUal|GREaterthan|LESSthan}	<type>; <type>={EQUal|GREaterthan|LESSthan}	unclear	-
+:TRIGger:IIS:CONDition	:TRIGger:IIS:CONDition?	both	:TRIGger:IIS:CONDition <condition>	<condition>={DATA|MUTE|CLIP|GLITch|RISing|FALLing}	<condition>; <condition>={DATA|MUTE|CLIP|GLITch|RISing|FALLing}	unclear	-
+:TRIGger:IIS:DLENgth	:TRIGger:IIS:DLENgth?	both	:TRIGger:IIS:DLENgth <value>	<value>=NR1	<value>; <value>=NR1	unclear	-
+:TRIGger:IIS:DSource	:TRIGger:IIS:DSource?	both	:TRIGger:IIS:DSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:TRIGger:IIS:DTHReshold	:TRIGger:IIS:DTHReshold?	both	:TRIGger:IIS:DTHReshold <value>	<value>=NR3 | guide threshold table lists other models but not SDS800X HD	<threshold>:= NR3 format.	unclear	-
+:TRIGger:IIS:LATChedge	:TRIGger:IIS:LATChedge?	both	:TRIGger:IIS:LATChedge <slope>	<slope>={RISing|FALLing}	<slope>; <slope>={RISing|FALLing}	unclear	-
+:TRIGger:IIS:LCH	:TRIGger:IIS:LCH?	both	:TRIGger:IIS:LCH <level>	<level>={LOW|HIGH}	<level>; <level>={LOW|HIGH}	unclear	-
+:TRIGger:IIS:VALue	:TRIGger:IIS:VALue?	both	:TRIGger:IIS:VALue <value>	<value>=NR1	<value>; <value>=NR1	unclear	-
+:TRIGger:IIS:WSSource	:TRIGger:IIS:WSSource?	both	:TRIGger:IIS:WSSource <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:TRIGger:IIS:WSTHreshold	:TRIGger:IIS:WSTHreshold?	both	:TRIGger:IIS:WSTHreshold <value>	<value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:TRIGger:SENT:SOURce	:TRIGger:SENT:Source?	both	:TRIGger:SENT:Source <source>	<source>={C<n>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|D<d>}	unclear	-
+:TRIGger:SENT:THReshold	:TRIGger:SENT:THReshold?	both	:TRIGger:SENT:THReshold <value>	<value>=NR3 | guide threshold table lists other models but not SDS800X HD	<value>; <value>=NR3	unclear	-
+:WAVeform:BYTeorder	:WAVeform:BYTeorder?	both	:WAVeform:BYTeorder <order>	<order>={MSB|LSB}	<order>; <order>={MSB|LSB}	yes	LSB
+:WAVeform:SOURce	:WAVeform:SOURce?	both	:WAVeform:SOURce <source>	<source>={C<n>|F<x>|D<d>}; <n>=1 to (# analog channels: 2 or 4 on SDS800X HD) (NR1); <x>=1 to (# math functions) (NR1); <d>=0 to (# digital channels - 1; 16 with SLA1016: D0-D15) (NR1)	<source>; <source>={C<n>|F<x>|D<d>}	yes	C1
+:WAVeform:STARt	:WAVeform:STARt?	both	:WAVeform:STARt <value>	<value>=NR1	<value>; <value>=NR1	yes	0
+:WAVeform:INTerval	:WAVeform:INTerval?	both	:WAVeform:INTerval <value>	<value>=NR1	<value>; <value>=NR1	yes	1
+:WAVeform:POINt	:WAVeform:POINt?	both	:WAVeform:POINt <value>	<value>=NR1	<value>; <value>=NR1	yes	0
+:WAVeform:MAXPoint	:WAVeform:MAXPoint?	query	-	-	<value>; <value>=NR1 (5000000 for analog BYTE at 10k…10M)	yes	5000000
+:WAVeform:WIDTh	:WAVeform:WIDTh?	both	:WAVeform:WIDTh <type>	<type>={BYTE|WORD}	<type>; <type>={BYTE|WORD}	yes	BYTE
+:WAVeform:PREamble	:WAVeform:PREamble?	query	-	-	<bin>; <bin>=binary data block headed " #9<9-Digits>”. See the table below for details.	yes	-
+:WAVeform:DATA	:WAVeform:DATA?	query	-	- | DATA? while the trigger is running freezes one record for the read and resumes (spec 11 §7.1)	<wave_data>; <wave_data>=binary data block headed " #N<N-Digits>”	yes	-
+:WAVeform:SEQuence	:WAVeform:SEQuence?	both	:WAVeform:SEQuence <value1>,<value2>	<value1>=NR1; <value2>=NR1; frame stays -1 until a sequence has been acquired (spec 11 §6.7)	<value1>,<value2>; <value1>=frame printed as unsigned 32-bit (default -1 → 4294967295); <value2>=NR1	yes	4294967295,1
+ARbWaVe	<channel>:ARbWaVe?	both	<channel>:ARbWaVe INDEX,<index>	<channel>={C1}; <index>=the index of the arbitrary waveform from the table; <name>=the name of the arbitrary waveform from the table | WGEN: needs built-in generator/SAG1021I + FG option	<channel>:ARWV	unclear	-
+BaSic_WaVe	<channel>:BaSic_WaVe?	both	<channel>:BaSic_WaVe <parameter>,<value>	<channel>={C1}; <parameter>=a parameter from the table below.; <value>=value of the corresponding parameter. | WGEN: needs built-in generator/SAG1021I + FG option	<channel>:BSWV <parameter>; <parameter>=All the parameters of the current basic waveform.	unclear	-
+OUTPut	<channel>:OUTPut?	both	<channel>:OUTPut <state>,LOAD,<load>	<channel>={C1}; <state>={ON|OFF}; <load>={50|HZ} | WGEN: needs built-in generator/SAG1021I + FG option	<channel>:OUTP <state>,LOAD,<load>,PLRT,<polarity>; <state>={ON|OFF}; <load>={50|HZ}; <polarity>={NOR|INVT}	unclear	-
+SToreList	SToreList? [<location>]	query	-	<location>={BUILDIN|USER} | WGEN: needs built-in generator/SAG1021I + FG option	-	unclear	-
+SYNC	<channel>:SYNC?	both	<channel>:SYNC <state>	<channel>={C1}; <state>={ON|OFF} | WGEN: needs built-in generator/SAG1021I + FG option	<channel>:SYNC <state>,TYPE,<TYPE>; <channel>={C1}; <state>={ON|OFF}; <TYPE>={CH1}	unclear	-
+VOLTPRT	VOLTPRT?	both	VOLTPRT <state>	<state>={ON|OFF} | SHS800X/SHS1000X only	VOLTPRT <state>	no	-
+MMETer	-	cmd	MMETer <switch>	<switch>={ON|OFF} | SHS800X/SHS1000X multimeter only	-	no	-
+READ	READ?	query	-	SHS800X/SHS1000X multimeter only	MM_VALUE <value>	no	-
+CONFigure	CONFigure?	query	-	SHS800X/SHS1000X multimeter only	<func>; <func>={DCV|ACV|RES|DIODE|CONTINUITY|CAP|DCI|ACI}	no	-
+CONFigure:CONTinuity	-	cmd	CONFigure:CONTinuity	SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure:CURRent:AC	-	both	CONFigure:CURRent:AC <range>	<range>={60mA|600mA|6A|10A|AUTO|MIN|MAX|DEF} | SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure:CURRent:DC	-	both	CONFigure:CURRent:DC <range>	<range>={60mA|600mA|6A|10A|AUTO|MIN|MAX|DEF} | SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure:DIODe	-	cmd	CONFigure:DIODe	SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure:RESistance	-	cmd	CONFigure:RESistance <range>	<range>={600|6k|60k|600k|6M|60M|AUTO|MIN|MAX|DEF} | SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure[:VOLTage]:AC	-	cmd	CONFigure[:VOLTage]:AC <range>	SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure[:VOLTage]:DC	-	cmd	CONFigure[:VOLTage]:DC <range>	SHS800X/SHS1000X multimeter only	-	no	-
+CONFigure:CAPacitance	-	cmd	CONFigure:CAPacitance	SHS800X/SHS1000X multimeter only	-	no	-
+MEASure:CONTinuity	MEASure:CONTinuity?	query	-	SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure:CURRent:AC	MEASure:CURRent:AC? <range>	query	-	<range>={60mA|600mA|6A|10A|AUTO} | SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure:CURRent:DC	MEASure:CURRent:DC? <range>	query	-	<range>={60mA|600mA|6A|10A|AUTO} | SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure:DIODe	MEASure:DIODe?	query	-	SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure:RESistance	MEASure:RESistance? <range>	query	-	<range>={600|6k|60k|600k|6M|60M} | SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure[:VOLTage]:AC	MEASure:VOLTage:AC? <range>	query	-	SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure[:VOLTage]:DC	MEASure:VOLTage:DC? <range>	query	-	SHS800X/SHS1000X multimeter only	<value>	no	-
+MEASure:CAPacitance	MEASure:CAPacitance?	query	[SENSe:]CURRent:AC:NULL <state>	<state>={ON|OFF}; <state>={ON|OFF}; <unit>={MA|A}; <unit>={MA|A}; <state>={ON|OFF}; <state>={ON|OFF}; <state>={ON|OFF}; <unit>={MV|V}; <unit>={MV|V}; <state>={ON|OFF} | SHS800X/SHS1000X multimeter only	<value>	no	-
+XYDS	XYDS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+ACQUIRE_WAY	ACQUIRE_WAY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+ACQW	ACQW?	both	-	legacy short-form (pre-E11A) command; long form ACQUIRE_WAY	-	legacy	-
+AVERAGE_ACQUIRE	AVERAGE_ACQUIRE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+AVGA	AVGA?	both	-	legacy short-form (pre-E11A) command; long form AVERAGE_ACQUIRE	-	legacy	-
+ACENBT	ACENBT?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+SXSA	SXSA?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+ACSQM	ACSQM?	both	-	legacy short-form (pre-E11A) command; long form ACQUIRE_SEQUENCE_MODE	-	legacy	-
+SAMPLE_NUM	SAMPLE_NUM?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+SANU	SANU?	both	-	legacy short-form (pre-E11A) command; long form SAMPLE_NUM	-	legacy	-
+MEMORY_SIZE	MEMORY_SIZE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MSIZ	MSIZ?	both	-	legacy short-form (pre-E11A) command; long form MEMORY_SIZE	-	legacy	-
+SINXX_SAMPLE	SINXX_SAMPLE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+BOARDTEST	BOARDTEST?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+*CAL	*CAL?	both	-	IEEE 488.2 common command	-	standard	-
+C#:VGAC	C#:VGAC?	both	-	legacy per-channel command	-	legacy	-
+C#:ALL_VGAC	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:DACC	C#:DACC?	both	-	legacy per-channel command; long form C#:ALL_VGAC	-	legacy	-
+C#:ADC_FS_SET	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:DAC_ATTEN	-	cmd	-	legacy per-channel command; long form C#:ADC_FS_SET	-	legacy	-
+DAC_CODE	DAC_CODE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+C#:CALibrate:BSKew:SET	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:ADC_OADJ	C#:ADC_OADJ?	both	-	legacy per-channel command	-	legacy	-
+C#:ADC_DATA_SOURCE	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:ADC_DATA	C#:ADC_DATA?	query	-	legacy per-channel command	-	legacy	-
+C#:ADC_INDEX_SKEW	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:ADC_CH_INSIDE_SKEW	C#:ADC_CH_INSIDE_SKEW?	query	-	legacy per-channel command	-	legacy	-
+:C#:CALdata:SAVE	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:ADC_CH_FINE_SKEW	C#:ADC_CH_FINE_SKEW?	query	-	legacy per-channel command	-	legacy	-
+C#:VGA_FB_SET	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:VGA_TFBGC:SET	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:VGA_TFBFC:SET	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:VGA_TFB:SWITch	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:VOLT_DIV	C#:VOLT_DIV?	both	-	legacy per-channel command	-	legacy	-
+C#:VDIV	C#:VDIV?	both	-	legacy per-channel command; long form C#:VOLT_DIV	-	legacy	-
+C#:TRACE	C#:TRACE?	both	-	legacy per-channel command	-	legacy	-
+C#:TRA	C#:TRA?	both	-	legacy per-channel command	-	legacy	-
+C#:OFFSET	C#:OFFSET?	both	-	legacy per-channel command	-	legacy	-
+C#:OFST	C#:OFST?	both	-	legacy per-channel command	-	legacy	-
+C#:COUPLING	C#:COUPLING?	both	-	legacy per-channel command	-	legacy	-
+C#:CPL	C#:CPL?	both	-	legacy per-channel command	-	legacy	-
+C#:ATTENUATION	C#:ATTENUATION?	both	-	legacy per-channel command	-	legacy	-
+C#:ATTN	C#:ATTN?	both	-	legacy per-channel command	-	legacy	-
+C#:UNIT	C#:UNIT?	both	-	legacy per-channel command	-	legacy	-
+C#:SKEW	C#:SKEW?	both	-	legacy per-channel command	-	legacy	-
+C#:INVERTSET	C#:INVERTSET?	both	-	legacy per-channel command	-	legacy	-
+C#:INVS	C#:INVS?	both	-	legacy per-channel command	-	legacy	-
+C#:BWL	C#:BWL?	query	-	legacy per-channel command	-	legacy	-
+C#:HADJ	C#:HADJ?	both	-	legacy per-channel command	-	legacy	-
+C#:PRIority	C#:PRIority?	both	-	legacy per-channel command	-	legacy	-
+VDIVL	VDIVL?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CHS	CHS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CURSOR_MEASURE	CURSOR_MEASURE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CRMS	CRMS?	both	-	legacy short-form (pre-E11A) command; long form CURSOR_MEASURE	-	legacy	-
+CURSOR_TYPE	CURSOR_TYPE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CRTY	CRTY?	both	-	legacy short-form (pre-E11A) command; long form CURSOR_TYPE	-	legacy	-
+C#:CURSOR_SET	C#:CURSOR_SET?	both	-	legacy per-channel command	-	legacy	-
+C#:CRST	C#:CRST?	both	-	legacy per-channel command; long form C#:CURSOR_SET	-	legacy	-
+C#:CURSOR_VALUE	C#:CURSOR_VALUE?	query	-	legacy per-channel command	-	legacy	-
+C#:CRVA	C#:CRVA?	query	-	legacy per-channel command	-	legacy	-
+MATH:CURSOR_VALUE	MATH:CURSOR_VALUE?	query	-	legacy math	-	legacy	-
+MATH:CRVA	MATH:CRVA?	query	-	legacy math	-	legacy	-
+DCST	DCST?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+DCDI	DCDI?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+B#:DeCo_IiC	-	cmd	-	legacy bus	-	legacy	-
+B#:DCIC	-	cmd	-	legacy bus; long form B#:DeCo_IiC	-	legacy	-
+B#:DeCo_SPi	-	cmd	-	legacy bus	-	legacy	-
+B#:DCSP	-	cmd	-	legacy bus; long form B#:DeCo_SPi	-	legacy	-
+B#:DeCo_UarT	-	cmd	-	legacy bus	-	legacy	-
+B#:DCUT	-	cmd	-	legacy bus; long form B#:DeCo_UarT	-	legacy	-
+B#:DeCo_CaN	-	cmd	-	legacy bus	-	legacy	-
+B#:DCCN	-	cmd	-	legacy bus; long form B#:DeCo_CaN	-	legacy	-
+B#:DeCo_LiN	-	cmd	-	legacy bus	-	legacy	-
+B#:DCLN	-	cmd	-	legacy bus; long form B#:DeCo_LiN	-	legacy	-
+D#:TRA	D#:TRA?	both	-	legacy digital channel	-	legacy	-
+D#:TRSL	D#:TRSL?	both	-	legacy digital channel	-	legacy	-
+D#:ACT	-	cmd	-	legacy digital channel	-	legacy	-
+DOT_JOIN	DOT_JOIN?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+DTJN	DTJN?	both	-	legacy short-form (pre-E11A) command; long form DOT_JOIN	-	legacy	-
+GRID_DISPLAY	GRID_DISPLAY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+GRDS	GRDS?	both	-	legacy short-form (pre-E11A) command; long form GRID_DISPLAY	-	legacy	-
+PERSIST_SETUP	PERSIST_SETUP?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PESU	PESU?	both	-	legacy short-form (pre-E11A) command; long form PERSIST_SETUP	-	legacy	-
+INTENSITY	INTENSITY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+INTS	INTS?	both	-	legacy short-form (pre-E11A) command; long form INTENSITY	-	legacy	-
+TREG	TREG?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+HSMD	HSMD?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+HISTORY_LIST	HISTORY_LIST?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+HSLST	HSLST?	both	-	legacy short-form (pre-E11A) command; long form HISTORY_LIST	-	legacy	-
+FRAME_TIME	FRAME_TIME?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FTIM	FTIM?	both	-	legacy short-form (pre-E11A) command; long form FRAME_TIME	-	legacy	-
+FRAME_SET	FRAME_SET?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FRAM	FRAM?	both	-	legacy short-form (pre-E11A) command; long form FRAME_SET	-	legacy	-
+HSST	HSST?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MATH:INVERT_SET	-	cmd	-	legacy math	-	legacy	-
+MATH:INVS	MATH:INVS?	both	-	legacy math; long form MATH:INVERT_SET	-	legacy	-
+MATH_VERT_DIV	MATH_VERT_DIV?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MTVD	MTVD?	both	-	legacy short-form (pre-E11A) command; long form MATH_VERT_DIV	-	legacy	-
+FFT_WINDOW	FFT_WINDOW?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTW	FFTW?	both	-	legacy short-form (pre-E11A) command; long form FFT_WINDOW	-	legacy	-
+FFT_UNIT	FFT_UNIT?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTU	FFTU?	both	-	legacy short-form (pre-E11A) command; long form FFT_UNIT	-	legacy	-
+FFT_FULLSCREEN	FFT_FULLSCREEN?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTF	FFTF?	both	-	legacy short-form (pre-E11A) command; long form FFT_FULLSCREEN	-	legacy	-
+FFT_POS	FFT_POS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTP	FFTP?	both	-	legacy short-form (pre-E11A) command; long form FFT_POS	-	legacy	-
+MTEN	MTEN?	both	-	legacy short-form (pre-E11A) command; long form MATH_ENABLE	-	legacy	-
+FFT_SCALE	FFT_SCALE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTS	FFTS?	both	-	legacy short-form (pre-E11A) command; long form FFT_SCALE	-	legacy	-
+FFT_CENTER	FFT_CENTER?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTC	FFTC?	both	-	legacy short-form (pre-E11A) command; long form FFT_CENTER	-	legacy	-
+MATH_VERT_POS	MATH_VERT_POS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MTVP	MTVP?	both	-	legacy short-form (pre-E11A) command; long form MATH_VERT_POS	-	legacy	-
+FFT_TDIV	FFT_TDIV?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FFTT	FFTT?	both	-	legacy short-form (pre-E11A) command; long form FFT_TDIV	-	legacy	-
+MATH:INVERTSET	MATH:INVERTSET?	both	-	legacy math	-	legacy	-
+C#:PARAMETER_VALUE	C#:PARAMETER_VALUE?	query	-	legacy per-channel command	-	legacy	-
+C#:PAVA	C#:PAVA?	query	-	legacy per-channel command	-	legacy	-
+MATH:PARAMETER_VALUE	MATH:PARAMETER_VALUE?	query	-	legacy math	-	legacy	-
+MATH:PAVA	MATH:PAVA?	query	-	legacy math	-	legacy	-
+MM_VALUE	MM_VALUE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MREG	MREG?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+COMM_HEADER	COMM_HEADER?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CHDR	CHDR?	both	-	legacy short-form (pre-E11A) command; long form COMM_HEADER	-	legacy	-
+BUID	BUID?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PF_ENABLE	PF_ENABLE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFEN	PFEN?	both	-	legacy short-form (pre-E11A) command; long form PF_ENABLE	-	legacy	-
+PF_DISPLAY	PF_DISPLAY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFDS	PFDS?	both	-	legacy short-form (pre-E11A) command; long form PF_DISPLAY	-	legacy	-
+PFSC	PFSC?	both	-	legacy short-form (pre-E11A) command; long form PF_SOURCR	-	legacy	-
+PF_OPERATION	PF_OPERATION?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFOP	PFOP?	both	-	legacy short-form (pre-E11A) command; long form PF_OPERATION	-	legacy	-
+PF_BUFFER	PF_BUFFER?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFBF	PFBF?	both	-	legacy short-form (pre-E11A) command; long form PF_BUFFER	-	legacy	-
+PF_FAIL_STOP	PF_FAIL_STOP?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFFS	PFFS?	both	-	legacy short-form (pre-E11A) command; long form PF_FAIL_STOP	-	legacy	-
+PF_DATADIS	PF_DATADIS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFDD	PFDD?	both	-	legacy short-form (pre-E11A) command; long form PF_DATADIS	-	legacy	-
+PF_SET	PF_SET?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFST	PFST?	both	-	legacy short-form (pre-E11A) command; long form PF_SET	-	legacy	-
+PF_SOURCE	PF_SOURCE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFTY	PFTY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFHIS	PFHIS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+PFCAP	PFCAP?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+SCDP	-	cmd	-	legacy short-form (pre-E11A) command	-	legacy	-
+PNGDP	-	cmd	-	legacy short-form (pre-E11A) command | returns a complete PNG (spec 11 §8)	-	legacy	-
+SCOPE_ID	SCOPE_ID?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MACHINE_BAND	MACHINE_BAND?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+MCBD	MCBD?	both	-	legacy short-form (pre-E11A) command; long form MACHINE_BAND	-	legacy	-
+LICENCE_INSTALL	LICENCE_INSTALL?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+LCISL	LCISL?	both	-	legacy short-form (pre-E11A) command; long form LICENCE_INSTALL	-	legacy	-
+C#:POffs	C#:POffs?	both	-	legacy per-channel command	-	legacy	-
+C#:PDAC	C#:PDAC?	both	-	legacy per-channel command	-	legacy	-
+C#:PDelta	C#:PDelta?	both	-	legacy per-channel command	-	legacy	-
+C#:PIntc	C#:PIntc?	both	-	legacy per-channel command	-	legacy	-
+C#:PCali	C#:PCali?	query	-	legacy per-channel command	-	legacy	-
+C#:PInfo	C#:PInfo?	query	-	legacy per-channel command	-	legacy	-
+C#:ProbeSN	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:PType	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:PCap	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:PBW	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:PGain	-	cmd	-	legacy per-channel command	-	legacy	-
+C#:PFRam:REAd	C#:PFRam:REAd?	query	-	legacy per-channel command	-	legacy	-
+REF_SOURCE	REF_SOURCE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+REFSR	REFSR?	both	-	legacy short-form (pre-E11A) command; long form REF_SOURCE	-	legacy	-
+REF_LOCATION	REF_LOCATION?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+REFLA	REFLA?	both	-	legacy short-form (pre-E11A) command; long form REF_LOCATION	-	legacy	-
+REF_DISPLAY	REF_DISPLAY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+REFDS	REFDS?	both	-	legacy short-form (pre-E11A) command; long form REF_DISPLAY	-	legacy	-
+REF_SCALE	REF_SCALE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+REFSC	REFSC?	both	-	legacy short-form (pre-E11A) command; long form REF_SCALE	-	legacy	-
+REF_POSITION	REF_POSITION?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+REFPO	REFPO?	both	-	legacy short-form (pre-E11A) command; long form REF_POSITION	-	legacy	-
+CSVS	CSVS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+SUSWF	SUSWF?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+WFDA	WFDA?	both	-	legacy short-form (pre-E11A) command; long form WF_DATA	-	legacy	-
+PNSU	PNSU?	both	-	legacy short-form (pre-E11A) command; long form PANEL_SETUP	-	legacy	-
+*RCL	-	cmd	-	IEEE 488.2 common command	-	standard	-
+*SAV	-	cmd	-	IEEE 488.2 common command	-	standard	-
+CMR	CMR?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+EXR	EXR?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+INR	INR?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+ALST	ALST?	both	-	legacy short-form (pre-E11A) command; long form ALL_STATUS	-	legacy	-
+TRIG_PATTERN	TRIG_PATTERN?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRPA	TRPA?	both	-	legacy short-form (pre-E11A) command; long form TRIG_PATTERN	-	legacy	-
+TRIG_WINDOW	TRIG_WINDOW?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRWI	TRWI?	both	-	legacy short-form (pre-E11A) command; long form TRIG_WINDOW	-	legacy	-
+SAMPLE_STATUS	SAMPLE_STATUS?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+SAST	SAST?	both	-	legacy short-form (pre-E11A) command; long form SAMPLE_STATUS	-	legacy	-
+TRST	TRST?	both	-	legacy short-form (pre-E11A) command; long form TRIG_STATUS | reply ON when the trigger state is Trig'd, else OFF (spec 11 §6.7.1)	-	legacy	-
+TRFSM	TRFSM?	both	-	legacy short-form (pre-E11A) command; long form TRIG_FSM	-	legacy	-
+CYMOMETER	CYMOMETER?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CYMT	CYMT?	both	-	legacy short-form (pre-E11A) command; long form CYMOMETER	CYMT <f>Hz; <f>=NR3 (f ≥ 10 Hz) or 10 (f < 10 Hz, no signal); CHDR header (11 §6.3.2, 15 §4)	legacy	-
+TRMD	TRMD?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRSR	TRSR?	both	-	legacy short-form (pre-E11A) command; long form TRIG_SOURCE	-	legacy	-
+TRNR	TRNR?	both	-	legacy short-form (pre-E11A) command; long form TRIG_NOISEREJ	-	legacy	-
+TRIG_IIC:SCL	TRIG_IIC:SCL?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:SCL	TRIIC:SCL?	both	-	legacy IIC trigger; long form TRIG_IIC:SCL	-	legacy	-
+TRIG_IIC:SDA	TRIG_IIC:SDA?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:SDA	TRIIC:SDA?	both	-	legacy IIC trigger; long form TRIG_IIC:SDA	-	legacy	-
+TRIG_IIC:QUALIFIER	TRIG_IIC:QUALIFIER?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:QUAL	TRIIC:QUAL?	both	-	legacy IIC trigger; long form TRIG_IIC:QUALIFIER	-	legacy	-
+TRIG_IIC:RW	TRIG_IIC:RW?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:RW	TRIIC:RW?	both	-	legacy IIC trigger; long form TRIG_IIC:RW	-	legacy	-
+TRIG_SPI:CLK	TRIG_SPI:CLK?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:CLK	TRSPI:CLK?	both	-	legacy SPI trigger; long form TRIG_SPI:CLK	-	legacy	-
+TRIG_SPI:MISO	TRIG_SPI:MISO?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:MISO	TRSPI:MISO?	both	-	legacy SPI trigger; long form TRIG_SPI:MISO	-	legacy	-
+TRIG_SPI:MOSI	TRIG_SPI:MOSI?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:MOSI	TRSPI:MOSI?	both	-	legacy SPI trigger; long form TRIG_SPI:MOSI	-	legacy	-
+TRIG_SPI:NCS	TRIG_SPI:NCS?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:NCS	TRSPI:NCS?	both	-	legacy SPI trigger; long form TRIG_SPI:NCS	-	legacy	-
+TRIG_SPI:CS	TRIG_SPI:CS?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:CS	TRSPI:CS?	both	-	legacy SPI trigger; long form TRIG_SPI:CS	-	legacy	-
+TRUART:RX	TRUART:RX?	both	-	legacy UART trigger	-	legacy	-
+TRUART:TX	TRUART:TX?	both	-	legacy UART trigger	-	legacy	-
+TRCAN:CANH	TRCAN:CANH?	both	-	legacy CAN trigger	-	legacy	-
+TRCAN:CANL	TRCAN:CANL?	both	-	legacy CAN trigger	-	legacy	-
+TRLIN:SOURCE	-	cmd	-	legacy LIN trigger	-	legacy	-
+TRLIN:SRC	TRLIN:SRC?	both	-	legacy LIN trigger	-	legacy	-
+TRLIN:BAUD	TRLIN:BAUD?	both	-	legacy LIN trigger	-	legacy	-
+C#:TRIG_LEVEL	C#:TRIG_LEVEL?	both	-	legacy per-channel command	-	legacy	-
+C#:TRLV	C#:TRLV?	both	-	legacy per-channel command; long form C#:TRIG_LEVEL	-	legacy	-
+EX:TRIG_LEVEL	EX:TRIG_LEVEL?	both	-	legacy external trigger	-	legacy	-
+EX:TRLV	EX:TRLV?	both	-	legacy external trigger; long form EX:TRIG_LEVEL	-	legacy	-
+EX5:TRIG_LEVEL	EX5:TRIG_LEVEL?	both	-	legacy external/5 trigger	-	legacy	-
+EX5:TRLV	EX5:TRLV?	both	-	legacy external/5 trigger; long form EX5:TRIG_LEVEL	-	legacy	-
+C#:TRIG_LEVEL2	C#:TRIG_LEVEL2?	both	-	legacy per-channel command	-	legacy	-
+C#:TRLV2	C#:TRLV2?	both	-	legacy per-channel command; long form C#:TRIG_LEVEL2	-	legacy	-
+C#:TRIG_SLOPE	C#:TRIG_SLOPE?	both	-	legacy per-channel command	-	legacy	-
+C#:TRSL	C#:TRSL?	both	-	legacy per-channel command; long form C#:TRIG_SLOPE	-	legacy	-
+EX:TRIG_SLOPE	EX:TRIG_SLOPE?	both	-	legacy external trigger	-	legacy	-
+EX:TRSL	EX:TRSL?	both	-	legacy external trigger; long form EX:TRIG_SLOPE	-	legacy	-
+EX5:TRIG_SLOPE	EX5:TRIG_SLOPE?	both	-	legacy external/5 trigger	-	legacy	-
+EX5:TRSL	EX5:TRSL?	both	-	legacy external/5 trigger; long form EX5:TRIG_SLOPE	-	legacy	-
+LINE:TRIG_SLOPE	LINE:TRIG_SLOPE?	both	-	legacy AC-line trigger	-	legacy	-
+LINE:TRSL	LINE:TRSL?	both	-	legacy AC-line trigger; long form LINE:TRIG_SLOPE	-	legacy	-
+C#:TRIG_COUPLING	C#:TRIG_COUPLING?	both	-	legacy per-channel command	-	legacy	-
+C#:TRCP	C#:TRCP?	both	-	legacy per-channel command; long form C#:TRIG_COUPLING	-	legacy	-
+EX:TRIG_COUPLING	EX:TRIG_COUPLING?	both	-	legacy external trigger	-	legacy	-
+EX:TRCP	EX:TRCP?	both	-	legacy external trigger; long form EX:TRIG_COUPLING	-	legacy	-
+EX5:TRIG_COUPLING	EX5:TRIG_COUPLING?	both	-	legacy external/5 trigger	-	legacy	-
+EX5:TRCP	EX5:TRCP?	both	-	legacy external/5 trigger; long form EX5:TRIG_COUPLING	-	legacy	-
+LINE:TRIG_COUPLING	LINE:TRIG_COUPLING?	both	-	legacy AC-line trigger	-	legacy	-
+LINE:TRCP	LINE:TRCP?	both	-	legacy AC-line trigger; long form LINE:TRIG_COUPLING	-	legacy	-
+TRIG_SELECT	TRIG_SELECT?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRSE	TRSE?	both	-	legacy short-form (pre-E11A) command; long form TRIG_SELECT	-	legacy	-
+TRIG_MODE	TRIG_MODE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+ARM_ACQUISITION	-	cmd	-	legacy short-form (pre-E11A) command	-	legacy	-
+ARM	-	cmd	-	legacy short-form (pre-E11A) command; long form ARM_ACQUISITION	-	legacy	-
+CYMT_HW	CYMT_HW?	query	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRIG_IIC:CONDITION	TRIG_IIC:CONDITION?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:CON	TRIIC:CON?	both	-	legacy IIC trigger; long form TRIG_IIC:CONDITION	-	legacy	-
+TRIG_IIC:ADDRESS	TRIG_IIC:ADDRESS?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:ADDR	TRIIC:ADDR?	both	-	legacy IIC trigger; long form TRIG_IIC:ADDRESS	-	legacy	-
+TRIG_IIC:DATA	TRIG_IIC:DATA?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:DATA	TRIIC:DATA?	both	-	legacy IIC trigger; long form TRIG_IIC:DATA	-	legacy	-
+TRIG_IIC:DATA2	TRIG_IIC:DATA2?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:DAT2	TRIIC:DAT2?	both	-	legacy IIC trigger; long form TRIG_IIC:DATA2	-	legacy	-
+TRIG_IIC:ADDR_LEN	TRIG_IIC:ADDR_LEN?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:ALEN	TRIIC:ALEN?	both	-	legacy IIC trigger; long form TRIG_IIC:ADDR_LEN	-	legacy	-
+TRIG_IIC:DATA_LEN	TRIG_IIC:DATA_LEN?	both	-	legacy IIC trigger (long form)	-	legacy	-
+TRIIC:DLEN	TRIIC:DLEN?	both	-	legacy IIC trigger; long form TRIG_IIC:DATA_LEN	-	legacy	-
+TRIG_SPI:CLK:EDGE	TRIG_SPI:CLK:EDGE?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:CLK:EDGE	TRSPI:CLK:EDGE?	both	-	legacy SPI trigger; long form TRIG_SPI:CLK:EDGE	-	legacy	-
+TRIG_SPI:CLK:TIME	-	cmd	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:CLK:TIM	TRSPI:CLK:TIM?	both	-	legacy SPI trigger; long form TRIG_SPI:CLK:TIME	-	legacy	-
+TRIG_SPI:CLK:TIM	TRIG_SPI:CLK:TIM?	query	-	legacy SPI trigger (long form)	-	legacy	-
+TRIG_SPI:CSTYPE	TRIG_SPI:CSTYPE?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:CSTP	TRSPI:CSTP?	both	-	legacy SPI trigger; long form TRIG_SPI:CSTYPE	-	legacy	-
+TRIG_SPI:TRTY	TRIG_SPI:TRTY?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:TRTY	TRSPI:TRTY?	both	-	legacy SPI trigger; long form TRIG_SPI:TRTY	-	legacy	-
+TRIG_SPI:DATA_LEN	TRIG_SPI:DATA_LEN?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:DLEN	TRSPI:DLEN?	both	-	legacy SPI trigger; long form TRIG_SPI:DATA_LEN	-	legacy	-
+TRIG_SPI:DATA	-	cmd	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:DATA	-	cmd	-	legacy SPI trigger; long form TRIG_SPI:DATA	-	legacy	-
+TRIG_SPI:BIT	TRIG_SPI:BIT?	both	-	legacy SPI trigger (long form)	-	legacy	-
+TRSPI:BIT	TRSPI:BIT?	both	-	legacy SPI trigger; long form TRIG_SPI:BIT	-	legacy	-
+TRIG_UART:RX	TRIG_UART:RX?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRIG_UART:TX	TRIG_UART:TX?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRIG_UART:TRTY	TRIG_UART:TRTY?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:TRTY	TRUART:TRTY?	both	-	legacy UART trigger; long form TRIG_UART:TRTY	-	legacy	-
+TRIG_UART:CONDITION	TRIG_UART:CONDITION?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:CON	TRUART:CON?	both	-	legacy UART trigger; long form TRIG_UART:CONDITION	-	legacy	-
+TRIG_UART:QUALIFIER	TRIG_UART:QUALIFIER?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:QUAL	TRUART:QUAL?	both	-	legacy UART trigger; long form TRIG_UART:QUALIFIER	-	legacy	-
+TRIG_UART:DATA	TRIG_UART:DATA?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:DATA	TRUART:DATA?	both	-	legacy UART trigger; long form TRIG_UART:DATA	-	legacy	-
+TRIG_UART:BAUD	TRIG_UART:BAUD?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:BAUD	TRUART:BAUD?	both	-	legacy UART trigger; long form TRIG_UART:BAUD	-	legacy	-
+TRIG_UART:DATA_LEN	TRIG_UART:DATA_LEN?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:DLEN	TRUART:DLEN?	both	-	legacy UART trigger; long form TRIG_UART:DATA_LEN	-	legacy	-
+TRIG_UART:PARITY	TRIG_UART:PARITY?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:PAR	TRUART:PAR?	both	-	legacy UART trigger; long form TRIG_UART:PARITY	-	legacy	-
+TRIG_UART:POLARITY	TRIG_UART:POLARITY?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:POL	TRUART:POL?	both	-	legacy UART trigger; long form TRIG_UART:POLARITY	-	legacy	-
+TRIG_UART:STOP	TRIG_UART:STOP?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:STOP	TRUART:STOP?	both	-	legacy UART trigger; long form TRIG_UART:STOP	-	legacy	-
+TRIG_UART:BIT	TRIG_UART:BIT?	both	-	legacy UART trigger (long form)	-	legacy	-
+TRUART:BIT	TRUART:BIT?	both	-	legacy UART trigger; long form TRIG_UART:BIT	-	legacy	-
+TRIG_CAN:CANH	TRIG_CAN:CANH?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRIG_CAN:CANL	TRIG_CAN:CANL?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRIG_CAN:TRTY	TRIG_CAN:TRTY?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:TRTY	TRCAN:TRTY?	both	-	legacy CAN trigger; long form TRIG_CAN:TRTY	-	legacy	-
+TRIG_CAN:CONDITION	TRIG_CAN:CONDITION?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:CON	TRCAN:CON?	both	-	legacy CAN trigger; long form TRIG_CAN:CONDITION	-	legacy	-
+TRIG_CAN:ID	TRIG_CAN:ID?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:ID	TRCAN:ID?	both	-	legacy CAN trigger; long form TRIG_CAN:ID	-	legacy	-
+TRIG_CAN:ID_LEN	TRIG_CAN:ID_LEN?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:IDL	TRCAN:IDL?	both	-	legacy CAN trigger; long form TRIG_CAN:ID_LEN	-	legacy	-
+TRIG_CAN:DATA	TRIG_CAN:DATA?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:DATA	TRCAN:DATA?	both	-	legacy CAN trigger; long form TRIG_CAN:DATA	-	legacy	-
+TRIG_CAN:DATA2	TRIG_CAN:DATA2?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:DAT2	TRCAN:DAT2?	both	-	legacy CAN trigger; long form TRIG_CAN:DATA2	-	legacy	-
+TRIG_CAN:BAUD	TRIG_CAN:BAUD?	both	-	legacy CAN trigger (long form)	-	legacy	-
+TRCAN:BAUD	TRCAN:BAUD?	both	-	legacy CAN trigger; long form TRIG_CAN:BAUD	-	legacy	-
+TRIG_LIN:SOURCE	TRIG_LIN:SOURCE?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRIG_LIN:CONDITION	TRIG_LIN:CONDITION?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:CON	TRLIN:CON?	both	-	legacy LIN trigger; long form TRIG_LIN:CONDITION	-	legacy	-
+TRIG_LIN:ID	TRIG_LIN:ID?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:ID	TRLIN:ID?	both	-	legacy LIN trigger; long form TRIG_LIN:ID	-	legacy	-
+TRIG_LIN:DATA	TRIG_LIN:DATA?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:DATA	TRLIN:DATA?	both	-	legacy LIN trigger; long form TRIG_LIN:DATA	-	legacy	-
+TRIG_LIN:DATA2	TRIG_LIN:DATA2?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:DAT2	TRLIN:DAT2?	both	-	legacy LIN trigger; long form TRIG_LIN:DATA2	-	legacy	-
+TRIG_LIN:DATA_LEN	TRIG_LIN:DATA_LEN?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:DLEN	TRLIN:DLEN?	both	-	legacy LIN trigger; long form TRIG_LIN:DATA_LEN	-	legacy	-
+TRIG_LIN:ERR:ID	TRIG_LIN:ERR:ID?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:ERR:ID	TRLIN:ERR:ID?	both	-	legacy LIN trigger; long form TRIG_LIN:ERR:ID	-	legacy	-
+TRIG_LIN:ERR:CHECK	TRIG_LIN:ERR:CHECK?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:ERR:CHK	TRLIN:ERR:CHK?	both	-	legacy LIN trigger; long form TRIG_LIN:ERR:CHECK	-	legacy	-
+TRIG_LIN:ERR:SYNC	TRIG_LIN:ERR:SYNC?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:ERR:SYNC	TRLIN:ERR:SYNC?	both	-	legacy LIN trigger; long form TRIG_LIN:ERR:SYNC	-	legacy	-
+TRIG_LIN:ERR:PAR	TRIG_LIN:ERR:PAR?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:ERR:PAR	TRLIN:ERR:PAR?	both	-	legacy LIN trigger; long form TRIG_LIN:ERR:PAR	-	legacy	-
+TRIG_LIN:BAUD	TRIG_LIN:BAUD?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRIG_LIN:STANDARD	TRIG_LIN:STANDARD?	both	-	legacy LIN trigger (long form)	-	legacy	-
+TRLIN:STAN	TRLIN:STAN?	both	-	legacy LIN trigger; long form TRIG_LIN:STANDARD	-	legacy	-
+TRDP	TRDP?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRPH	TRPH?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRPT	TRPT?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRIIC	TRIIC?	both	-	legacy IIC trigger	-	legacy	-
+TRSPI	TRSPI?	both	-	legacy SPI trigger	-	legacy	-
+TRUART	TRUART?	both	-	legacy UART trigger	-	legacy	-
+TRCAN	TRCAN?	both	-	legacy CAN trigger	-	legacy	-
+TRLIN	TRLIN?	both	-	legacy LIN trigger	-	legacy	-
+BUZZ	BUZZ?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+SCREEN_SAVE	SCREEN_SAVE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+COMM_NET	COMM_NET?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+CONET	CONET?	both	-	legacy short-form (pre-E11A) command; long form COMM_NET	-	legacy	-
+EMOD	EMOD?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FAN_SPD	FAN_SPD?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+*OPT	*OPT?	query	-	IEEE 488.2 common command	<field>[,<field>…]; one field per supported option type: option name if installed, else 0 (spec 11 §6.4)	standard	-
+HOR_POSITION	HOR_POSITION?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+HPOS	HPOS?	both	-	legacy short-form (pre-E11A) command; long form HOR_POSITION	-	legacy	-
+HOR_MAGNIFY	HOR_MAGNIFY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+HMAG	HMAG?	both	-	legacy short-form (pre-E11A) command; long form HOR_MAGNIFY	-	legacy	-
+TRIG_DELAY	TRIG_DELAY?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+TRDL	TRDL?	both	-	legacy short-form (pre-E11A) command; long form TRIG_DELAY	-	legacy	-
+TIME_DIV	TIME_DIV?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+HSTA	HSTA?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+WFSU	WFSU?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+C#:WAVEFORM	C#:WAVEFORM?	query	-	legacy per-channel command	-	legacy	-
+C#:WF	C#:WF?	query	-	legacy per-channel command	-	legacy	-
+MATH:WAVEFORM	MATH:WAVEFORM?	query	-	legacy math	-	legacy	-
+MATH:WF	MATH:WF?	query	-	legacy math	-	legacy	-
+F#:WAVEFORM	F#:WAVEFORM?	query	-	legacy math function	-	legacy	-
+F#:WF	F#:WF?	query	-	legacy math function	-	legacy	-
+D#:WAVEFORM	D#:WAVEFORM?	query	-	legacy digital channel	-	legacy	-
+D#:WF	D#:WF?	query	-	legacy digital channel	-	legacy	-
+ROSC	ROSC?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+ROSCILLATOR	ROSCILLATOR?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+IQSP	IQSP?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+*CLS	-	cmd	-	IEEE 488.2 common command	-	standard	-
+*ESE	*ESE?	both	-	IEEE 488.2 common command	-	standard	-
+*ESR	*ESR?	query	-	IEEE 488.2 common command	-	standard	-
+*SRE	*SRE?	both	-	IEEE 488.2 common command	-	standard	-
+*STB	*STB?	query	-	IEEE 488.2 common command	-	standard	-
+*TST	*TST?	query	-	IEEE 488.2 common command	-	standard	-
+*WAI	-	cmd	-	IEEE 488.2 common command	-	standard	-
+STATus:OPERation:CONDition	STATus:OPERation:CONDition?	query	-	SCPI status registers	-	standard	-
+STATus:OPERation:ENABle	-	cmd	-	SCPI status registers	-	standard	-
+STATus:OPERation[:EVENt]	STATus:OPERation[:EVENt]?	query	-	SCPI status registers	-	standard	-
+STATus:QUEStionable:CONDition	STATus:QUEStionable:CONDition?	query	-	SCPI status registers	-	standard	-
+STATus:QUEStionable:ENABle	-	cmd	-	SCPI status registers	-	standard	-
+STATus:QUEStionable[:EVENt]	STATus:QUEStionable[:EVENt]?	query	-	SCPI status registers	-	standard	-
+STATus:PRESet	-	cmd	-	SCPI status registers	-	standard	-
+CHIP	CHIP?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+LICENSE	LICENSE?	both	-	legacy short-form (pre-E11A) command	-	legacy	-
+FACTORYDATA	FACTORYDATA?	both	-	legacy short-form (pre-E11A) command	-	legacy	-

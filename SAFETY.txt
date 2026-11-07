@@ -1,0 +1,151 @@
+open-sds800xhd — SAFETY / USE AT YOUR OWN RISK
+===============================================
+
+This is EXPERIMENTAL clean-room replacement firmware for the Siglent SDS800X HD
+series oscilloscope (SDS802X HD to SDS824X HD). It has run in a simulator only:
+NOTHING HERE HAS RUN ON A REAL UNIT YET.
+
+- Once installed, it TAKES OVER the instrument at every boot: a couple of
+  seconds after power-on it stops the vendor application and runs this
+  firmware instead.
+- It drives the real hardware (relays, gain/offset DACs, ADCs, the
+  programmable logic's registers). A bug can wedge the acquisition engine or
+  leave the front end in an unexpected state. The unit has no watchdog: a hang
+  stays a hang until you switch the mains off.
+- It is for the SDS800X HD SERIES ONLY. Do not run it on other hardware.
+- Its network services (web UI, SCPI over VXI-11, ports 5024/5025) have NO
+  AUTHENTICATION. Use it on a trusted network only.
+- There is NO WARRANTY. You are responsible for your instrument. See LICENSE.
+
+
+Why the unit stays recoverable: the rules the firmware never breaks
+--------------------------------------------------------------------
+
+At every boot, before Linux starts, the vendor U-Boot looks for a USB stick
+carrying a recovery environment (huluwa_udiskEnv.txt). That stick route is
+how the vendor recovers a unit, how this firmware is installed and how it is
+removed. U-Boot lives in BOOT.bin on eMMC partition p1. As long as nothing
+touches what that route depends on, a unit can always be brought back.
+
+So this firmware writes ONLY under p12's root, /usr/bin/siglent/usr:
+extra.sh (the launch hook), open/... (the app's slots, logs, settings and
+setups) and the user self-calibration file. Captures go to a USB stick, never
+to the eMMC. It NEVER:
+
+  1. writes p1 (BOOT.bin: FSBL, boot PL image, U-Boot; uEnv.txt), p5 (kernel
+     Image, system.dtb), p7 or p10 (the vendor system), or any raw eMMC block
+     device (/dev/mmcblk0, its partitions or boot areas);
+  2. creates or writes a U-Boot environment: no uboot.env on any partition,
+     no fw_setenv / saveenv. (A valid uboot.env would replace U-Boot's boot
+     command, including the stick check, for good.)
+  3. touches the Zynq eFuses, the BBRAM key or any secure-boot or key storage
+     (nvmem and eFuse files in /sys, the CSU, eFuse and BBRAM registers);
+  4. writes p9, the factory data: calibration, serial number, MAC address,
+     licences. It is read only. Nothing can recreate it.
+  5. drives a PL pin whose function on this board is not verified (below);
+  6. puts anything in p12's updatefile/ or usr/upgrade/ directories: the
+     vendor boot flashes what it finds there to p1, p5, p7, p9 and p10.
+
+These rules are enforced in code, not only by convention. Every file write,
+rename and delete of the supervisor, the installer, the census and the app
+goes through one write guard (ota/fsguard). It refuses, with an error that
+says why, any path outside p12's root after resolving ".." and symlinks, the
+two vendor update directories, any uboot.env, BOOT.bin or uEnv.txt, block
+devices, eFuse/BBRAM/nvmem paths, and /dev/mem windows over the CSU, eFuse,
+BBRAM and SD/eMMC controllers. The install stick's /init writes only after the
+kernel's mount table shows /dev/mmcblk0p12 (ext4) on its mount point and no
+other eMMC partition mounted writable. The census writes nothing to the eMMC
+at all: its report goes to the stick or to RAM.
+
+
+The programmable logic (PL): why a wrong pin map is a hardware risk
+-------------------------------------------------------------------
+
+Today the firmware keeps the vendor's PL image. An open PL image (fpga/) is
+being designed. A PL image decides which FPGA balls are outputs. If our map of
+the board is wrong and an image drives a ball that is in fact an output of
+another chip, or tied to a rail, the two drivers fight; that can damage the
+FPGA or the other part, and no stick or reflash repairs that.
+
+Every board fact the open image depends on is listed in spec 20 §14 and in
+fpga/vivado/verified.tcl, each 0 (unverified) or 1 (measured on a unit and
+written into the specs). The guards:
+
+- The build refuses to make a bitstream while any fact is 0
+  (fpga/vivado/build.tcl bitstream). All are 0 today: no open PL image for
+  the unit exists.
+- Each image is built with a manifest (open_pl.json) recording the facts it
+  was built against and its sha256. The board loads an image through
+  fpga_manager only when that manifest declares every fact verified and the
+  sha256 matches (app/internal/plimage); otherwise nothing reaches the PL.
+- A bring-up or test image, when one is made to settle facts, keeps every
+  ball whose function is still unverified as an input.
+- A bad PL image is undone by a power cycle: the FSBL loads the vendor PL
+  image from BOOT.bin at every boot, and BOOT.bin is never written.
+
+
+Getting back to the vendor firmware
+-----------------------------------
+
+From mildest to strongest:
+
+1. Next boot only: hold the Acquire key while you switch the unit on, and
+   keep it held until the vendor application's screen appears: the launch
+   hook reads it late in the boot, before it starts anything, and leaves that one boot to the vendor
+   firmware; nothing is written, and the next boot runs ours again. Acquire
+   was chosen because in the vendor firmware it only opens a menu: the vendor
+   firmware seeing it held changes no setting.
+2. Next boot and every boot after: choose the vendor firmware, without
+   uninstalling anything. Any of
+     - SCPI:      :SYSTem:BOOT VENDOR   (:SYSTem:BOOT OPEN undoes it,
+                  :SYSTem:BOOT? says which)
+     - web:       POST /api/boot with "vendor" or "open"; GET /api/boot
+     - otactl:    otactl vendor [reboot]  /  otactl open
+   writes or removes /usr/bin/siglent/usr/open/disable. While that file
+   exists the launch hook exits at once and the vendor firmware runs
+   untouched. The supervisor also creates it by itself after 3 reboots in a
+   row without a healthy app, so a firmware that keeps crashing ends up
+   leaving the unit to the vendor firmware at the next power-up. Removing it
+   (OPEN, otactl open, or deleting the file) runs ours again.
+3. Uninstall stick. Boot with the uninstall stick inserted: it deletes
+   extra.sh and the install markers on p12 and reboots into the vendor
+   firmware. The rest of open/ stays (harmless without extra.sh); a later
+   install stick overwrites it.
+4. Remove extra.sh. Deleting /usr/bin/siglent/usr/extra.sh by any means (for
+   example from a shell on the serial console) returns the unit to the vendor
+   firmware at the next boot. Nothing else of ours runs at boot.
+5. Vendor recovery stick (spec 01 §11.3). It rewrites p1, p5, p7, p8 and p10
+   from the vendor's recovery package. Use only the package for your unit's
+   firmware and hardware version. WARNING: a recovery stick that carries
+   firmdata0.ext4.gz OVERWRITES p9 (calibration, serial, MAC, licences). NEVER
+   use a stick carrying another unit's firmdata0.ext4.gz: your unit's
+   factory data would be gone for good. The vendor package does not carry
+   it; check before you boot.
+
+After any recovery boot, remove the stick: U-Boot runs a stick's environment
+at every boot while it is inserted.
+
+
+First contact with a new unit: the staged order
+-----------------------------------------------
+
+Nothing of ours writes to the eMMC until the unit's own data is backed up and
+the way back is proven. In order, stopping at the first unexpected result:
+
+1. Passive and read-only: photographs, the vendor UI's version page, network
+   queries, the serial console's boot log. No code of ours on the unit.
+2. Census and backup stick (our first code on the unit). It boots the vendor
+   kernel with our initramfs from the stick, mounts nothing of the eMMC for
+   writing, and saves the census and raw backups of every partition (p9 and
+   p11 above all), with their SHA-256, to the stick. Keep two copies of the
+   backups off the unit; they hold your serial, MAC, calibration and licences,
+   so keep them private.
+3. Prove the way back before the first install: install, uninstall and
+   restore sticks rehearsed against an image of the unit's own dumps in the
+   emulator; a restore stick that writes back p12 from its own backup; who
+   switches the mains when it hangs.
+4. Only then the install stick. It writes extra.sh and open/... on p12 and
+   nothing else.
+
+
+Project + full docs: https://github.com/labeth/open-sds800xhd

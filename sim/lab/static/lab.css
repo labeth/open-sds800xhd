@@ -1,0 +1,92 @@
+/* simlab: the bench page over the family tokens (tokens.css) and base styles (base.css). */
+body { display: block; overflow: auto; height: auto; min-height: 100%; }
+#top { position: sticky; top: 0; height: 44px; }
+.chip { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px;
+  border-radius: 10px; border: 1px solid var(--edge); color: var(--dim); background: var(--well); white-space: nowrap; }
+.chip.running, .chip.attached { color: var(--run); border-color: color-mix(in srgb, var(--run) 50%, var(--edge)); }
+.chip.queued { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--edge)); }
+.chip.ended { color: var(--stop); }
+h2 { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 0; }
+
+#lab { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 12px; padding: 12px; align-items: start; }
+#web { grid-column: 1 / -1; }
+@media (max-width: 1180px) { #lab { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- the instrument ---- */
+#instrument { min-width: 0; }
+.bezel { display: flex; gap: 14px; padding: 16px; border-radius: 14px;
+  background: linear-gradient(180deg, #2a313a, #1b2028 60%, #161a20); border: 1px solid #3a434e;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 6px 24px rgba(0,0,0,.45); }
+.screenwrap { position: relative; flex: 1 1 auto; min-width: 360px; align-self: flex-start;
+  aspect-ratio: 1024 / 600; background: var(--screen); border-radius: 4px; overflow: hidden;
+  border: 6px solid #0c0f13; box-shadow: inset 0 0 0 1px #000; }
+#screen:not(.up) { visibility: hidden; }
+#screen { width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; user-select: none; }
+.screenmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: var(--dim); font-size: 13px; pointer-events: none; text-align: center; padding: 20px; }
+.ripple { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+  border: 2px solid var(--focus); pointer-events: none; animation: ripple .45s ease-out forwards; }
+@keyframes ripple { to { transform: scale(2.2); opacity: 0; } }
+
+.controls { flex: 0 0 auto; display: grid; grid-template-columns: repeat(7, 46px); grid-auto-rows: 40px;
+  gap: 6px 6px; align-content: start; position: relative; padding-top: 2px; }
+.sect { font-size: 9px; font-weight: 700; letter-spacing: .12em; color: #8d97a3; text-transform: uppercase;
+  align-self: end; justify-self: center; white-space: nowrap; }
+button.key { position: relative; padding: 0; height: 30px; align-self: center; font-size: 10px; line-height: 1.05;
+  font-weight: 600; letter-spacing: .02em; border-radius: 5px; color: #dfe5ec;
+  background: linear-gradient(180deg, #3b4450, #2b323b); border: 1px solid #4a5562;
+  box-shadow: 0 2px 0 #12161b, inset 0 1px 0 rgba(255,255,255,.08); white-space: normal; overflow: hidden; }
+button.key:hover { border-color: #66737f; }
+button.key:active, button.key.down { transform: translateY(1px); box-shadow: 0 1px 0 #12161b; }
+button.key.ch1 { color: var(--c1); } button.key.ch2 { color: var(--c2); }
+button.key.ch3 { color: var(--c3); } button.key.ch4 { color: var(--c4); }
+button.key.big { height: 34px; }
+button.key .led { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%;
+  background: #11161c; box-shadow: inset 0 0 1px #000; }
+button.key.lit { background: linear-gradient(180deg, #46505d, #343c46); }
+button.key.lit .led { background: var(--lamp, #e6ecf2); box-shadow: 0 0 6px 1px var(--lamp, #e6ecf2); }
+button.key.lit-ring { box-shadow: 0 0 0 1px var(--lamp), 0 0 10px -2px var(--lamp), 0 2px 0 #12161b; }
+
+.knobcell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.knob { position: relative; width: 40px; height: 40px; border-radius: 50%; cursor: ns-resize; touch-action: none;
+  background: radial-gradient(circle at 35% 30%, #59636f, #2a3038 62%, #1b2026);
+  border: 1px solid #0f1317; box-shadow: 0 3px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12); }
+.knob.big { width: 50px; height: 50px; }
+.knob .ind { position: absolute; inset: 0; border-radius: 50%; }
+.knob .ind::after { content: ""; position: absolute; left: 50%; top: 4px; width: 3px; height: 11px; margin-left: -1.5px;
+  border-radius: 2px; background: #d8dee5; }
+.knob:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.knob.pushed { transform: scale(.94); }
+.knob.lamp { box-shadow: 0 0 0 2px var(--focus), 0 3px 6px rgba(0,0,0,.5); }
+.knoblabel { font-size: 9px; color: #9aa4af; white-space: nowrap; letter-spacing: .04em; }
+
+.modelplate { display: flex; gap: 12px; align-items: baseline; padding: 6px 4px 0; flex-wrap: wrap; }
+.modelplate .mark { font-weight: 700; letter-spacing: .1em; font-size: 11px; color: var(--dim); text-transform: uppercase; }
+.modelplate .hint { white-space: normal; }
+
+/* ---- the generator ---- */
+#gen { background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; padding: 10px 12px; }
+.genhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.seg > button.cc3.on { color: var(--c3); } .seg > button.cc4.on { color: var(--c4); }
+.form { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 5px 8px; align-items: center; }
+.form label { font-size: 12px; color: var(--dim); }
+.form input, .form select { width: 100%; }
+.form .pair { display: flex; gap: 5px; align-items: center; }
+.form .pair input { width: 0; flex: 1 1 0; }
+.form .pair > .pair { flex: 1 1 0; min-width: 0; }
+.form .pair select { width: auto; flex: 0 0 auto; }
+.form .sep { grid-column: 1 / -1; height: 1px; background: var(--edge); margin: 3px 0; }
+.form .full { grid-column: 1 / -1; }
+.genfoot { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.presets { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.sigtable { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
+.sigtable td { padding: 3px 4px; border-top: 1px solid var(--edge); vertical-align: top; }
+.sigtable td:first-child { font-weight: 700; width: 28px; }
+.sigtable td.spec { font-family: var(--mono); word-break: break-all; color: var(--text); }
+#genmsg { min-height: 16px; margin-top: 6px; white-space: normal; }
+#genmsg.err { color: var(--err); }
+
+/* ---- the firmware's web UI ---- */
+#web { background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; padding: 8px; }
+.webhead { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; }
+#webframe { width: 100%; height: 760px; border: 1px solid var(--edge); border-radius: 6px; background: var(--bg); }

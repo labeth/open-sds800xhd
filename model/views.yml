@@ -1,0 +1,35 @@
+schemaVersion: 2
+views:
+- id: VIEW-SYSTEM
+  kind: architecture-intent
+  roots:
+  - FG-HD-APP
+  - FG-HD-BOARD
+  - FG-HD-OPERATIONS
+  - FG-HD-VERIFICATION
+design:
+  id: DESIGN-SDS800XHD
+  title: SDS800X HD Firmware Architecture
+  functionalGroups:
+  - id: FG-HD-APP
+    views:
+      architecture_intent:
+        title: Scope application
+        narrative: The one device main and its wiring of the core over this board.
+  - id: FG-HD-BOARD
+    views:
+      architecture_intent:
+        title: Board support
+        narrative: The hardware code of the SDS800X HD and its implementation of the core's board interface, the
+          SCPI dialect and the measurements adapter.
+  - id: FG-HD-OPERATIONS
+    views:
+      architecture_intent:
+        title: Operations
+        narrative: Launch hook, install and uninstall sticks, A/B slots, the supervisor's board side and the read-only
+          census.
+  - id: FG-HD-VERIFICATION
+    views:
+      architecture_intent:
+        title: Verification
+        narrative: The in-guest board tests, the trigger goldens and the tier-1 simulator parity harness.

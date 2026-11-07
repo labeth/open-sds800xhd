@@ -1,0 +1,51 @@
+schemaVersion: 2
+reqLinks:
+- id: LNK-HD-005-CORE
+  parent: REQ-HD-005
+  child: core::CAP-DSO-ACQUISITION
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.
+- id: LNK-HD-006-CORE
+  parent: REQ-HD-006
+  child: core::CAP-DSO-BOARD-SUPPORT
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.
+- id: LNK-HD-007-CORE
+  parent: REQ-HD-007
+  child: core::CAP-DSO-FRONT-PANEL
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.
+- id: LNK-HD-009-CORE
+  parent: REQ-HD-009
+  child: core::CAP-DSO-REMOTE-PROGRAMMING
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.
+- id: LNK-HD-010-CORE
+  parent: REQ-HD-010
+  child: core::CAP-DSO-MEASUREMENT
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.
+- id: LNK-HD-011-CORE
+  parent: REQ-HD-011
+  child: core::CAP-DSO-SETTINGS
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.
+- id: LNK-HD-012-CORE
+  parent: REQ-HD-012
+  child: core::CAP-DSO-SUPERVISED-OPERATION
+  pinned:
+    version: v0.1.0
+  status: claimed
+  rationale: This scope relies on the core for it; claimed until the owner reviews it.

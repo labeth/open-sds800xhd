@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The app requires open-dso-core from ../../open-dso-core (app/go.mod's
+      # replace) until the core is released and pinned by tag.
+      - name: Check out open-dso-core
+        uses: actions/checkout@v4
+        with:
+          repository: labeth/open-dso-core
+          ref: main
+          path: .dso-core
+          token: ${{ secrets.DSO_CORE_TOKEN || github.token }}
+      - name: Place open-dso-core next to the repository
+        run: mv .dso-core ../open-dso-core
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: app/go.mod
+          cache: false
+      - name: vet
+        run: make vet
+      - name: test
+        run: make test
+      - name: arm64 build
+        run: make app ota boardtest
+
+  # The open PL (fpga/): the iverilog testbenches, Verilator lint and the
+  # yosys neutrality check of the shareable blocks. Vivado never runs in CI.
+  rtl-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install iverilog, yosys
+        run: sudo apt-get update && sudo apt-get install -y iverilog yosys
+      # Verilator at the version the lint waivers are written for (fpga/lint.vlt
+      # names warning codes older packaged releases do not know), from its
+      # official image, mounted at the workspace's own path so absolute paths hold.
+      # As the runner's user the image has no writable home, so ccache is off.
+      - name: Pin Verilator 5.046
+        run: |
+          docker pull -q verilator/verilator:v5.046
+          sudo tee /usr/local/bin/verilator >/dev/null <<'SH'
+          #!/bin/sh
+          exec docker run --rm -u "$(id -u):$(id -g)" -e CCACHE_DISABLE=1 -e HOME=/tmp -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$PWD" verilator/verilator:v5.046 "$@"
+          SH
+          sudo chmod +x /usr/local/bin/verilator
+          verilator --version
+      - name: register ABI
+        run: node fpga/tools/regmap.mjs --check
+      - name: lint
+        run: make fpga-lint
+      - name: neutrality
+        run: make fpga-neutral
+      - name: simulate
+        run: make fpga-sim
+      # The open PL core Verilated with the co-simulation harness, run on its
+      # own self-test (edge trigger, record, DMA readout, 1/16-sample
+      # interpolation). The full co-simulation lane (make cosim-test) runs the
+      # firmware against it in the tier-1 simulator, which lives in the
+      # private reference workspace: a local lane, not CI.
+      - name: co-simulation smoke
+        run: make cosim-smoke
+
+  # golangci-lint with the repository's .golangci.yml (the linters, their
+  # thresholds and each exception's reason live there).
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [app, ota, sim]
+    steps:
+      - uses: actions/checkout@v4
+      # app and ota require open-dso-core from ../../open-dso-core (their
+      # go.mod replaces) until the core is released and pinned by tag.
+      - name: Check out open-dso-core
+        uses: actions/checkout@v4
+        with:
+          repository: labeth/open-dso-core
+          ref: main
+          path: .dso-core
+          token: ${{ secrets.DSO_CORE_TOKEN || github.token }}
+      - name: Place open-dso-core next to the repository
+        working-directory: ${{ github.workspace }}
+        run: mv .dso-core ../open-dso-core
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache: false
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0
+          working-directory: ${{ matrix.module }}
+
+  # The engineering model (model/, product tier) must validate without
+  # errors; warnings are reported but pass. It runs inside model/ with
+  # --code-root .. so the code and test scans both reach the repository. It
+  # composes open-dso-core's model (alias core), resolved from the core
+  # checked out next to this repository through a workspace file above both
+  # (ENGMOD_WORK) until that model is published to a registry.
+  model:
+    runs-on: ubuntu-latest
+    env:
+      ENGMODEL_VERSION: v0.10.0 # pin: the engine release the model is validated with (commit 4fb9b77)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out open-dso-core
+        uses: actions/checkout@v4
+        with:
+          repository: labeth/open-dso-core
+          ref: main
+          path: .dso-core
+          token: ${{ secrets.DSO_CORE_TOKEN || github.token }}
+      - name: Place open-dso-core next to the repository
+        run: |
+          mv .dso-core ../open-dso-core
+          printf 'schemaVersion: 2\nreplacements:\n- module: github.com/labeth/open-dso-core/model@v0\n  path: ./open-dso-core/model\n' > ../engmod.work.yml
+          echo "ENGMOD_WORK=$(cd .. && pwd)/engmod.work.yml" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      # Three tries: a module proxy lookup that times out is not a model error.
+      - name: Install engdoc
+        run: |
+          for try in 1 2 3; do
+            go install "github.com/labeth/engineering-model-go/cmd/engdoc@${ENGMODEL_VERSION}" && exit 0
+            sleep 15
+          done
+          exit 1
+      - name: validate the model
+        working-directory: model
+        run: >
+          engdoc --model engmod.yml --requirements requirements.yml
+          --design views.yml --code-root .. --lock check
+          --out "$RUNNER_TEMP/ARCHITECTURE.adoc"

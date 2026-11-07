@@ -1,0 +1,60 @@
+schemaVersion: 2
+module:
+  path: github.com/labeth/open-sds800xhd/model@v0
+  version: v0.1.0
+  modelId: sds800xhd
+  title: SDS800X HD open firmware engineering model
+  introduction: 'The open firmware of the SDS800X HD oscilloscopes: the board-support package that runs open-dso-core
+    on the unit, its operations and its simulator verification. Stage: simulator; nothing has run on a unit yet.'
+  kind: system
+documents:
+  catalog: catalog.yml
+  requirements: requirements.yml
+  architecture: architecture.yml
+  behavior: behavior.yml
+  assurance: assurance.yml
+  compliance: compliance.yml
+  views: views.yml
+  decisions: decisions.yml
+  reqLinks: req-links.yml
+dependencies:
+- alias: core
+  path: github.com/labeth/open-dso-core/model@v0
+  version: v0.1.0
+  publications:
+  - public
+lifecycle:
+  tier: product
+  bundles:
+  - foundation
+  - security
+  tierDecision: ADR-HD-MODEL-TIER
+requirementLinks: strict
+publications:
+- id: public
+  architecture:
+  - CAP-HD-PLATFORM
+  - CAP-HD-ACQUISITION
+  - CAP-HD-DISPLAY-PANEL
+  - CAP-HD-REMOTE
+  - CAP-HD-SETTINGS
+  - CAP-HD-SUPERVISION
+  - CAP-HD-CENSUS
+  - CAP-HD-SIMULATION
+  requirements:
+  - REQ-HD-001
+  - REQ-HD-002
+  - REQ-HD-003
+  - REQ-HD-004
+  - REQ-HD-005
+  - REQ-HD-006
+  - REQ-HD-007
+  - REQ-HD-008
+  - REQ-HD-009
+  - REQ-HD-010
+  - REQ-HD-011
+  - REQ-HD-012
+  - REQ-HD-013
+  - REQ-HD-014
+  - REQ-HD-015
+  - REQ-HD-016

@@ -1,0 +1,59 @@
+schemaVersion: 2
+assurance:
+  risks:
+  - id: RISK-HD-CORE-LINKS
+    title: Requirements the core meets are claimed, not reviewed
+    statement: The acquisition engine, board-support contract, front-panel model, remote programming, settings and
+      supervision that satisfy these requirements are the core's; this scope links them to the core's capabilities
+      as claimed links until the owner reviews them.
+    status: open
+    appliesTo:
+    - FU-HD-SCOPEBOARD
+    relatedControls: []
+    rationale: Review each link against the core capability and its tests at the pinned core version.
+    response: mitigate
+  - id: RISK-HD-CODE-TRACE
+    title: Most source functions carry no requirement trace yet
+    statement: The open PL's RTL, testbenches and scripts and the write guard carry TRLC-LINKS; most Go functions of
+      the app, the supervisor and the simulator do not, so the trace from a requirement to its code is coarse.
+    status: open
+    appliesTo:
+    - FU-HD-SCOPEBOARD
+    relatedControls: []
+    rationale: Tag each function with the requirements it serves, package by package, as the SDS1000CML+ does.
+    response: mitigate
+  poamItems:
+  - id: POAM-HD-CORE-LINKS
+    riskRef: RISK-HD-CORE-LINKS
+    milestone: tier:product
+    status: planned
+    responsibleRole: ACT-MAINTAINER
+    artifacts:
+    - path: model/req-links.yml
+      description: 'The links of the requirements the core''s capabilities satisfy; review each and set it accepted.'
+    defers:
+    - code: link.claimed_only
+      path: reqLinks[0].status
+    - code: link.claimed_only
+      path: reqLinks[1].status
+    - code: link.claimed_only
+      path: reqLinks[2].status
+    - code: link.claimed_only
+      path: reqLinks[3].status
+    - code: link.claimed_only
+      path: reqLinks[4].status
+    - code: link.claimed_only
+      path: reqLinks[5].status
+    - code: link.claimed_only
+      path: reqLinks[6].status
+  - id: POAM-HD-CODE-TRACE
+    riskRef: RISK-HD-CODE-TRACE
+    milestone: tier:product
+    status: planned
+    responsibleRole: ACT-MAINTAINER
+    artifacts:
+    - path: app/
+      description: 'Tag every function of the app, ota and sim modules with TRLC-LINKS to the REQ-HD-* it serves,
+        package by package; then remove this item so a missing tag fails the check.'
+    defers:
+    - code: code.missing_trlc_link

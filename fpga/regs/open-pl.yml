@@ -1,0 +1,654 @@
+# The open PL register ABI (spec 20 §10). One-to-one with SystemRDL:
+#   addrmap -> this file, block -> regfile, reg -> reg, field -> field.
+# Field access (sw): r (read only), rw, w1 (write 1 pulses, reads 0),
+# rc (read clears), w1c (write 1 clears). Offsets are byte offsets in the
+# open plane; registers are 32 bits. The generator (fpga/tools/regmap.mjs)
+# emits the Verilog include, the Go constants, a SystemRDL rendering and the
+# manifest hash the image reports in ID_MANIFEST.
+abi:
+  name: open-pl
+  major: 1
+  minor: 0
+addrmap:
+  name: open_pl
+  base: 0x80100000
+  size: 0x10000
+blocks:
+  - name: ID
+    offset: 0x000
+    desc: Identity. Never moves between ABI versions.
+    regs:
+      - name: MAGIC
+        offset: 0x000
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0x4F504C31}
+      - name: ABI
+        offset: 0x004
+        fields:
+          - {name: minor, lsb: 0, width: 16, sw: r, reset: 0}
+          - {name: major, lsb: 16, width: 16, sw: r, reset: 1}
+      - name: IMAGE
+        offset: 0x008
+        desc: Image name, four ASCII bytes, first character in bits 7:0.
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0x6C6C7566}
+      - name: BUILD
+        offset: 0x00C
+        desc: Build identity (git commit); also in USR_ACCESS.
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: MANIFEST_LO
+        offset: 0x010
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: MANIFEST_HI
+        offset: 0x014
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: CAPS
+        offset: 0x018
+        fields:
+          - {name: acquisition, lsb: 0, width: 1, sw: r, reset: 1}
+          - {name: interval, lsb: 1, width: 1, sw: r, reset: 1}
+          - {name: nth, lsb: 2, width: 1, sw: r, reset: 1}
+          - {name: video, lsb: 3, width: 1, sw: r, reset: 0}
+          - {name: zone, lsb: 4, width: 1, sw: r, reset: 0}
+          - {name: uart, lsb: 5, width: 1, sw: r, reset: 1}
+          - {name: spi, lsb: 6, width: 1, sw: r, reset: 1}
+          - {name: i2c, lsb: 7, width: 1, sw: r, reset: 1}
+          - {name: can, lsb: 8, width: 1, sw: r, reset: 0}
+          - {name: symbol, lsb: 9, width: 1, sw: r, reset: 0}
+          - {name: sequence, lsb: 10, width: 1, sw: r, reset: 0}
+          - {name: stream, lsb: 11, width: 1, sw: r, reset: 1}
+          - {name: stacker, lsb: 12, width: 1, sw: r, reset: 1}
+          - {name: reducer, lsb: 13, width: 1, sw: r, reset: 1}
+          - {name: counter, lsb: 14, width: 1, sw: r, reset: 1}
+          - {name: interp, lsb: 15, width: 1, sw: r, reset: 1}
+          - {name: segments, lsb: 16, width: 1, sw: r, reset: 1}
+      - name: GEOMETRY
+        offset: 0x01C
+        fields:
+          - {name: lanes, lsb: 0, width: 8, sw: r, reset: 8}
+          - {name: channels, lsb: 8, width: 8, sw: r, reset: 4}
+          - {name: tick_ps, lsb: 16, width: 16, sw: r, reset: 500}
+      - name: SCRATCH
+        offset: 0x020
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: UPTIME_LO
+        offset: 0x024
+        desc: aclk cycles; reading LO latches HI.
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: UPTIME_HI
+        offset: 0x028
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: DNA0
+        offset: 0x02C
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: DNA1
+        offset: 0x030
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: DNA2
+        offset: 0x034
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+
+  - name: SYS
+    offset: 0x100
+    desc: Clocks, resets, faults and interrupts.
+    regs:
+      - name: CTRL
+        offset: 0x100
+        fields:
+          - {name: core_reset, lsb: 0, width: 1, sw: rw, reset: 0}
+          - {name: adc0_mmcm_reset, lsb: 1, width: 1, sw: rw, reset: 0}
+          - {name: adc1_mmcm_reset, lsb: 2, width: 1, sw: rw, reset: 0}
+      - name: STATUS
+        offset: 0x104
+        fields:
+          - {name: adc0_locked, lsb: 0, width: 1, sw: r, reset: 0}
+          - {name: adc1_locked, lsb: 1, width: 1, sw: r, reset: 0}
+          - {name: core_alive, lsb: 2, width: 1, sw: r, reset: 0}
+          - {name: adc1_fifo_ok, lsb: 3, width: 1, sw: r, reset: 0}
+      - name: CCLK_KHZ
+        offset: 0x108
+        desc: Core sample clock measured against aclk over 1 ms.
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: ADC1_KHZ
+        offset: 0x10C
+        fields:
+          - {name: value, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: FAULT
+        offset: 0x110
+        desc: Sticky faults.
+        fields:
+          - {name: rec_overflow, lsb: 0, width: 1, sw: w1c, reset: 0}
+          - {name: stream_overflow, lsb: 1, width: 1, sw: w1c, reset: 0}
+          - {name: adc1_slip, lsb: 2, width: 1, sw: w1c, reset: 0}
+          - {name: axi_wr_err, lsb: 3, width: 1, sw: w1c, reset: 0}
+          - {name: axi_rd_err, lsb: 4, width: 1, sw: w1c, reset: 0}
+      - name: IRQ_EN
+        offset: 0x114
+        fields:
+          - {name: acq_done, lsb: 0, width: 1, sw: rw, reset: 0}
+          - {name: stream_block, lsb: 1, width: 1, sw: rw, reset: 0}
+          - {name: stack_done, lsb: 2, width: 1, sw: rw, reset: 0}
+          - {name: readout_done, lsb: 3, width: 1, sw: rw, reset: 0}
+      - name: IRQ_STATUS
+        offset: 0x118
+        desc: Causes pending on the interrupt line (enabled or not).
+        fields:
+          - {name: causes, lsb: 0, width: 4, sw: r, reset: 0}
+      - name: IRQ_TAKEN
+        offset: 0x11C
+        desc: Causes moved here by an acknowledge (compat ACQ 0x160 read or IRQ_ACK); reading clears.
+        fields:
+          - {name: causes, lsb: 0, width: 4, sw: rc, reset: 0}
+      - name: IRQ_ACK
+        offset: 0x120
+        fields:
+          - {name: take, lsb: 0, width: 1, sw: w1, reset: 0}
+
+  - name: ACQ
+    offset: 0x200
+    desc: Acquisition state machine, route, decimation and record memory.
+    regs:
+      - name: CTRL
+        offset: 0x200
+        fields:
+          - {name: arm, lsb: 0, width: 1, sw: w1, reset: 0}
+          - {name: stop, lsb: 1, width: 1, sw: w1, reset: 0}
+          - {name: force, lsb: 2, width: 1, sw: w1, reset: 0}
+          - {name: clear, lsb: 3, width: 1, sw: w1, reset: 0}
+          - {name: commit, lsb: 4, width: 1, sw: w1, reset: 0}
+      - name: STATUS
+        offset: 0x204
+        fields:
+          - {name: state, lsb: 0, width: 3, sw: r, reset: 0}
+          - {name: triggered, lsb: 4, width: 1, sw: r, reset: 0}
+          - {name: auto, lsb: 5, width: 1, sw: r, reset: 0}
+          - {name: forced, lsb: 6, width: 1, sw: r, reset: 0}
+          - {name: overflow, lsb: 7, width: 1, sw: r, reset: 0}
+          - {name: stopping, lsb: 8, width: 1, sw: r, reset: 0}
+          - {name: segment, lsb: 16, width: 16, sw: r, reset: 0}
+      - name: ROUTE
+        offset: 0x208
+        fields:
+          - {name: route, lsb: 0, width: 2, sw: rw, reset: 0}
+          - {name: mask, lsb: 4, width: 4, sw: rw, reset: 1}
+      - name: DECIM
+        offset: 0x20C
+        fields:
+          - {name: ratio, lsb: 0, width: 28, sw: rw, reset: 1}
+      - name: MODE
+        offset: 0x210
+        fields:
+          - {name: reduce, lsb: 0, width: 2, sw: rw, reset: 0}
+      - name: INVERT
+        offset: 0x214
+        fields:
+          - {name: mask, lsb: 0, width: 4, sw: rw, reset: 0}
+      - name: GNDSUB
+        offset: 0x218
+        fields:
+          - {name: mask, lsb: 0, width: 4, sw: rw, reset: 0}
+      - name: GNDCODE01
+        offset: 0x21C
+        fields:
+          - {name: ch0, lsb: 0, width: 12, sw: rw, reset: 0x800}
+          - {name: ch1, lsb: 16, width: 12, sw: rw, reset: 0x800}
+      - name: GNDCODE23
+        offset: 0x220
+        fields:
+          - {name: ch2, lsb: 0, width: 12, sw: rw, reset: 0x800}
+          - {name: ch3, lsb: 16, width: 12, sw: rw, reset: 0x800}
+      - name: SKEW
+        offset: 0x224
+        desc: Samples by which each ADC's streams are delayed to align the two.
+        fields:
+          - {name: adc0, lsb: 0, width: 6, sw: rw, reset: 0}
+          - {name: adc1, lsb: 8, width: 6, sw: rw, reset: 0}
+      - name: PRE
+        offset: 0x230
+        fields:
+          - {name: words, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: POST
+        offset: 0x234
+        fields:
+          - {name: words, lsb: 0, width: 32, sw: rw, reset: 1000}
+      - name: SEGMENTS
+        offset: 0x238
+        fields:
+          - {name: count, lsb: 0, width: 16, sw: rw, reset: 1}
+      - name: REC_BASE
+        offset: 0x240
+        fields:
+          - {name: addr, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: REC_GROUPS
+        offset: 0x244
+        desc: 48-byte groups of 32 words per channel ring.
+        fields:
+          - {name: groups, lsb: 0, width: 28, sw: rw, reset: 0}
+      - name: REC_LOST
+        offset: 0x248
+        fields:
+          - {name: groups, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: TRIG_TIME_LO
+        offset: 0x250
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: TRIG_TIME_HI
+        offset: 0x254
+        fields:
+          - {name: ticks, lsb: 0, width: 16, sw: r, reset: 0}
+      - name: TRIG_POS
+        offset: 0x258
+        desc: Ring word holding the trigger.
+        fields:
+          - {name: word, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: TRIG_PHASE
+        offset: 0x25C
+        desc: Ticks from the trigger word's first sample to the trigger.
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: TRIG_FRAC
+        offset: 0x260
+        fields:
+          - {name: sixteenths, lsb: 0, width: 5, sw: r, reset: 0}
+          - {name: valid, lsb: 8, width: 1, sw: r, reset: 0}
+      - name: TRIG_FLAGS
+        offset: 0x264
+        fields:
+          - {name: auto, lsb: 0, width: 1, sw: r, reset: 0}
+          - {name: forced, lsb: 1, width: 1, sw: r, reset: 0}
+          - {name: overflow, lsb: 2, width: 1, sw: r, reset: 0}
+      - name: WORDS
+        offset: 0x268
+        fields:
+          - {name: words, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: SEG_SEL
+        offset: 0x270
+        fields:
+          - {name: segment, lsb: 0, width: 10, sw: rw, reset: 0}
+      - name: SEG_TIME_LO
+        offset: 0x274
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: SEG_TIME_HI
+        offset: 0x278
+        fields:
+          - {name: ticks, lsb: 0, width: 16, sw: r, reset: 0}
+      - name: SEG_POS
+        offset: 0x27C
+        fields:
+          - {name: word, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: SEG_FLAGS
+        offset: 0x280
+        fields:
+          - {name: frac, lsb: 0, width: 5, sw: r, reset: 0}
+          - {name: auto, lsb: 8, width: 1, sw: r, reset: 0}
+          - {name: forced, lsb: 9, width: 1, sw: r, reset: 0}
+
+  - name: TRIG
+    offset: 0x400
+    desc: Trigger engine (spec 20 §7).
+    regs:
+      - name: CTRL
+        offset: 0x400
+        fields:
+          - {name: engine, lsb: 0, width: 4, sw: rw, reset: 1}
+          - {name: holdoff_en, lsb: 8, width: 1, sw: rw, reset: 0}
+          - {name: auto_en, lsb: 9, width: 1, sw: rw, reset: 0}
+          - {name: interp_en, lsb: 10, width: 1, sw: rw, reset: 0}
+          - {name: interp_ch, lsb: 12, width: 2, sw: rw, reset: 0}
+          - {name: interp_cmp, lsb: 14, width: 1, sw: rw, reset: 0}
+          - {name: interp_falling, lsb: 15, width: 1, sw: rw, reset: 0}
+      - name: OPEN
+        offset: 0x404
+        fields:
+          - {name: events, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: CLOSE
+        offset: 0x408
+        fields:
+          - {name: events, lsb: 0, width: 32, sw: rw, reset: 1}
+      - name: ABORT
+        offset: 0x40C
+        fields:
+          - {name: events, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: QUAL_MASK
+        offset: 0x410
+        fields:
+          - {name: states, lsb: 0, width: 9, sw: rw, reset: 0}
+      - name: QUAL_REQ
+        offset: 0x414
+        fields:
+          - {name: states, lsb: 0, width: 9, sw: rw, reset: 0}
+      - name: COND
+        offset: 0x418
+        fields:
+          - {name: cond, lsb: 0, width: 3, sw: rw, reset: 0}
+          - {name: reach, lsb: 4, width: 1, sw: rw, reset: 0}
+          - {name: always_armed, lsb: 5, width: 1, sw: rw, reset: 1}
+      - name: TA_LO
+        offset: 0x420
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: rw, reset: 4}
+      - name: TA_HI
+        offset: 0x424
+        fields:
+          - {name: ticks, lsb: 0, width: 16, sw: rw, reset: 0}
+      - name: TB_LO
+        offset: 0x428
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: rw, reset: 6}
+      - name: TB_HI
+        offset: 0x42C
+        fields:
+          - {name: ticks, lsb: 0, width: 16, sw: rw, reset: 0}
+      - name: HOLDOFF_LO
+        offset: 0x430
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: rw, reset: 160}
+      - name: HOLDOFF_HI
+        offset: 0x434
+        fields:
+          - {name: ticks, lsb: 0, width: 16, sw: rw, reset: 0}
+      - name: AUTO_LO
+        offset: 0x438
+        desc: Auto-trigger timeout in cclk cycles.
+        fields:
+          - {name: clocks, lsb: 0, width: 32, sw: rw, reset: 25000000}
+      - name: AUTO_HI
+        offset: 0x43C
+        fields:
+          - {name: clocks, lsb: 0, width: 16, sw: rw, reset: 0}
+      - name: NTH
+        offset: 0x440
+        fields:
+          - {name: count, lsb: 0, width: 16, sw: rw, reset: 1}
+      - name: PATTERN
+        offset: 0x444
+        fields:
+          - {name: care, lsb: 0, width: 4, sw: rw, reset: 0}
+          - {name: level, lsb: 4, width: 4, sw: rw, reset: 0}
+          - {name: or, lsb: 8, width: 1, sw: rw, reset: 0}
+          - {name: invert, lsb: 9, width: 1, sw: rw, reset: 0}
+      - name: CMP0_A_HI
+        offset: 0x450
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP0_A_LO
+        offset: 0x454
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP0_B_HI
+        offset: 0x458
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP0_B_LO
+        offset: 0x45C
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP1_A_HI
+        offset: 0x460
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP1_A_LO
+        offset: 0x464
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP1_B_HI
+        offset: 0x468
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP1_B_LO
+        offset: 0x46C
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP2_A_HI
+        offset: 0x470
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP2_A_LO
+        offset: 0x474
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP2_B_HI
+        offset: 0x478
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP2_B_LO
+        offset: 0x47C
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP3_A_HI
+        offset: 0x480
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP3_A_LO
+        offset: 0x484
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: CMP3_B_HI
+        offset: 0x488
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x800}
+      - name: CMP3_B_LO
+        offset: 0x48C
+        fields:
+          - {name: code, lsb: 0, width: 12, sw: rw, reset: 0x7C0}
+      - name: VIDEO
+        offset: 0x490
+        fields:
+          - {name: line, lsb: 0, width: 10, sw: rw, reset: 0}
+          - {name: negative, lsb: 16, width: 1, sw: rw, reset: 1}
+      - name: CANDIDATES
+        offset: 0x4A0
+        fields:
+          - {name: count, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: ACCEPTED
+        offset: 0x4A4
+        fields:
+          - {name: count, lsb: 0, width: 32, sw: r, reset: 0}
+
+  - name: PROTO
+    offset: 0x600
+    desc: Protocol trigger engines (spec 20 §7.7).
+    regs:
+      - name: CTRL
+        offset: 0x600
+        fields:
+          - {name: engine, lsb: 0, width: 4, sw: rw, reset: 0}
+          - {name: enable, lsb: 8, width: 1, sw: rw, reset: 0}
+      - name: LINES
+        offset: 0x604
+        fields:
+          - {name: a_ch, lsb: 0, width: 2, sw: rw, reset: 0}
+          - {name: b_ch, lsb: 4, width: 2, sw: rw, reset: 1}
+          - {name: inv_a, lsb: 8, width: 1, sw: rw, reset: 0}
+          - {name: inv_b, lsb: 9, width: 1, sw: rw, reset: 0}
+      - name: SLICE_A
+        offset: 0x608
+        fields:
+          - {name: hi, lsb: 0, width: 12, sw: rw, reset: 0x800}
+          - {name: lo, lsb: 16, width: 12, sw: rw, reset: 0x7C0}
+      - name: SLICE_B
+        offset: 0x60C
+        fields:
+          - {name: hi, lsb: 0, width: 12, sw: rw, reset: 0x800}
+          - {name: lo, lsb: 16, width: 12, sw: rw, reset: 0x7C0}
+      - name: TIMING
+        offset: 0x610
+        desc: UART bit time or SPI idle gap, in cclk cycles.
+        fields:
+          - {name: clocks, lsb: 0, width: 24, sw: rw, reset: 868}
+      - name: OPTS
+        offset: 0x614
+        fields:
+          - {name: cpol, lsb: 0, width: 1, sw: rw, reset: 0}
+          - {name: cpha, lsb: 1, width: 1, sw: rw, reset: 0}
+          - {name: msb, lsb: 2, width: 1, sw: rw, reset: 1}
+          - {name: address, lsb: 8, width: 7, sw: rw, reset: 0}
+          - {name: any_address, lsb: 15, width: 1, sw: rw, reset: 1}
+          - {name: direction, lsb: 16, width: 2, sw: rw, reset: 2}
+      - name: PATTERN
+        offset: 0x618
+        fields:
+          - {name: bytes, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: PATTERN_LEN
+        offset: 0x61C
+        fields:
+          - {name: bytes, lsb: 0, width: 3, sw: rw, reset: 0}
+      - name: MATCHES
+        offset: 0x620
+        fields:
+          - {name: count, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: EVENTS
+        offset: 0x624
+        fields:
+          - {name: count, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: ERRORS
+        offset: 0x628
+        fields:
+          - {name: count, lsb: 0, width: 32, sw: r, reset: 0}
+
+  - name: STREAM
+    offset: 0x800
+    desc: Gap-free stream ring (spec 20 §8.1).
+    regs:
+      - name: CTRL
+        offset: 0x800
+        fields:
+          - {name: enable, lsb: 0, width: 1, sw: rw, reset: 0}
+          - {name: payload, lsb: 4, width: 2, sw: rw, reset: 1}
+          - {name: mask, lsb: 8, width: 4, sw: rw, reset: 1}
+      - name: DECIM
+        offset: 0x804
+        fields:
+          - {name: ratio, lsb: 0, width: 28, sw: rw, reset: 1}
+      - name: BASE
+        offset: 0x808
+        fields:
+          - {name: addr, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: BLOCKS
+        offset: 0x80C
+        fields:
+          - {name: count, lsb: 0, width: 16, sw: rw, reset: 0}
+      - name: BEATS
+        offset: 0x810
+        desc: Items per block; a block is BEATS + 2 beats of 8 bytes.
+        fields:
+          - {name: items, lsb: 0, width: 16, sw: rw, reset: 510}
+      - name: HEAD
+        offset: 0x814
+        fields:
+          - {name: blocks, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: TAIL
+        offset: 0x818
+        fields:
+          - {name: blocks, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: SEQ
+        offset: 0x81C
+        fields:
+          - {name: blocks, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: LOST
+        offset: 0x820
+        fields:
+          - {name: items, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: STATUS
+        offset: 0x824
+        fields:
+          - {name: running, lsb: 0, width: 1, sw: r, reset: 0}
+          - {name: overflow, lsb: 1, width: 1, sw: r, reset: 0}
+
+  - name: STACK
+    offset: 0xA00
+    desc: Stacking accumulator (spec 20 §8.2); bins read at 0x80110000.
+    regs:
+      - name: CTRL
+        offset: 0xA00
+        fields:
+          - {name: clear, lsb: 0, width: 1, sw: w1, reset: 0}
+          - {name: start, lsb: 1, width: 1, sw: w1, reset: 0}
+      - name: N
+        offset: 0xA04
+        fields:
+          - {name: records, lsb: 0, width: 16, sw: rw, reset: 1}
+      - name: PHASES
+        offset: 0xA08
+        fields:
+          - {name: count, lsb: 0, width: 5, sw: rw, reset: 1}
+      - name: STATUS
+        offset: 0xA10
+        fields:
+          - {name: busy, lsb: 0, width: 1, sw: r, reset: 0}
+          - {name: clearing, lsb: 1, width: 1, sw: r, reset: 0}
+          - {name: records, lsb: 16, width: 16, sw: r, reset: 0}
+
+  - name: READOUT
+    offset: 0xC00
+    desc: Record readout into the AXI DMA (spec 20 §6.4).
+    regs:
+      - name: CTRL
+        offset: 0xC00
+        fields:
+          - {name: start, lsb: 0, width: 1, sw: w1, reset: 0}
+      - name: SRC
+        offset: 0xC04
+        fields:
+          - {name: channel, lsb: 0, width: 2, sw: rw, reset: 0}
+          - {name: segment, lsb: 16, width: 10, sw: rw, reset: 0}
+      - name: START
+        offset: 0xC08
+        fields:
+          - {name: word, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: COUNT
+        offset: 0xC0C
+        fields:
+          - {name: words, lsb: 0, width: 32, sw: rw, reset: 0}
+      - name: MODE
+        offset: 0xC10
+        fields:
+          - {name: mode, lsb: 0, width: 2, sw: rw, reset: 0}
+          - {name: bucket, lsb: 8, width: 24, sw: rw, reset: 1}
+      - name: STATUS
+        offset: 0xC14
+        fields:
+          - {name: busy, lsb: 0, width: 1, sw: r, reset: 0}
+          - {name: error, lsb: 1, width: 1, sw: r, reset: 0}
+
+  - name: COUNTER
+    offset: 0xE00
+    desc: Frequency counter and totalizer (spec 20 §7.9).
+    regs:
+      - name: CTRL
+        offset: 0xE00
+        fields:
+          - {name: event, lsb: 0, width: 5, sw: rw, reset: 0}
+          - {name: enable, lsb: 8, width: 1, sw: rw, reset: 0}
+          - {name: totalize, lsb: 9, width: 1, sw: rw, reset: 0}
+      - name: GATE
+        offset: 0xE04
+        fields:
+          - {name: clocks, lsb: 0, width: 32, sw: rw, reset: 250000000}
+      - name: COUNT
+        offset: 0xE08
+        fields:
+          - {name: events, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: PERIOD
+        offset: 0xE0C
+        fields:
+          - {name: ticks, lsb: 0, width: 32, sw: r, reset: 0}
+      - name: STATUS
+        offset: 0xE10
+        fields:
+          - {name: done, lsb: 0, width: 1, sw: r, reset: 0}
+      - name: CLEAR
+        offset: 0xE14
+        fields:
+          - {name: clear, lsb: 0, width: 1, sw: w1, reset: 0}

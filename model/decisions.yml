@@ -1,0 +1,49 @@
+schemaVersion: 2
+decisions:
+- id: ADR-HD-MODEL-TIER
+  title: The model is held to the product life-cycle tier
+  status: accepted
+  date: '2026-11-07'
+  context: The repository is public and its model joins the family model beside the core's and the SDS1000CML+'s,
+    which are held to the product tier. The firmware runs in the tier-1 simulator; no unit has been on the bench.
+  decision: 'The module declares the product tier and strict requirement links, like the core and the SDS1000CML+.
+
+    Tier: Product
+
+    Bundles: Foundation, Security
+    '
+  consequences:
+  - Every requirement realizes a published capability (CAP-HD-*); an unapproved or unparented requirement fails
+    the model check. The requirements are implemented in code and verified in simulation only; none is recorded
+    verified until a unit confirms it.
+  - Links to the core's capabilities stay claimed until the owner reviews them, carried by POAM-HD-CORE-LINKS.
+  - Source files carry trace tags where the open PL's RTL, testbenches and scripts carry them; tagging the Go code
+    is reported, not required, at this tier.
+- id: ADR-HD-MODEL-COMPOSES-CORE
+  title: The model composes open-dso-core's model
+  status: accepted
+  date: '2026-11-07'
+  context: The SDS800X HD firmware is a board-support package of open-dso-core (the core's ADR-CORE-IS-THE-PRODUCT).
+  decision: The model depends on github.com/labeth/open-dso-core/model@v0 (alias core, publication public) as
+    subsystem SUB-CORE and owns the REQ-HD-* prefix (the core's ADR-CORE-MODEL-IDS). Until the core's model is
+    published to a registry it resolves from a checkout next to this repository through engmod.work.yml above
+    both.
+  consequences:
+  - CI checks the core out next to the repository and names the workspace file in ENGMOD_WORK.
+- id: ADR-HD-OPEN-PL
+  title: The open PL speaks its own register ABI beside compat planes, and draws no waveforms
+  status: proposed
+  date: '2026-11-07'
+  context: Stage 2 replaces the vendor bitstream. The vendor acquisition, trigger and map-engine registers are tied to
+    semantics the specs mark UNVERIFIED; the front end, ADC bring-up, panel and the unit's kernel modules use a small
+    set of registers whose semantics are specified.
+  decision: The open image keeps the Xilinx VDMA and AXI DMA blocks and the compat subset of the ACQ and MAP planes
+    (spec 20 §10.4), and puts everything else in an open register plane described by fpga/regs/open-pl.yml, identity
+    block first. It has no waveform renderer, waveform VDMA, mixer or capture path; the core draws the waveforms in
+    software from the readout engine's envelopes (spec 20 §9).
+  consequences:
+  - The board's front-end, panel and platform code run unchanged on both images; acquisition, trigger and readout
+    gain open-PL backends.
+  - The board tells the images apart from compat ACQ 0x002 bits 15:8 (0x4F on the open image) before touching the
+    open plane.
+  - A PL density accumulator is the fallback if software intensity grading proves too slow on a unit.

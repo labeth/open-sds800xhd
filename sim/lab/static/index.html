@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>simlab</title>
+<link rel="stylesheet" href="design/tokens.css">
+<link rel="stylesheet" href="design/base.css">
+<link rel="stylesheet" href="lab.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><b>simlab</b><span>SDS800X HD virtual bench</span></div>
+  <span id="runchip" class="chip">starting</span>
+  <span id="runinfo" class="hint"></span>
+  <span class="grow"></span>
+  <label class="row-tight" title="Where the screen picture comes from">Screen
+    <select id="screensrc" class="sm">
+      <option value="sim">device model (fb0 over the waveform plane)</option>
+      <option value="app">firmware capture (/api/screen.png)</option>
+    </select>
+  </label>
+  <button id="restart" class="sm" title="End this simulator run and start a new one (settings on the simulated p12 are kept)">Restart run</button>
+  <a id="weblink" class="tlink" href="#" target="_blank" rel="noopener">Firmware web UI ↗</a>
+</header>
+
+<main id="lab">
+  <section id="instrument" aria-label="Oscilloscope front panel">
+    <div class="bezel">
+      <div class="screenwrap">
+        <img id="screen" alt="The scope's screen; click to touch" width="1024" height="600" draggable="false">
+        <div id="screenmsg" class="screenmsg">waiting for the simulator…</div>
+      </div>
+      <div class="controls" id="controls">
+        <!-- filled from the layout in lab.js (spec 08 §2.4) -->
+      </div>
+    </div>
+    <div class="modelplate"><span class="mark">open-sds800xhd</span><span class="hint">keys, knobs and touch go through the simulated key matrix and touch controller · drag or scroll a knob to turn it, click to push · arrow keys turn a focused knob, Enter pushes</span></div>
+  </section>
+
+  <section id="gen" aria-label="Signal generator">
+    <div class="genhead">
+      <h2>Signal generator</h2>
+      <div class="seg" id="gentabs" role="tablist"></div>
+    </div>
+    <div id="genbody"></div>
+    <div class="cap">Inputs now</div>
+    <table id="sigtable" class="sigtable"><tbody></tbody></table>
+    <div id="genmsg" class="hint" role="status"></div>
+  </section>
+
+  <section id="web" aria-label="Firmware web UI">
+    <div class="webhead"><h2>Firmware web UI</h2><span class="hint" id="webhint"></span>
+      <span class="grow"></span>
+      <button id="webreload" class="sm">Reload</button>
+      <a id="weblink2" class="tlink" href="#" target="_blank" rel="noopener">Open in its own tab ↗</a></div>
+    <iframe id="webframe" title="The firmware's web UI" src="about:blank"></iframe>
+  </section>
+</main>
+<script src="lab.js"></script>
+</body>
+</html>

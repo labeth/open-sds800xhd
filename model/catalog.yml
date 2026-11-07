@@ -1,0 +1,16 @@
+schemaVersion: 2
+catalog:
+  systems:
+  - id: SYS-INSTRUMENT
+    name: instrument
+    definition: An SDS800X HD oscilloscope (SDS802X HD to SDS824X HD) running the open firmware built on open-dso-core.
+    aliases:
+    - the instrument
+  events:
+  - id: EVT-DISABLE-KEY
+    name: the disable key is held at power-on
+    definition: The front-panel key that keeps the open firmware from starting is held while the unit powers on
+      (spec 01 §12).
+  - id: EVT-CENSUS-BOOT
+    name: booted from the census stick
+    definition: The unit boots the vendor kernel with the census stick's initramfs.
