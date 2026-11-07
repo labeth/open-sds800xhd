@@ -28,6 +28,12 @@
 #                    serve the directory on localhost or https to try it
 #   make demo-native - the same demo as a local web server (bench page at
 #                    http://127.0.0.1:8090/demo/, web UI at /); Ctrl-C stops
+#   make sessions  - the recorded sessions (open-dso-core/session) against
+#                    TARGET: pair (the default: the native and the WebAssembly
+#                    demo, and their diff), native, wasm, or simlab (the app in
+#                    the simulator: start make simlab first; SCOPE and BENCH
+#                    are its web UI and bench page). ARGS adds flags (-only
+#                    a,b). Output in build/sessions/
 #
 # The app module requires open-dso-core next to this repository
 # (app/go.mod's replace) until the core is released and pinned by tag; the
@@ -36,8 +42,13 @@
 GO ?= go
 CORE ?= $(abspath ../open-dso-core)
 DEMO_OUT ?= $(abspath build/demo)
+SESSIONS_OUT ?= $(abspath build/sessions)
+TARGET ?= pair
+SCOPE ?= http://127.0.0.1:8080
+BENCH ?= http://127.0.0.1:8090
+DEMO_FILES = -profile $(abspath demo/profile.yaml) -demo $(abspath demo/demo.json)
 
-.PHONY: test app vet boardtest ota sim-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth demo demo-native
+.PHONY: test app vet boardtest ota sim-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth demo demo-native sessions
 
 demo:
 	rm -rf $(DEMO_OUT)
@@ -45,6 +56,18 @@ demo:
 
 demo-native:
 	cd $(CORE) && $(GO) run ./cmd/dsodemo -profile $(abspath demo/profile.yaml) -demo $(abspath demo/demo.json)
+
+sessions:
+	mkdir -p $(SESSIONS_OUT)
+ifeq ($(TARGET),pair)
+	cd $(CORE) && $(GO) run ./cmd/dsosessions pair $(DEMO_FILES) -out $(SESSIONS_OUT) $(ARGS)
+else ifeq ($(TARGET),simlab)
+	cd $(CORE) && $(GO) run ./cmd/dsosessions run -target simlab -url $(SCOPE) -bench-url $(BENCH) \
+		-out $(SESSIONS_OUT)/simlab.json -md $(SESSIONS_OUT)/simlab.md $(ARGS)
+else
+	cd $(CORE) && $(GO) run ./cmd/dsosessions run -target $(TARGET) $(DEMO_FILES) \
+		-out $(SESSIONS_OUT)/$(TARGET).json -md $(SESSIONS_OUT)/$(TARGET).md $(ARGS)
+endif
 
 test:
 	cd app && $(GO) test ./...
