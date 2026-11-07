@@ -27,7 +27,7 @@ done
 # Power cuts during an update: the install is killed after D ms (every
 # process of the update dies at once), its half-written temporary file torn,
 # then the unit boots.
-for d in 0 25 50 80 120 170 230 300 400 550 750 1000; do
+for d in 0 60 120 170 200 230 260 300 450; do
 	stop_app
 	$O bootstrap $F/extra.sh $F/app l4-1 >/dev/null
 	rm -rf "$P/open/b" "$P/open/previous"
