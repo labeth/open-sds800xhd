@@ -198,7 +198,8 @@ export async function fuzzSuite() {
       await resetScope();
       await SOURCES.tone1M();
       const seed = +(process.env.FUZZ_SEED || t.rep);
-      const out = path.join(t.out, `fuzz-${t.rep}-seed${seed}-${Date.now()}`);
+      // absolute: the fuzzer runs in the core's e2e directory
+      const out = path.resolve(t.out, `fuzz-${t.rep}-seed${seed}-${Date.now()}`);
       mkdirSync(out, { recursive: true });
       const code = await new Promise((resolve) => {
         const p = spawn(process.execPath, [path.join(E2E, "fuzz.mjs")], {
