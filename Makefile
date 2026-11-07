@@ -12,6 +12,12 @@
 #                    stage-2 area with expected/measured tables
 #                    (build/cosim-test.txt; needs the private reference workspace's simulator)
 #   make cosim-smoke - the Verilated open PL's self-test alone (no simulator)
+#   make l4-test   - the fault lane: the device model's fault knobs (DMA,
+#                    interrupts, bus errors, PL reload, clock lock, keys),
+#                    power cuts during an install or an update, damaged
+#                    images and storage, the write guard, and the operator
+#                    fuzzer on the web UI (build/l4-test.txt, with a fault
+#                    table; needs the private reference workspace's simulator)
 #   make simlab    - the virtual bench: the simulator running the app, and
 #                    a page (http://127.0.0.1:8090/) with the scope's front
 #                    panel, live screen, a signal generator on its inputs and
@@ -27,7 +33,7 @@
 
 GO ?= go
 
-.PHONY: test app vet boardtest ota sim-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth
+.PHONY: test app vet boardtest ota sim-test l4-test simlab cosim-test cosim-smoke cosim-build fpga-sim fpga-lint fpga-neutral fpga-synth
 
 test:
 	cd app && $(GO) test ./...
@@ -67,6 +73,13 @@ cosim-smoke: cosim-build
 cosim-test: app boardtest ota cosim-build
 	cd sim && $(GO) build -o ../build/simtest ./cmd/simtest
 	./build/simtest -cosim $(if $(AREA),-area $(AREA)) $(if $(REUSE),-reuse)
+
+# AREA=l4-acq,l4-fuzz limits the run; REUSE=1 re-checks the last runs;
+# L4_FUZZ_SEEDS=1-20 and L4_FUZZ_ITERS=25 size the fuzz lane.
+l4-test: app ota
+	cd ota && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) test -c -tags simguest -trimpath -o ../build/installtest ./internal/install
+	cd sim && $(GO) build -o ../build/simtest ./cmd/simtest
+	./build/simtest -l4 $(if $(AREA),-area $(AREA)) $(if $(REUSE),-reuse)
 
 # SIMLAB_ARGS passes simlab flags, e.g. SIMLAB_ARGS="-addr 127.0.0.1:9000".
 simlab: app

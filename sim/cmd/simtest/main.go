@@ -81,6 +81,7 @@ func main() {
 	prefix := flag.String("prefix", "o800-", "run-name prefix")
 	list := flag.Bool("list", false, "list the areas")
 	cosim := flag.Bool("cosim", false, "run the open-PL co-simulation areas (fpga/build/cosim/opl_cosim, simd -pl open)")
+	l4 := flag.Bool("l4", false, "run the fault-injection areas (test-bench layer L4: the device model's fault knobs, power cuts, damaged storage)")
 	flag.Parse()
 
 	root, err := os.Getwd()
@@ -98,6 +99,12 @@ func main() {
 		areas, e.cosim = cosimAreas, filepath.Join(root, "fpga", "build", "cosim", "opl_cosim")
 		if *prefix == "o800-" {
 			e.prefix = "cos-"
+		}
+	}
+	if *l4 {
+		areas = l4Areas
+		if *prefix == "o800-" {
+			e.prefix = "l4-"
 		}
 	}
 	if *list {
@@ -133,11 +140,17 @@ func main() {
 	if e.cosim != "" {
 		report += renderCosim(results, names)
 	}
+	if *l4 {
+		report += renderL4(results)
+	}
 	fmt.Print(report)
 	_ = os.MkdirAll(filepath.Join(root, "build"), 0o755) //nolint:gosec // G301: a build output directory of the repository
 	out := "sim-test.txt"
-	if e.cosim != "" {
+	switch {
+	case e.cosim != "":
 		out = "cosim-test.txt"
+	case *l4:
+		out = "l4-test.txt"
 	}
 	_ = os.WriteFile(filepath.Join(root, "build", out), []byte(report), 0o644) //nolint:gosec // G306: a build report of the repository
 	for _, r := range results {
