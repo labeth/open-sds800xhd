@@ -76,6 +76,7 @@ func init() {
 const (
 	trigHostFile = "trigfire-host.txt"
 	statTrigd    = "Trig'd"
+	failWord     = "FAIL"
 	typEdge      = "edge"
 )
 
@@ -137,9 +138,9 @@ func trigHost(ctx context.Context, dir string) {
 	}
 	defer func() { _ = f.Close() }()
 	rowf := func(via, typ, form, want, got string, ok bool) {
-		v := passWord
-		if !ok {
-			v = "FAIL"
+		v := failWord
+		if ok {
+			v = passWord
 		}
 		_, _ = fmt.Fprintf(f, "ROW %s|%s|%s|%s|%s|%s\n", via, typ, form, want, got, v)
 	}
