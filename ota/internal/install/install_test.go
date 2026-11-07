@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-dso-core/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // guardRoot roots the write guard at dir for one test.
 func guardRoot(t *testing.T, dir string) {
 	t.Helper()
-	restore, err := fsguard.SetRoot(dir)
+	restore, err := hdguard.FS.SetRoot(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

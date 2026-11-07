@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/ota/internal/slots"
 )
 
@@ -101,7 +101,7 @@ func mkdirs(dir string) error {
 	if err := mkdirs(filepath.Dir(dir)); err != nil {
 		return err
 	}
-	if err := fsguard.Mkdir(dir); err != nil {
+	if err := hdguard.FS.Mkdir(dir); err != nil {
 		return err
 	}
 	return slots.SyncDir(filepath.Dir(dir))

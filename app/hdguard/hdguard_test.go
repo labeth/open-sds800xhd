@@ -1,4 +1,4 @@
-package fsguard
+package hdguard
 
 import (
 	"errors"
@@ -6,13 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labeth/open-dso-core/fsguard"
 )
 
 // useRoot makes a fresh temporary directory the writable root for one test.
 func useRoot(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	restore, err := SetRoot(dir)
+	restore, err := FS.SetRoot(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +22,7 @@ func useRoot(t *testing.T) string {
 	return dir
 }
 
-func refused(err error) bool { return errors.Is(err, ErrRefused) }
+func refused(err error) bool { return errors.Is(err, fsguard.ErrRefused) }
 
 // TRLC-LINKS: REQ-HD-016
 func TestCheckInsideOutside(t *testing.T) {
@@ -48,7 +50,7 @@ func TestCheckInsideOutside(t *testing.T) {
 		filepath.Join(root, "config", "settings.xml"),
 	}
 	for _, p := range ok {
-		if err := Check(p); err != nil {
+		if err := FS.Check(p); err != nil {
 			t.Errorf("%s refused: %v", p, err)
 		}
 	}
@@ -82,7 +84,7 @@ func TestCheckInsideOutside(t *testing.T) {
 		"/lib/firmware/x.bin",
 	}
 	for _, p := range bad {
-		err := Check(p)
+		err := FS.Check(p)
 		if !refused(err) {
 			t.Errorf("%q not refused: %v", p, err)
 		}
@@ -91,11 +93,11 @@ func TestCheckInsideOutside(t *testing.T) {
 
 // TRLC-LINKS: REQ-HD-016
 func TestDefaultRootIsP12(t *testing.T) {
-	if Root() != P12 {
-		t.Fatalf("default root %s", Root())
+	if FS.Root() != P12 {
+		t.Fatalf("default root %s", FS.Root())
 	}
 	for _, p := range []string{"/usr/bin/siglent/usr/open/current", "/usr/bin/siglent/usr/extra.sh"} {
-		if err := Check(p); err != nil {
+		if err := FS.Check(p); err != nil {
 			t.Errorf("%s: %v", p, err)
 		}
 	}
@@ -103,7 +105,7 @@ func TestDefaultRootIsP12(t *testing.T) {
 		"/usr/bin/siglent/usr/../firmdata0/x", "/usr/bin/siglent/config/x", "/tmp/x",
 		"/usr/bin/siglent/usr/updatefile/BOOT.bin",
 	} {
-		if !refused(Check(p)) {
+		if !refused(FS.Check(p)) {
 			t.Errorf("%s not refused", p)
 		}
 	}
@@ -115,24 +117,24 @@ func TestSetRootRefusesVendorAreas(t *testing.T) {
 		"/", "/usr", "/usr/bin/siglent", "/usr/bin/siglent/firmdata0", "/dev", "/sys/class",
 		"/mnt/logo", "/etc", "/lib/firmware", "",
 	} {
-		if r, err := SetRoot(d); err == nil {
+		if r, err := FS.SetRoot(d); err == nil {
 			r()
 			t.Errorf("root %q accepted", d)
 		}
 	}
 	for _, d := range []string{P12, P12 + "/open", "/mnt", t.TempDir()} {
-		r, err := SetRoot(d)
+		r, err := FS.SetRoot(d)
 		if err != nil {
 			t.Errorf("root %q: %v", d, err)
 			continue
 		}
-		if Root() != d {
-			t.Errorf("root %q is %q", d, Root())
+		if FS.Root() != d {
+			t.Errorf("root %q is %q", d, FS.Root())
 		}
 		r()
 	}
-	if Root() != P12 {
-		t.Fatalf("restore left %s", Root())
+	if FS.Root() != P12 {
+		t.Fatalf("restore left %s", FS.Root())
 	}
 }
 
@@ -144,7 +146,7 @@ func TestCheckDevice(t *testing.T) {
 		"/sys/module/firmware_class/parameters/path", "/dev/siglent_touch", "/dev/simd_mark",
 	}
 	for _, p := range ok {
-		if err := CheckDevice(p); err != nil {
+		if err := FS.CheckDevice(p); err != nil {
 			t.Errorf("%s: %v", p, err)
 		}
 	}
@@ -156,7 +158,7 @@ func TestCheckDevice(t *testing.T) {
 		"/sys/block/mmcblk0/force_ro", "/sys/class/block/mmcblk0p1/ro", "/dev/../dev/mmcblk0p7", "/dev/uboot.env",
 	}
 	for _, p := range bad {
-		if !refused(CheckDevice(p)) {
+		if !refused(FS.CheckDevice(p)) {
 			t.Errorf("%s not refused", p)
 		}
 	}
@@ -165,16 +167,16 @@ func TestCheckDevice(t *testing.T) {
 // TRLC-LINKS: REQ-HD-016
 func TestCheckPhys(t *testing.T) {
 	for _, p := range []uint64{0x8000_0000, 0x8003_0000, 0x8004_0000, 0xFF11_0000} {
-		if err := CheckPhys(p, 0x1_0000); err != nil {
+		if err := FS.CheckPhys(p, 0x1_0000); err != nil {
 			t.Errorf("%#x: %v", p, err)
 		}
 	}
 	for _, p := range []uint64{0xFFCA_0000, 0xFFCC_0000, 0xFFCC_8000, 0xFFCD_0000, 0xFF16_0000, 0xFF17_0000} {
-		if !refused(CheckPhys(p, 0x1_0000)) {
+		if !refused(FS.CheckPhys(p, 0x1_0000)) {
 			t.Errorf("%#x not refused", p)
 		}
 	}
-	if !refused(CheckPhys(0xFFC0_0000, 0x10_0000)) {
+	if !refused(FS.CheckPhys(0xFFC0_0000, 0x10_0000)) {
 		t.Error("a window over the eFuse block not refused")
 	}
 }
@@ -184,17 +186,17 @@ func TestWritesThroughTheGuard(t *testing.T) {
 	root := useRoot(t)
 	outside := t.TempDir()
 	in := filepath.Join(root, "open", "current")
-	if err := MkdirAll(filepath.Dir(in)); err != nil {
+	if err := FS.MkdirAll(filepath.Dir(in)); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteFile(in, []byte("a\n"), 0o644); err != nil {
+	if err := FS.WriteFile(in, []byte("a\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(in); string(b) != "a\n" {
 		t.Fatalf("content %q", b)
 	}
 	out := filepath.Join(outside, "x")
-	if !refused(WriteFile(out, []byte("x"), 0o644)) {
+	if !refused(FS.WriteFile(out, []byte("x"), 0o644)) {
 		t.Error("write outside the root not refused")
 	}
 	if _, err := os.Stat(out); err == nil {
@@ -203,31 +205,31 @@ func TestWritesThroughTheGuard(t *testing.T) {
 	if _, err := os.Stat(out + ".new"); err == nil {
 		t.Error("a refused write left its temporary file")
 	}
-	if !refused(Rename(in, out)) {
+	if !refused(FS.Rename(in, out)) {
 		t.Error("rename out of the root not refused")
 	}
-	if !refused(Rename(out, in)) {
+	if !refused(FS.Rename(out, in)) {
 		t.Error("rename from outside the root not refused")
 	}
-	if !refused(Remove(out)) || !refused(MkdirAll(filepath.Join(outside, "d"))) || !refused(Mkdir(outside)) {
+	if !refused(FS.Remove(out)) || !refused(FS.MkdirAll(filepath.Join(outside, "d"))) || !refused(FS.Mkdir(outside)) {
 		t.Error("remove or mkdir outside the root not refused")
 	}
-	if _, err := OpenFile(filepath.Join(root, "updatefile", "BOOT.bin"), os.O_WRONLY|os.O_CREATE, 0o644); !refused(err) {
+	if _, err := FS.OpenFile(filepath.Join(root, "updatefile", "BOOT.bin"), os.O_WRONLY|os.O_CREATE, 0o644); !refused(err) {
 		t.Errorf("open in updatefile/: %v", err)
 	}
-	if err := Rename(in, in+".old"); err != nil {
+	if err := FS.Rename(in, in+".old"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Remove(in + ".old"); err != nil {
+	if err := FS.Remove(in + ".old"); err != nil {
 		t.Fatal(err)
 	}
-	var re *RefusedError
-	if err := Check(out); !errors.As(err, &re) || !strings.Contains(err.Error(), "outside p12's root") {
+	var re *fsguard.RefusedError
+	if err := FS.Check(out); !errors.As(err, &re) || !strings.Contains(err.Error(), "outside p12's root") {
 		t.Errorf("refusal %v", err)
 	}
 }
 
-const stockMounts = `/dev/root / ext4 ro,relatime 0 0
+const unitMounts = `/dev/root / ext4 ro,relatime 0 0
 devtmpfs /dev devtmpfs rw,relatime 0 0
 proc /proc proc rw,relatime 0 0
 tmpfs /tmp tmpfs rw,relatime 0 0
@@ -241,7 +243,7 @@ tmpfs /tmp tmpfs rw,relatime 0 0
 // TRLC-LINKS: REQ-HD-016
 func TestCheckInstallMounts(t *testing.T) {
 	good := "rootfs / rootfs rw 0 0\ndevtmpfs /dev devtmpfs rw 0 0\n/dev/mmcblk0p12 /mnt ext4 rw,relatime 0 0\n"
-	if err := CheckInstallMounts(strings.NewReader(good), "/mnt"); err != nil {
+	if err := FS.CheckInstallMounts(strings.NewReader(good), "/mnt"); err != nil {
 		t.Fatal(err)
 	}
 	for name, m := range map[string]string{
@@ -251,11 +253,11 @@ func TestCheckInstallMounts(t *testing.T) {
 		"wrong fs":        "/dev/mmcblk0p12 /mnt vfat rw 0 0\n",
 		"another rw eMMC": good + "/dev/mmcblk0p5 /boot vfat rw 0 0\n",
 	} {
-		if !refused(CheckInstallMounts(strings.NewReader(m), "/mnt")) {
+		if !refused(FS.CheckInstallMounts(strings.NewReader(m), "/mnt")) {
 			t.Errorf("%s not refused", name)
 		}
 	}
-	if err := CheckInstallMounts(strings.NewReader(good+"/dev/mmcblk0p7 /ro ext4 ro 0 0\n"), "/mnt"); err != nil {
+	if err := FS.CheckInstallMounts(strings.NewReader(good+"/dev/mmcblk0p7 /ro ext4 ro 0 0\n"), "/mnt"); err != nil {
 		t.Errorf("a read-only eMMC mount refused: %v", err)
 	}
 }
@@ -263,7 +265,7 @@ func TestCheckInstallMounts(t *testing.T) {
 // TRLC-LINKS: REQ-HD-013, REQ-HD-016
 func TestCheckOffUnit(t *testing.T) {
 	for _, p := range []string{"/tmp/census.json", "/mnt/usb stick/census.json", "/mnt/usb stick/backup/p9.img"} {
-		if err := CheckOffUnit(p, strings.NewReader(stockMounts)); err != nil {
+		if err := FS.CheckOffUnit(p, strings.NewReader(unitMounts)); err != nil {
 			t.Errorf("%s: %v", p, err)
 		}
 	}
@@ -271,7 +273,7 @@ func TestCheckOffUnit(t *testing.T) {
 		"/usr/bin/siglent/usr/census.json", "/usr/bin/siglent/firmdata0/x", "/mnt/logo/x",
 		"/etc/x", "/dev/mmcblk0p9", "/mnt/usb stick/uboot.env", "/mnt/usb stick/huluwa_udiskEnv.txt",
 	} {
-		if !refused(CheckOffUnit(p, strings.NewReader(stockMounts))) {
+		if !refused(FS.CheckOffUnit(p, strings.NewReader(unitMounts))) {
 			t.Errorf("%s not refused", p)
 		}
 	}

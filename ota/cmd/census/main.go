@@ -14,8 +14,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/ota/census"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
 )
 
 func main() { os.Exit(run()) }
@@ -63,7 +63,7 @@ func createOffUnit(path string) (*os.File, error) {
 		return nil, err
 	}
 	defer func() { _ = m.Close() }() // read only: nothing to flush
-	if err := fsguard.CheckOffUnit(path, m); err != nil {
+	if err := hdguard.FS.CheckOffUnit(path, m); err != nil {
 		return nil, err
 	}
 	return os.Create(path) //nolint:gosec // G304: the path passed the write guard

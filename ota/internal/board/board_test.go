@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/labeth/open-dso-core/hal"
-	"github.com/labeth/open-sds800xhd/ota/boottarget"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // fakeProcs builds /proc entries: pid → argv, parent, state.
@@ -36,7 +35,7 @@ func fakeProcs(t *testing.T, root string, ps map[int][]string, ppid map[int]int,
 // guardRoot roots the write guard at dir for one test.
 func guardRoot(t *testing.T, dir string) {
 	t.Helper()
-	restore, err := fsguard.SetRoot(dir)
+	restore, err := hdguard.FS.SetRoot(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,13 +168,13 @@ func TestCensusRefusesWrites(t *testing.T) {
 // TRLC-LINKS: REQ-HD-002, REQ-HD-016
 func TestBootTarget(t *testing.T) {
 	b, _ := testBoard(t)
-	if b.BootTarget() != boottarget.Open {
+	if b.BootTarget() != hal.BootOpen {
 		t.Fatal("fresh unit boots open")
 	}
-	if err := b.SetBootTarget(boottarget.Vendor, "test"); err != nil {
+	if err := b.SetBootTarget(hal.BootVendor, "test"); err != nil {
 		t.Fatal(err)
 	}
-	if b.BootTarget() != boottarget.Vendor || !b.Slots().Status().Disabled {
+	if b.BootTarget() != hal.BootVendor || !b.Slots().Status().Disabled {
 		t.Fatal("vendor not set")
 	}
 	if err := b.RebootNow("test"); err == nil || err.Error() != "rebooted" {
@@ -184,10 +183,10 @@ func TestBootTarget(t *testing.T) {
 	if b.reboots() != 0 {
 		t.Errorf("an asked reboot counted: %d", b.reboots())
 	}
-	if err := b.SetBootTarget(boottarget.Open, "test"); err != nil {
+	if err := b.SetBootTarget(hal.BootOpen, "test"); err != nil {
 		t.Fatal(err)
 	}
-	if b.BootTarget() != boottarget.Open {
+	if b.BootTarget() != hal.BootOpen {
 		t.Fatal("open not set")
 	}
 }

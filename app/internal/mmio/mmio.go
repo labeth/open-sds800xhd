@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // Physical bases of the blocks the firmware uses (spec 02 §2).
@@ -49,7 +49,7 @@ type Window struct {
 // controllers.
 // TRLC-LINKS: REQ-HD-016
 func Map(phys uint64) (*Window, error) {
-	if err := fsguard.CheckPhys(phys, WindowSize); err != nil {
+	if err := hdguard.FS.CheckPhys(phys, WindowSize); err != nil {
 		return nil, err
 	}
 	fd, err := syscall.Open("/dev/mem", syscall.O_RDWR|syscall.O_SYNC|syscall.O_CLOEXEC, 0)

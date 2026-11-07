@@ -25,7 +25,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // The verdicts a part can get.
@@ -145,7 +145,7 @@ func (u Unit) readAttr(p string) (string, error) {
 }
 
 func (u Unit) writeAttr(p, v string) error {
-	if err := fsguard.CheckDevice(p); err != nil {
+	if err := hdguard.FS.CheckDevice(p); err != nil {
 		return err
 	}
 	fd, err := syscall.Open(u.path(p), syscall.O_WRONLY|syscall.O_CLOEXEC, 0)

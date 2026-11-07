@@ -11,8 +11,8 @@ import (
 	"sync"
 
 	"github.com/labeth/open-dso-core/hal"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/app/internal/platform"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
 )
 
 // storageFacet is p12, the only writable partition (spec 01 §8, spec 09
@@ -60,7 +60,7 @@ func (s *storageFacet) Captures() (string, error) {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return "", err
 	}
-	if err := fsguard.CheckOffUnit(filepath.Join(dir, "x"), f); err != nil {
+	if err := hdguard.FS.CheckOffUnit(filepath.Join(dir, "x"), f); err != nil {
 		return "", err
 	}
 	return dir, nil
@@ -164,10 +164,10 @@ func (kv *fileKV) Put(key string, val []byte) error {
 	if u := kv.used(key); u+len(val) > kv.budget {
 		return hal.Refuse("store "+key, fmt.Sprintf("%d bytes do not fit: %d of the %d-byte budget are in use", len(val), u, kv.budget))
 	}
-	if err := fsguard.MkdirAll(kv.dir); err != nil {
+	if err := hdguard.FS.MkdirAll(kv.dir); err != nil {
 		return err
 	}
-	return fsguard.WriteFile(p, val, 0o644)
+	return hdguard.FS.WriteFile(p, val, 0o644)
 }
 
 // Budget is the store's size budget in bytes.

@@ -25,8 +25,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/labeth/open-sds800xhd/ota/boottarget"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-dso-core/hal"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/ota/internal/board"
 	"github.com/labeth/open-sds800xhd/ota/internal/slots"
 )
@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 	// Every write of the board side goes through the write guard, rooted at
 	// the p12 this run works on; a vendor area is refused as a root.
-	if _, err := fsguard.SetRoot(*p12); err != nil {
+	if _, err := hdguard.FS.SetRoot(*p12); err != nil {
 		say("%v", err)
 		os.Exit(1)
 	}
@@ -67,7 +67,7 @@ func run(b *board.Board, cmd string, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := fsguard.MkdirAll(l.Dir); err != nil {
+		if err := hdguard.FS.MkdirAll(l.Dir); err != nil {
 			return err
 		}
 		if err := l.Bootstrap(app, arg(args, 2, "bootstrap")); err != nil {
@@ -126,7 +126,7 @@ func run(b *board.Board, cmd string, args []string) error {
 	case "takeover":
 		return b.Takeover(context.Background())
 	case "vendor":
-		if err := b.SetBootTarget(boottarget.Vendor, "otactl vendor"); err != nil {
+		if err := b.SetBootTarget(hal.BootVendor, "otactl vendor"); err != nil {
 			return err
 		}
 		if arg(args, 0, "") == "reboot" {
@@ -135,7 +135,7 @@ func run(b *board.Board, cmd string, args []string) error {
 		}
 		say("vendor: next boot runs the vendor firmware; 'otactl vendor reboot' reboots now, 'otactl open' undoes it")
 	case "open":
-		if err := b.SetBootTarget(boottarget.Open, "otactl open"); err != nil {
+		if err := b.SetBootTarget(hal.BootOpen, "otactl open"); err != nil {
 			return err
 		}
 		say("open: next boot runs the open firmware")
@@ -222,7 +222,7 @@ const simMark = "/dev/simd_mark"
 func say(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	fmt.Println("otactl:", s)
-	if fsguard.CheckDevice(simMark) != nil {
+	if hdguard.FS.CheckDevice(simMark) != nil {
 		return
 	}
 	if f, err := os.OpenFile(simMark, os.O_WRONLY, 0); err == nil {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // Sysfs attributes are accessed with one plain syscall each, not os.File:
@@ -17,7 +17,7 @@ import (
 // guard's device check (no block device, eFuse, BBRAM or nvmem).
 // TRLC-LINKS: REQ-HD-016
 func WriteAttr(path, v string) error {
-	if err := fsguard.CheckDevice(path); err != nil {
+	if err := hdguard.FS.CheckDevice(path); err != nil {
 		return err
 	}
 	fd, err := syscall.Open(path, syscall.O_WRONLY|syscall.O_CLOEXEC, 0)

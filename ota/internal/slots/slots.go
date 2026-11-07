@@ -25,7 +25,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-dso-core/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // The slot names.
@@ -112,7 +113,7 @@ func (l Layout) Install(app []byte, version string) (string, error) {
 		return "", ErrOnTrial
 	}
 	to := Other(st.Current)
-	if err := fsguard.MkdirAll(l.path(to)); err != nil {
+	if err := hdguard.FS.MkdirAll(l.path(to)); err != nil {
 		return "", err
 	}
 	if err := WriteFile(l.path(to, "app"), app, 0o755); err != nil {
@@ -133,7 +134,7 @@ func (l Layout) Install(app []byte, version string) (string, error) {
 // Bootstrap makes app slot a, current and confirmed: the layout the install
 // stick leaves.
 func (l Layout) Bootstrap(app []byte, version string) error {
-	if err := fsguard.MkdirAll(l.path(A)); err != nil {
+	if err := hdguard.FS.MkdirAll(l.path(A)); err != nil {
 		return err
 	}
 	if err := WriteFile(l.path(A, "app"), app, 0o755); err != nil {
@@ -179,11 +180,11 @@ func (l Layout) App() string { return l.path(l.Status().Current, "app") }
 // fsguard): a temporary file next to it, fsync, mode, rename, then an fsync
 // of the directory (spec 01 §12.4 step 4).
 func WriteFile(path string, data []byte, mode os.FileMode) error {
-	return fsguard.WriteFile(path, data, mode)
+	return hdguard.FS.WriteFile(path, data, mode)
 }
 
 // Remove deletes path, if it exists, durably, through the write guard.
-func Remove(path string) error { return fsguard.Remove(path) }
+func Remove(path string) error { return hdguard.FS.Remove(path) }
 
 // SyncDir fsyncs a directory.
 func SyncDir(dir string) error { return fsguard.SyncDir(dir) }

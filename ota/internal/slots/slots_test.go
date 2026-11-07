@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // fakeApp is an app that records its start in OTA_DIR/started.
@@ -20,7 +20,7 @@ func fakeApp(name string) []byte {
 // guardRoot roots the write guard at dir for one test.
 func guardRoot(t *testing.T, dir string) {
 	t.Helper()
-	restore, err := fsguard.SetRoot(dir)
+	restore, err := hdguard.FS.SetRoot(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,10 +21,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/labeth/open-dso-core/boottarget"
 	"github.com/labeth/open-dso-core/hal"
-	"github.com/labeth/open-sds800xhd/ota/boottarget"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/ota/census"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
 	"github.com/labeth/open-sds800xhd/ota/internal/slots"
 )
 
@@ -215,7 +215,7 @@ func (b *Board) Takeover(ctx context.Context) error {
 // the vendor firmware at the next power-up instead of rebooting forever.
 // Every reboot and refusal is logged on p12 first.
 func (b *Board) Reboot(reason string) error {
-	if err := fsguard.MkdirAll(b.SlotsDir()); err != nil {
+	if err := hdguard.FS.MkdirAll(b.SlotsDir()); err != nil {
 		return err
 	}
 	n := b.reboots()
@@ -233,8 +233,8 @@ func (b *Board) Reboot(reason string) error {
 	return b.reboot()
 }
 
-// BootTarget is what the next power-up runs: boottarget.Open, or
-// boottarget.Vendor while the disable file exists.
+// BootTarget is what the next power-up runs: hal.BootOpen, or
+// hal.BootVendor while the disable file exists.
 // TRLC-LINKS: REQ-HD-002
 func (b *Board) BootTarget() string { return boottarget.Next(b.SlotsDir()) }
 
@@ -242,7 +242,7 @@ func (b *Board) BootTarget() string { return boottarget.Next(b.SlotsDir()) }
 // unit to the vendor firmware (the disable file), without uninstalling.
 // TRLC-LINKS: REQ-HD-002, REQ-HD-016
 func (b *Board) SetBootTarget(target, reason string) error {
-	if err := boottarget.Set(b.SlotsDir(), target, reason); err != nil {
+	if err := boottarget.Set(hdguard.FS, b.SlotsDir(), target, reason); err != nil {
 		return err
 	}
 	b.rebootLog("next boot: %s firmware (%s)", target, reason)
@@ -276,8 +276,8 @@ func (b *Board) reboots() int {
 
 func (b *Board) rebootLog(format string, a ...any) {
 	dir := filepath.Join(b.SlotsDir(), "log")
-	_ = fsguard.MkdirAll(dir)
-	f, err := fsguard.OpenFile(filepath.Join(dir, "reboot.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
+	_ = hdguard.FS.MkdirAll(dir)
+	f, err := hdguard.FS.OpenFile(filepath.Join(dir, "reboot.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
 		return
 	}

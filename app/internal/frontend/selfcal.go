@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/app/internal/platform"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
 )
 
 // The user self-calibration of spec 10 §5: with the inputs open, the offset
@@ -688,10 +688,10 @@ func writeUserCalFile(path string, cals []UserCal) error {
 	if err := WriteUserCal(&b, cals); err != nil {
 		return err
 	}
-	if err := fsguard.MkdirAll(filepath.Dir(path)); err != nil {
+	if err := hdguard.FS.MkdirAll(filepath.Dir(path)); err != nil {
 		return err
 	}
-	return fsguard.WriteFile(path, b.Bytes(), 0o644)
+	return hdguard.FS.WriteFile(path, b.Bytes(), 0o644)
 }
 
 // ForgetDAC makes the next channel setup write every offset DAC.
