@@ -242,7 +242,15 @@ func trigHost(ctx context.Context, dir string) {
 	rowf("SCPI", "sweep", "single, rising 0.5 V: status", "Stop", stat, stat == "Stop")
 	rowf("SCPI", "sweep", "single, rising 0.5 V", posWantText(0.5, 1), got, ok)
 
-	// Force from Normal without the condition
+	// After a single shot taken from AUTO, :TRIG:MODE NORM must give NORMal
+	_, _ = scpiQuery(ctx, ":TRIG:MODE NORM")
+	time.Sleep(time.Second)
+	afterShot, _ := scpiQuery(ctx, ":TRIG:MODE?")
+	rowf("SCPI", "sweep", "NORM after a single shot taken from AUTO", "NORMal", afterShot, strings.HasPrefix(afterShot, "NORM"))
+
+	// Force from Normal without the condition (AUTO first, so the mode the shot replaced is gone)
+	_, _ = scpiQuery(ctx, ":TRIG:MODE AUTO")
+	time.Sleep(time.Second)
 	_, _ = scpiQuery(ctx, base+":TRIG:EDGE:SLOP RIS;:TRIG:EDGE:LEV 1.5;:TRIG:MODE NORM")
 	time.Sleep(2 * time.Second)
 	modeBefore, _ := scpiQuery(ctx, ":TRIG:MODE?")

@@ -494,7 +494,7 @@ func serialCases() []fireCase {
 	// from the frame's first edge (after a gap of more than 8 bits) on channel c to the trigger
 	fromFrame := func(c int, want float64, what string, alt ...float64) func(r fireRec) (string, string, bool) {
 		return func(r fireRec) (string, string, bool) {
-			x := r.at
+			x := r.at + 1 // an edge at the trigger itself counts
 			first := -1.0
 			for {
 				o, ok := r.before(c, 0, 0, x)
