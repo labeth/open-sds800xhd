@@ -16,11 +16,16 @@ import (
 // one "l4: ..." line per case; the checks read them.
 func init() {
 	l4register(area{
-		name: "l4-update", title: "faults: damaged update images, power cuts during an update, damaged p12",
+		name: "l4-update", title: "faults: damaged update images, power cuts during an update; a damaged p12",
 		runs: func(e *env) []harness.Spec {
-			return []harness.Spec{l4Spec(e, "update", "l4-update.sh", 290, nil)}
+			return []harness.Spec{l4Spec(e, "update", "l4-update.sh", 290, nil), l4Spec(e, "p12", "l4-p12.sh", 200, nil)}
 		},
-		check: func(_ *env, runs []*harness.Run) []harness.Result { return updateChecks(runs[0]) },
+		check: func(_ *env, runs []*harness.Run) []harness.Result {
+			if len(runs) != 2 {
+				return []harness.Result{harness.Fail("l4-update", "update-cut/runs", "%d runs, want 2", len(runs))}
+			}
+			return append(updateChecks(runs[0]), p12Checks(runs[1])...)
+		},
 	})
 	l4register(area{
 		name: "l4-install", title: "faults: power cuts during the install stick's copy, the stick's re-run",
@@ -154,6 +159,15 @@ func updateChecks(r *harness.Run) []harness.Result {
 	}
 	if n == 0 {
 		res = append(res, harness.Fail(a, "update-cut/runs", "no power cut ran"))
+	}
+	return append(res, guardChecks(a, r)...)
+}
+
+func p12Checks(r *harness.Run) []harness.Result {
+	const a = "l4-update"
+	var res []harness.Result
+	if !strings.Contains(r.Console, "l4: p12 scenario done") {
+		res = append(res, harness.Fail(a, "corrupt-p12/done", "the scenario did not finish (time limit?)"))
 	}
 	for _, l := range l4Lines(r, "corrupt-p12") {
 		c := strings.Fields(l)[0]
