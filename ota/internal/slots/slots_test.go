@@ -369,3 +369,30 @@ func TestInstallChecksDigest(t *testing.T) {
 		t.Fatalf("the built image: %s %v", s, err)
 	}
 }
+
+// A slot's app damaged after its install fails Verify; an intact one and a
+// slot with no recorded digest pass.
+// TRLC-LINKS: REQ-HD-012
+func TestVerifySlot(t *testing.T) {
+	_, l := p12(t)
+	if err := l.Bootstrap(fakeApp("good"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Verify(A); err != nil {
+		t.Fatalf("intact slot: %v", err)
+	}
+	app := filepath.Join(l.Dir, A, "app")
+	b, _ := os.ReadFile(app)
+	if err := os.WriteFile(app, b[:len(b)/2], 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Verify(A); !errors.Is(err, ErrDigest) {
+		t.Fatalf("cut slot: %v, want ErrDigest", err)
+	}
+	if err := os.Remove(filepath.Join(l.Dir, A, "sha256")); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Verify(A); err != nil {
+		t.Fatalf("a slot without a recorded digest: %v", err)
+	}
+}

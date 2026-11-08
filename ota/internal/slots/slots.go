@@ -3,7 +3,8 @@
 //
 // Layout under the open directory (p12/open):
 //
-//	a/app, b/app        the two slots' app binaries; a/version, b/version
+//	a/app, b/app        the two slots' app binaries; a/version, b/version;
+//	a/sha256, b/sha256  "<hex SHA-256> <size>" of each app as installed
 //	current             "a" or "b": the slot the launch hook starts
 //	previous            the slot to go back to when current fails
 //	trial               "<slot> <starts>" while current is not yet confirmed
@@ -185,6 +186,9 @@ func (l Layout) Install(app []byte, version string, want Digest) (string, error)
 	if err := WriteFile(l.path(to, "version"), []byte(version+"\n"), 0o644); err != nil {
 		return "", err
 	}
+	if err := WriteFile(l.path(to, "sha256"), []byte(want.String()+"\n"), 0o644); err != nil {
+		return "", err
+	}
 	if err := WriteFile(l.path("previous"), []byte(st.Current+"\n"), 0o644); err != nil {
 		return "", err
 	}
@@ -204,6 +208,9 @@ func (l Layout) Bootstrap(app []byte, version string) error {
 		return err
 	}
 	if err := WriteFile(l.path(A, "version"), []byte(version+"\n"), 0o644); err != nil {
+		return err
+	}
+	if err := WriteFile(l.path(A, "sha256"), []byte(DigestOf(app).String()+"\n"), 0o644); err != nil {
 		return err
 	}
 	if err := Remove(l.path("trial")); err != nil {
@@ -234,6 +241,30 @@ func (l Layout) Rollback() (string, error) {
 		return st.Current, err
 	}
 	return st.Previous, Remove(l.path("trial"))
+}
+
+// Verify checks slot s's app against the digest recorded when it was
+// installed (s/sha256): nil when they match or no digest was recorded (a
+// slot from before digests), ErrDigest when the app was damaged since.
+// TRLC-LINKS: REQ-HD-012
+func (l Layout) Verify(s string) error {
+	f := strings.Fields(l.read(filepath.Join(s, "sha256")))
+	if len(f) < 2 {
+		return nil
+	}
+	n, err := strconv.ParseInt(f[1], 10, 64)
+	if err != nil {
+		return fmt.Errorf("%w: slot %s's recorded digest %q", ErrDigest, s, strings.Join(f, " "))
+	}
+	want, err := ParseDigest(f[0], n)
+	if err != nil {
+		return fmt.Errorf("%w: slot %s's recorded digest: %w", ErrDigest, s, err)
+	}
+	app, err := os.ReadFile(l.path(s, "app"))
+	if err != nil {
+		return fmt.Errorf("%w: slot %s: %w", ErrDigest, s, err)
+	}
+	return want.check(app, "slot "+s+"'s app")
 }
 
 // App is the current slot's app binary.

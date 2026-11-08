@@ -194,8 +194,23 @@ func imageDigest(image, sum string, size int64) (slots.Digest, error) {
 	return slots.ParseDigest(f[0], n)
 }
 
-// launch runs the launch hook as S99extra does.
+// launch runs the launch hook as S99extra does, once the current slot's
+// app matches the digest recorded at its install: a damaged app is not
+// started; the previous slot is made current when its own app is intact,
+// otherwise nothing is started (the vendor firmware runs at the next boot).
 func launch(b *board.Board) error {
+	l := b.Slots()
+	if err := l.Verify(l.Status().Current); err != nil {
+		prev := l.Status().Previous
+		if prev == "" || l.Verify(prev) != nil {
+			return fmt.Errorf("%w: nothing started", err)
+		}
+		s, rerr := l.Rollback()
+		if rerr != nil {
+			return fmt.Errorf("%w: rollback: %w", err, rerr)
+		}
+		say("launch: %v: back to slot %s", err, s)
+	}
 	out, err := exec.CommandContext(context.Background(), "/bin/sh", filepath.Join(b.P12, "extra.sh")).CombinedOutput() //nolint:gosec // G204: the launch hook at its fixed place on p12
 	if len(out) > 0 {
 		say("launch: %s", out)
