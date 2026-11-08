@@ -101,10 +101,11 @@ boardtest:
 	mkdir -p build
 	cd app && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) test -c -tags simboard -trimpath -o ../build/boardtest ./internal/boardtest
 
-# AREA=trigger,readout limits the run; REUSE=1 re-checks the last runs.
+# AREA=trigger,readout limits the run; CASES=uart,i2c the cases of the decode
+# areas; REUSE=1 re-checks the last runs.
 sim-test: app boardtest ota
 	cd sim && $(GO) build -o ../build/simtest ./cmd/simtest
-	./build/simtest $(if $(AREA),-area $(AREA)) $(if $(REUSE),-reuse)
+	./build/simtest $(if $(AREA),-area $(AREA)) $(if $(CASES),-cases $(CASES)) $(if $(REUSE),-reuse)
 
 cosim-build:
 	fpga/cosim/build.sh
