@@ -32,6 +32,8 @@ func (r *readoutFacet) Read(ctx context.Context, req hal.ReadRequest, dst []*sam
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	b.reading = true
+	defer func() { b.reading = false }()
 	if b.open != nil && b.eng != nil {
 		return b.openRead(ctx, req, dst, yield)
 	}
