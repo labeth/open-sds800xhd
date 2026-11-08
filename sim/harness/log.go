@@ -32,6 +32,14 @@ type Event struct {
 	CS   int             `json:"cs"`
 	Tx   string          `json:"tx"`
 	Kind string          `json:"kind"`
+
+	// An open's guest path, flags and result (emulated, pass, an error).
+	Path  string `json:"path"`
+	Flags string `json:"flags"`
+	Res   string `json:"res"`
+	// Fired names the fault a fault event reports firing (the device
+	// model's fault knobs); empty on the event that sets a knob.
+	Fired string `json:"fired"`
 }
 
 // Address returns an mmio event's physical address.
@@ -111,7 +119,7 @@ func ReadLog(path string) (*Log, error) {
 			continue
 		}
 		switch e.Ev {
-		case "mmio", "spi", "mark", "ctl", "shot", "key", "touch", "dma", "fb", "irq":
+		case "mmio", "spi", "mark", "ctl", "shot", "key", "touch", "dma", "fb", "irq", "fault", "open":
 			l.Events = append(l.Events, e)
 		}
 	}
