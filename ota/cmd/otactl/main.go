@@ -5,11 +5,13 @@
 // core's.
 //
 //	otactl [-p12 DIR] bootstrap HOOK APP [VERSION]  first install: hook, slot a, confirmed
-//	otactl [-p12 DIR] install APP [VERSION]         into the other slot, on trial
+//	otactl [-p12 DIR] install [-sha256 HEX -size N] APP [VERSION]  into the other slot, on trial,
+//	                                                once APP matches its digest (flags, or APP.sha256)
 //	otactl [-p12 DIR] confirm | rollback | status
 //	otactl [-p12 DIR] launch                        run the launch hook as the boot does
 //	otactl [-p12 DIR] restart                       stop the running app, launch again
 //	otactl [-p12 DIR] watch [GRACE]                 health check: confirm, or roll back and relaunch
+//	otactl [-p12 DIR] supervise [GRACE]             keep the app running, bounded: 3 starts a boot, 3 reboots
 //	otactl [-p12 DIR] takeover                      stop the vendor processes (no hardware)
 //	otactl [-p12 DIR] vendor [reboot]               next power-up runs the vendor firmware (open/disable)
 //	otactl [-p12 DIR] open                          next power-up runs the open firmware again
@@ -21,7 +23,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -78,14 +83,25 @@ func run(b *board.Board, cmd string, args []string) error {
 		}
 		say("bootstrap: slot a installed and current, hook in place")
 	case "install":
+		fs := flag.NewFlagSet("install", flag.ContinueOnError)
+		sum := fs.String("sha256", "", "the image's SHA-256 (hex), as built")
+		size := fs.Int64("size", 0, "the image's size in bytes, as built")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		args = fs.Args()
 		if len(args) < 1 {
 			usage()
+		}
+		want, err := imageDigest(args[0], *sum, *size)
+		if err != nil {
+			return err
 		}
 		app, err := os.ReadFile(args[0])
 		if err != nil {
 			return err
 		}
-		s, err := l.Install(app, arg(args, 1, filepath.Base(args[0])))
+		s, err := l.Install(app, arg(args, 1, filepath.Base(args[0])), want)
 		if err != nil {
 			return err
 		}
@@ -123,6 +139,16 @@ func run(b *board.Board, cmd string, args []string) error {
 			grace = d
 		}
 		return watch(b, grace)
+	case "supervise":
+		grace := 15 * time.Second
+		if len(args) > 0 {
+			d, err := time.ParseDuration(args[0])
+			if err != nil {
+				return err
+			}
+			grace = d
+		}
+		return supervise(b, grace)
 	case "takeover":
 		return b.Takeover(context.Background())
 	case "vendor":
@@ -143,6 +169,29 @@ func run(b *board.Board, cmd string, args []string) error {
 		usage()
 	}
 	return nil
+}
+
+// imageDigest is the digest an update image must match: -sha256 and -size,
+// or else the manifest beside the image (IMAGE.sha256: "<hex SHA-256>
+// <size>", written where the image was built). An image without one is
+// refused: nothing could tell a damaged copy from a good one.
+func imageDigest(image, sum string, size int64) (slots.Digest, error) {
+	if sum != "" || size != 0 {
+		return slots.ParseDigest(sum, size)
+	}
+	m, err := os.ReadFile(image + ".sha256") //nolint:gosec // G304: the manifest beside the image the operator named
+	if err != nil {
+		return slots.Digest{}, fmt.Errorf("no digest for %s: give -sha256 and -size, or the manifest %s.sha256 (%w)", image, image, err)
+	}
+	f := strings.Fields(string(m))
+	if len(f) < 2 {
+		return slots.Digest{}, fmt.Errorf("manifest %s.sha256: want \"<hex SHA-256> <size>\"", image)
+	}
+	n, err := strconv.ParseInt(f[1], 10, 64)
+	if err != nil {
+		return slots.Digest{}, fmt.Errorf("manifest %s.sha256: size %q", image, f[1])
+	}
+	return slots.ParseDigest(f[0], n)
 }
 
 // launch runs the launch hook as S99extra does.
@@ -197,6 +246,27 @@ func watch(b *board.Board, grace time.Duration) error {
 	return launch(b)
 }
 
+// supervise runs the bounded supervisor (board.Supervisor) until SIGTERM
+// or SIGINT.
+func supervise(b *board.Board, grace time.Duration) error {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+	s := &board.Supervisor{
+		B: b, Grace: grace,
+		Launch: func() error { return launch(b) },
+		Stop:   func(pid int) { stop(b, pid) },
+		Done:   func() bool { return ctx.Err() != nil },
+		Sleep: func(d time.Duration) {
+			select {
+			case <-ctx.Done():
+			case <-time.After(d):
+			}
+		},
+		Logf: say,
+	}
+	return s.Run()
+}
+
 func stop(b *board.Board, pid int) {
 	_ = syscall.Kill(pid, syscall.SIGTERM)
 	for range 50 {
@@ -232,6 +302,6 @@ func say(format string, a ...any) {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: otactl [-p12 DIR] bootstrap|install|confirm|rollback|status|launch|restart|watch|takeover|vendor|open ...")
+	fmt.Fprintln(os.Stderr, "usage: otactl [-p12 DIR] bootstrap|install|confirm|rollback|status|launch|restart|watch|supervise|takeover|vendor|open ...")
 	os.Exit(2)
 }

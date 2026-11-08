@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -107,8 +109,32 @@ func l4Images(e *env) (map[string]string, error) {
 			return nil, err
 		}
 		files[name] = p
+		// The damaged images carry the manifest of the image they were
+		// built as, the app: what a copy damaged on its way would arrive with.
+		built := b
+		if strings.HasPrefix(name, "app.") {
+			built = app
+		}
+		m, err := writeManifest(dir, name, built)
+		if err != nil {
+			return nil, err
+		}
+		files[name+".sha256"] = m
 	}
+	m, err := writeManifest(dir, "app", app)
+	if err != nil {
+		return nil, err
+	}
+	files["app.sha256"] = m
 	return files, nil
+}
+
+// writeManifest writes dir/name.sha256, the update manifest otactl install
+// checks an image against: "<hex SHA-256> <size>" of built.
+func writeManifest(dir, name string, built []byte) (string, error) {
+	sum := sha256.Sum256(built)
+	p := filepath.Join(dir, name+".sha256")
+	return p, os.WriteFile(p, fmt.Appendf(nil, "%s %d\n", hex.EncodeToString(sum[:]), len(built)), 0o644) //nolint:gosec // G306: a guest input, not a secret
 }
 
 // l4Lines are a run's "l4: <prefix> ..." console lines, prefix removed.

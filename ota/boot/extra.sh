@@ -13,7 +13,8 @@
 #
 # A slot on trial gets one start; if it is still unconfirmed at the next
 # start (the supervisor confirms a healthy app), the hook goes back to the
-# previous slot. Disable switch: open/disable (every boot until removed), or
+# previous slot. A trial start the hook cannot count (p12 read-only) is not
+# made: the previous slot starts instead, or with none the vendor firmware. Disable switch: open/disable (every boot until removed), or
 # the Acquire key held at power-up (this boot only). Deleting this script
 # returns the unit to the vendor firmware at the next boot.
 #
@@ -83,8 +84,17 @@ if [ -f "$open/trial" ] && read -r tslot starts <"$open/trial" && [ "$tslot" = "
 		put current "$prev"
 		plain trial && rm -f "$open/trial" && sync
 		slot=$prev
-	else
-		put trial "$slot $((starts + 1))"
+	elif ! put trial "$slot $((starts + 1))"; then
+		# The start cannot be counted (p12 read-only or full): a slot on
+		# trial would then start on every boot without ever going back.
+		# Start the previous slot instead, or nothing (the vendor firmware).
+		if { [ "$prev" = a ] || [ "$prev" = b ]; } && [ "$prev" != "$slot" ] && [ -x "$open/$prev/app" ]; then
+			log "slot $slot on trial and its start cannot be counted: slot $prev for this boot"
+			slot=$prev
+		else
+			log "slot $slot on trial and its start cannot be counted: vendor firmware for this boot"
+			exit 0
+		fi
 	fi
 fi
 

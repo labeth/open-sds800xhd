@@ -18,6 +18,8 @@
 package slots
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -103,11 +105,65 @@ func (l Layout) Status() Status {
 // other slot is then the only known-good one.
 var ErrOnTrial = errors.New("the current slot is on trial: confirm it or roll back before installing")
 
+// Digest is what an update image must be: its size and SHA-256, given by
+// whoever built it and checked on the unit before the image becomes a slot
+// (ADR-UPDATE-INTEGRITY). It guards against an image damaged on its way or
+// on p12, not against a forged one: it is no signature.
+type Digest struct {
+	Size   int64
+	SHA256 [sha256.Size]byte
+}
+
+// DigestOf is data's digest.
+func DigestOf(data []byte) Digest {
+	return Digest{Size: int64(len(data)), SHA256: sha256.Sum256(data)}
+}
+
+// ParseDigest reads a digest from its hex SHA-256 and its size in bytes.
+func ParseDigest(hexSum string, size int64) (Digest, error) {
+	var d Digest
+	b, err := hex.DecodeString(strings.TrimSpace(hexSum))
+	if err != nil || len(b) != sha256.Size {
+		return d, fmt.Errorf("SHA-256 %q: want %d hex digits", hexSum, 2*sha256.Size)
+	}
+	if size <= 0 {
+		return d, fmt.Errorf("image size %d: want the image's size in bytes", size)
+	}
+	copy(d.SHA256[:], b)
+	d.Size = size
+	return d, nil
+}
+
+// String is the digest as "<hex SHA-256> <size>", the form of a manifest
+// line.
+func (d Digest) String() string {
+	return hex.EncodeToString(d.SHA256[:]) + " " + strconv.FormatInt(d.Size, 10)
+}
+
+// ErrDigest is an image whose size or SHA-256 is not the one it was sent
+// with.
+var ErrDigest = errors.New("the update image does not match its digest")
+
+// check reports whether data is d.
+func (d Digest) check(data []byte, what string) error {
+	if got := DigestOf(data); got != d {
+		return fmt.Errorf("%w: %s is %s, want %s", ErrDigest, what, got, d)
+	}
+	return nil
+}
+
 // Install writes app into the slot that is not current, makes it current on
-// trial and remembers the old one as previous. Each file is written
-// atomically; the pointer to the new slot is written last, so a power cut at
-// any point leaves a layout the launch hook starts a known-good slot from.
-func (l Layout) Install(app []byte, version string) (string, error) {
+// trial and remembers the old one as previous. The image must match want
+// (its size and SHA-256), both as given and as written to the slot: a
+// mismatch refuses the install before the slot becomes current. Each file is
+// written atomically; the pointer to the new slot is written last, so a
+// power cut at any point leaves a layout the launch hook starts a known-good
+// slot from.
+// TRLC-LINKS: REQ-HD-012
+func (l Layout) Install(app []byte, version string, want Digest) (string, error) {
+	if err := want.check(app, "the image"); err != nil {
+		return "", err
+	}
 	st := l.Status()
 	if st.Trial {
 		return "", ErrOnTrial
@@ -117,6 +173,13 @@ func (l Layout) Install(app []byte, version string) (string, error) {
 		return "", err
 	}
 	if err := WriteFile(l.path(to, "app"), app, 0o755); err != nil {
+		return "", err
+	}
+	written, err := os.ReadFile(l.path(to, "app"))
+	if err != nil {
+		return "", err
+	}
+	if err := want.check(written, "slot "+to+"'s copy"); err != nil {
 		return "", err
 	}
 	if err := WriteFile(l.path(to, "version"), []byte(version+"\n"), 0o644); err != nil {

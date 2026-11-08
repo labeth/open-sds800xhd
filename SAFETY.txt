@@ -110,8 +110,13 @@ From mildest to strongest:
    exists the launch hook exits at once and the vendor firmware runs
    untouched. The supervisor also creates it by itself after 3 reboots in a
    row without a healthy app, so a firmware that keeps crashing ends up
-   leaving the unit to the vendor firmware at the next power-up. Removing it
-   (OPEN, otactl open, or deleting the file) runs ours again.
+   leaving the unit to the vendor firmware at the next power-up: it starts
+   a dead app again at most 3 times in a row per boot, then reboots, and
+   each such reboot is counted on p12 before it is made. When the count
+   cannot be written (p12 read-only or full) it neither reboots nor starts
+   the app again in that boot, and the launch hook starts no slot on trial
+   whose start it cannot count. Removing the file (OPEN, otactl open, or
+   deleting it) runs ours again.
 3. Uninstall stick. Boot with the uninstall stick inserted: it deletes
    extra.sh and the install markers on p12 and reboots into the vendor
    firmware. The rest of open/ stays (harmless without extra.sh); a later
