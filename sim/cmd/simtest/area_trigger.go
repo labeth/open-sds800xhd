@@ -8,7 +8,10 @@ import (
 )
 
 func init() {
-	b := boardArea("trigger", "", "Trigger", 120, "", nil, refTriggerParity)
+	// The register goldens wait for a frame after each case only to commit the
+	// arm; the simulator's frames do not wait for the trigger to fire here
+	// (trigger firing is the trigfire area's).
+	b := boardArea("trigger", "", "Trigger", 120, "-no-trig-model", nil, refTriggerParity)
 	register(area{
 		name:  "trigger",
 		title: "triggers: the board's goldens and reference parity; every type set from SCPI and the web through the app",

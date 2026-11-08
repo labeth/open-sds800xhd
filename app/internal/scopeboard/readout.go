@@ -201,7 +201,7 @@ func (b *Board) readWindow(sel acq.Selection, p windowPlan, f *sample.Frame, yie
 		Depth:     h.D * h.Delta,
 		WinPoints: int(h.S) / factor,
 		TriggerAt: win.TriggerAt / float64(pick),
-		TrigKind:  sample.HardwareNode,
+		TrigKind:  b.trigKind(),
 		Seq:       b.seq,
 		ContentID: uint64(b.epoch)<<32 | b.seq,
 		Status:    b.status,
@@ -252,7 +252,7 @@ func (b *Board) peakFrame(p windowPlan, win acq.Window, f *sample.Frame, tr *sam
 		Depth:     h.D * h.Delta,
 		WinPoints: int(h.S) / factor,
 		TriggerAt: trig,
-		TrigKind:  sample.HardwareNode,
+		TrigKind:  b.trigKind(),
 		Seq:       b.seq,
 		ContentID: uint64(b.epoch)<<32 | b.seq,
 		Status:    b.status,
@@ -338,4 +338,14 @@ func (r *readoutFacet) Limits() hal.ReadLimits {
 func (b *Board) triggerSample() float64 {
 	h := b.eng.Timebase()
 	return float64(h.S)/2 - 2 - h.R*b.eng.Settings().DelayS*1e6
+}
+
+// trigKind is how the held record's trigger was found: a forced record is
+// marked as such (the stage-1 PL has no flag that tells an auto timeout from
+// a trigger, so only Force is known).
+func (b *Board) trigKind() sample.TrigKind {
+	if b.status.Forced {
+		return sample.Forced
+	}
+	return sample.HardwareNode
 }

@@ -48,7 +48,7 @@ func hostSetups(e *env) ([]hostSetup, error) {
 // trigAppRun is the app run of the trigger area.
 func trigAppRun(e *env) harness.Spec {
 	return harness.Spec{
-		Name: e.prefix + "trigger-app", Secs: 240, Ports: true, SimdArgs: signals,
+		Name: e.prefix + "trigger-app", Secs: 240, Ports: true, SimdArgs: signals + " -no-trig-model", // registers and read-backs, not firing (trigfire's)
 		App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
 		Host: func(ctx context.Context, dir string) { trigHost(ctx, e, dir) },
 	}
