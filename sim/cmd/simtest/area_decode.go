@@ -367,6 +367,14 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 	}
 	p, named, settings := busSettings(u)
 	o.Named, o.Settings = named, settings
+	// the decode the app runs: the UI model's decoder settings, the BUS
+	// sheet's rows and those it keeps unshown (1-Wire's overdrive rate)
+	if d := u.panel().Display; d.DecProto == p.Proto {
+		p = framecalc.Params(d.DecProto, d.DecBaud, d.DecChA, d.DecChB, d.DecCPOL, d.DecCPHA, d.DecLSB, 0, d.DecDelayNs, d.DecParity)
+		if p.Proto == framecalc.ProtoUART {
+			p.Parity, p.Inverted = d.DecParity, d.DecInverted
+		}
+	}
 	switch {
 	case p.Proto == framecalc.ProtoOff || p.Proto == framecalc.ProtoAuto:
 		o.Reason = strings.TrimSpace(o.Reason + " AUTO named no bus")
@@ -576,8 +584,23 @@ func sampleFrame(wf wire.Frame) (*sample.Frame, error) {
 
 // matchTruth compares a decode with the generator's truth: one whole unit
 // of the bus's bytes (its repeating message) in order in the decoded bytes,
-// and every token the truth names in the text.
+// and every token the truth names in the text. A bus that reads the same
+// with its lines the other way round (Truth.Mirrored: a quadrature
+// encoder, whose A line AUTO cannot know) may match that reading instead.
 func matchTruth(r decode.Result, t synth.Truth) (bool, string) {
+	ok, why := matchTruthOf(r, t)
+	if !ok && t.Mirrored != nil {
+		m := t
+		m.Bytes, m.Mirrored = t.Mirrored, nil
+		if mok, mwhy := matchTruthOf(r, m); mok {
+			return true, mwhy + " (its lines read the other way round)"
+		}
+	}
+	return ok, why
+}
+
+// matchTruthOf is matchTruth of the truth's own reading.
+func matchTruthOf(r decode.Result, t synth.Truth) (bool, string) {
 	if !r.OK && len(r.Bytes) == 0 {
 		return false, "no decode: " + r.Error
 	}
