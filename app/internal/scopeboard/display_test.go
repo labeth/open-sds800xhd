@@ -78,3 +78,16 @@ func TestSetAppearance(t *testing.T) {
 	refused(t, r.SetAppearance(hal.Appearance{PersistenceS: 2}), "a persistence of 2 s")
 	refused(t, r.Colors(nil), "trace colours")
 }
+
+// The vendor image's map engine is the renderer; the open image has none
+// (spec 20 §9), so the core draws the traces and sends no held views.
+func TestRendererOnOpenImage(t *testing.T) {
+	b := testBoard()
+	if r, ok := (*displayFacet)(b).Renderer(); !ok || r == nil {
+		t.Error("vendor image: no renderer")
+	}
+	b.open = &openBackend{}
+	if r, ok := (*displayFacet)(b).Renderer(); ok || r != nil {
+		t.Error("open image: a renderer is offered")
+	}
+}
