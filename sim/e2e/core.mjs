@@ -78,7 +78,12 @@ export const SOURCES = {
 // window around the trigger shows flat lines where the bench's FPGA source
 // triggered on an edge. The UART-based PRBS source shares it.
 const IDLE_AT_TRIGGER = "the simulator's protocol frames start idle at the trigger point, so the window autoset picks shows flat lines (the bench triggered on an edge)";
+// The burst's 150 MHz tone shows two cycles at 2 ns/div, where the HD's
+// record is the screen: 20 samples at 1 GSa/s, fewer than a spectrum takes
+// (the CML's record there was its 20480-sample native record).
+const SHORT_RECORD = "at the burst's timebase (2 ns/div) the HD records the screen's 20 samples at 1 GSa/s, fewer than the spectrum's 32";
 export const SKIP = Object.fromEntries([
+  ["B2", SHORT_RECORD], ["B10", SHORT_RECORD],
   ...Array.from({ length: 20 }, (_, i) => [`S${i + 1}`, IDLE_AT_TRIGGER]),
   ...Array.from({ length: 12 }, (_, i) => [`U${i + 1}`, IDLE_AT_TRIGGER]),
   ...Array.from({ length: 24 }, (_, i) => [`P${i + 1}`, IDLE_AT_TRIGGER]),
