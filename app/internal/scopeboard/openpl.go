@@ -416,7 +416,7 @@ func (b *Board) openWindow(w hal.Window, seg, pos int, f *sample.Frame) error {
 	sc := b.eng.Scale(ch)
 	f.Traces[0] = sample.Trace{
 		Ch: ch, Format: format12, Codes16: words, Valid: len(words),
-		Scale:       sample.Scale{PerCode: sc.PerCode, Zero: sc.Zero},
+		Scale:       sample.Scale{PerCode: sc.PerCode, Zero: sc.Zero, OffsetV: sc.OffsetV},
 		CodesPerDiv: codesPerDiv,
 	}
 	return nil
