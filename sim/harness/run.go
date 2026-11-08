@@ -23,6 +23,10 @@ func Workspace() string {
 	return filepath.Join(home, "ws", "sds800xhd")
 }
 
+// SimSource is the simulator source tree to run instead of the workspace's
+// own sim/ (SDS800XHD_SIMSRC), "" for the workspace's.
+func SimSource() string { return os.Getenv("SDS800XHD_SIMSRC") }
+
 // Spec is one simulator run.
 type Spec struct {
 	Name     string   // run name: analysis/testenv/runs/<Name>
@@ -31,6 +35,12 @@ type Spec struct {
 	Scenario []string // timed control lines "@SECS command ..."
 	Ports    bool     // publish the SCPI ports on host loopback
 	Keep     bool     // keep the run's p12 and p9 from the last run of this name
+	// P12Mode replaces the writable p12: "ro" mounts the run's p12 (as an
+	// earlier run of this name left it, with Keep) read-only, as after the
+	// kernel remounted a damaged file system; "tmpfs:SIZE" starts from an
+	// empty p12 of SIZE (e.g. "8m"), a storage device that fills up, which
+	// is gone after the run.
+	P12Mode string
 	// Script pins register reads in the device model: physical address →
 	// value (simd -script), for status the model does not compute.
 	Script map[uint64]uint32
@@ -80,14 +90,24 @@ type Run struct {
 // Exec runs s under the simulator's lock and loads its outputs.
 func Exec(s Spec) (*Run, error) {
 	ws := Workspace()
+	env := os.Environ()
+	tier1 := filepath.Join(ws, "sim", "run", "tier1.sh")
+	if src := SimSource(); src != "" {
+		// a simulator tree of its own (a worktree's sim/): its run script
+		// and device model, against the workspace's lock, rootfs and runs
+		tier1 = filepath.Join(src, "run", "tier1.sh")
+		env = append(env, "SIMSRC="+src)
+	}
 	args := []string{
-		filepath.Join(ws, "analysis", ".sim.lock"), filepath.Join(ws, "sim", "run", "tier1.sh"),
+		filepath.Join(ws, "analysis", ".sim.lock"), tier1,
 		"-n", s.Name, "-t", strconv.Itoa(s.Secs),
 	}
 	if s.Ports {
 		args = append(args, "-p")
 	}
-	env := os.Environ()
+	if s.P12Mode != "" {
+		env = append(env, "P12MODE="+s.P12Mode)
+	}
 	simd := s.SimdArgs
 	if len(s.Seed) > 0 {
 		if err := seed(ws, s.Name, s.Seed); err != nil {
