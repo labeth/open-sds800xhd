@@ -15,6 +15,7 @@ import (
 	"github.com/labeth/open-dso-core/webserver"
 	"github.com/labeth/open-dso-core/webserver/webtest"
 
+	"github.com/labeth/open-sds800xhd/app/internal/frontend"
 	"github.com/labeth/open-sds800xhd/app/internal/scpi"
 )
 
@@ -58,7 +59,7 @@ func TestConformance(t *testing.T) {
 
 // The probe factors offered are 1-2-5 steps from 0.1x to 10000x.
 func TestProbes(t *testing.T) {
-	p := probes()
+	p := frontend.Probes()
 	if len(p) != 16 || p[0] != 0.1 || p[3] != 1 || p[6] != 10 || p[len(p)-1] != 10000 {
 		t.Fatalf("%v", p)
 	}
