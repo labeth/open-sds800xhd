@@ -43,7 +43,7 @@ func init() {
 				{
 					Name: e.prefix + "trigfire-app", Secs: 240, Ports: true, SimdArgs: signals,
 					App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
-					Host: func(ctx context.Context, dir string) { trigHost(ctx, dir) },
+					Host: func(ctx context.Context, dir string) { trigfireHost(ctx, dir) },
 				},
 			}
 		},
@@ -76,7 +76,6 @@ func init() {
 const (
 	trigHostFile = "trigfire-host.txt"
 	statTrigd    = "Trig'd"
-	failWord     = "FAIL"
 	typEdge      = "edge"
 )
 
@@ -130,8 +129,8 @@ type trigCase struct {
 	stat      string // :TRIG:STAT? reply wanted ("" any)
 }
 
-// trigHost runs the SCPI and web cases against the app while it runs.
-func trigHost(ctx context.Context, dir string) {
+// trigfireHost runs the SCPI and web cases against the app while it runs.
+func trigfireHost(ctx context.Context, dir string) {
 	f, err := os.Create(filepath.Join(dir, trigHostFile)) //nolint:gosec // G304: the run's own directory
 	if err != nil {
 		return
