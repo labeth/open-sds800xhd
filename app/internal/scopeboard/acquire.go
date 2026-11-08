@@ -7,6 +7,7 @@ import (
 
 	"github.com/labeth/open-dso-core/hal"
 	"github.com/labeth/open-sds800xhd/app/internal/acq"
+	"github.com/labeth/open-sds800xhd/app/internal/timebase"
 	"github.com/labeth/open-sds800xhd/app/internal/trigger"
 )
 
@@ -61,6 +62,7 @@ func (a *acquirerFacet) Arm() error {
 	}
 	b.rerun = false
 	b.state, b.stored = hal.Armed, false
+	b.armedAt = time.Now()
 	return nil
 }
 
@@ -106,6 +108,7 @@ func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.St
 		case <-tick.C:
 		}
 	}
+	took := time.Since(b.armedAt)
 	halted, valid := b.eng.Halt()
 	if !halted {
 		b.state = hal.Idle
@@ -126,11 +129,34 @@ func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.St
 	b.state, b.stored = hal.Ready, true
 	forced := b.forced
 	b.forced = false
+	h := b.eng.Timebase()
+	_, tr := timebase.Timeouts(h.Enum, autoOvertime)
+	auto := autoFired(b.eng.Settings().Trig.Sweep, forced, took, tr)
 	b.status = hal.Status{
-		Triggered: !forced, Forced: forced, Done: valid, Coherent: valid,
+		Triggered: !forced && !auto, Forced: forced, Done: valid, Coherent: valid,
 		Record: hal.RecordID{Epoch: b.epoch, Seq: uint32(b.seq)}, //nolint:gosec // G115: the record sequence wraps at 32 bits
 	}
 	return b.status, nil
+}
+
+// autoOvertime is the auto-trigger overtime the timebase setup programs
+// (spec 05 §7: TR_TIMEOUT = 2·v).
+const autoOvertime = 12_500_000
+
+// autoTick is the PL's timeout tick, seconds (spec 05 §7: UNVERIFIED, 4 ns
+// gives the 100 ms default).
+const autoTick = 4e-9
+
+// autoFired reports a frame of the AUTO sweep that completed through the
+// PL's auto timeout rather than its trigger condition: the PL has no flag
+// for it, so a frame that took at least the trigger timeout tr (ticks) from
+// the arm is taken as auto-triggered (spec 03 §3.1, UNVERIFIED).
+// A forced frame is the user's, and the other sweeps never time out.
+func autoFired(sweep trigger.Sweep, forced bool, took time.Duration, tr uint32) bool {
+	if forced || sweep != trigger.Auto {
+		return false
+	}
+	return took.Seconds() >= float64(tr)*autoTick
 }
 
 // Force is the one-shot forced trigger (spec 05 §7): the armed
