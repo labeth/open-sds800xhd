@@ -67,7 +67,7 @@ pass/fail per area, mapped onto the CML 1.2 regression areas, and writes `build/
 against what covers it here, the result of a run of every lane and a verdict, with the gaps ranked.
 
 ```sh
-make sim-test                       # every area (about eight minutes; selfcal alone takes four)
+make sim-test                       # every area (several hours (the decode areas run the longest); selfcal alone takes four)
 make sim-test AREA=trigger,readout  # some areas
 make sim-test REUSE=1               # re-check the last runs without running the simulator
 ./build/simtest -list               # the areas
