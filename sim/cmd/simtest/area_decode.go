@@ -242,6 +242,12 @@ func decodeHost(ctx context.Context, dir string, cases []busCase) {
 		if ctx.Err() != nil {
 			return // the run ended inside the case: it reports as not run
 		}
+		var st map[string]any
+		if u.get("/api/status", &st) != nil {
+			o.Reason += " (the app stopped answering: the run's later cases report as not run)"
+			_ = enc.Encode(o) // a file the check reads
+			return
+		}
 		_ = enc.Encode(o) // a file the check reads; a lost line is a case not run
 		_ = f.Sync()
 	}
@@ -280,6 +286,11 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 	// an AUTO still running (a case before that timed out) would take the
 	// press as its cancel: wait it out first
 	until(u.ctx, 60*time.Second, func() bool { return !u.panel().AutosetBusy })
+	// the decoder off first: the protocol AUTO leaves is the one it found
+	if res := u.setRow("bus.protocol", framecalc.ProtoOff); !res.OK {
+		o.Reason = "BUS protocol Off: " + res.Error
+		return o
+	}
 	before := u.panel().AutosetDone
 	var rep map[string]any
 	if err := u.post("/api/panel", `{"button":"auto","for":"bus"}`, &rep); err != nil {
