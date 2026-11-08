@@ -36,6 +36,7 @@ type Board struct {
 	staged  acq.Settings // what the next Arm commits
 	state   hal.AcqState
 	rerun   bool      // the next Arm follows a stop or a change: start delay, pending calibration
+	reading bool      // inside Readout.Read: Service applies nothing
 	forced  bool      // a forced trigger was issued since the last arm
 	armedAt time.Time // when the last Arm armed the PL
 	seq     uint64

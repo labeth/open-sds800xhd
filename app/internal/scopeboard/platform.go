@@ -64,7 +64,22 @@ func (p *platformFacet) Handover() hal.Handover {
 
 // Service has no housekeeping to do: the panel's readers block in the
 // kernel, not on the bus, and the board has no extension requests.
-func (p *platformFacet) Service() {}
+// Service applies the front-end settings staged while nothing is armed (a
+// stopped scope's channels follow its controls); the next Arm runs its
+// start delay all the same. Never in the middle of a read.
+func (p *platformFacet) Service() {
+	b := (*Board)(p)
+	if b.eng == nil || b.reading || b.state == hal.Armed {
+		return
+	}
+	s := b.eng.Settings()
+	if s.Ch == b.staged.Ch {
+		return
+	}
+	s.Ch = b.staged.Ch
+	b.eng.Commit(s)
+	b.rerun = true
+}
 
 func (p *platformFacet) Worker() func() int { return nil }
 
