@@ -27,7 +27,7 @@ import (
 //	DEBUG_AT       passed to the fuzzer: diagnostics before that iteration
 //	L4_FUZZ_STALL_MS  the fuzzer's frame-stall window (STALL_MS; default 5000)
 //
-// The host samples the app's frame counter during the run (fuzz/server.txt),
+// The host samples the app's frame counter during the run (fuzz-server.txt),
 // so each frame stall the fuzzer reports says whether the app published
 // frames the page did not get, or published none and for how long.
 func init() {
@@ -138,7 +138,7 @@ func fuzzHost(ctx context.Context, e *env, dir string, seed int) {
 			cmd.Stdout, cmd.Stderr = log, log
 			sctx, stop := context.WithCancel(ctx)
 			sampled := make(chan struct{})
-			go func() { defer close(sampled); sampleServer(sctx, u, filepath.Join(out, serverFile)) }()
+			go func() { defer close(sampled); sampleServer(sctx, u, filepath.Join(dir, serverFile)) }()
 			t0 := time.Now()
 			err = cmd.Run()
 			stop()
@@ -152,9 +152,9 @@ func fuzzHost(ctx context.Context, e *env, dir string, seed int) {
 }
 
 // serverFile is the app's frame counter as the host samples it during a
-// fuzz run (fuzz/), one line a sample: unix ms, published frames, fps,
+// fuzz run (in the run's directory: the fuzzer clears its own), one line a sample: unix ms, published frames, fps,
 // run state, time/div, the record's length in seconds.
-const serverFile = "server.txt"
+const serverFile = "fuzz-server.txt"
 
 // sampleServer writes the app's status every 500 ms until ctx ends, so a
 // frame stall the fuzzer reports can be told apart: frames the app
@@ -185,7 +185,7 @@ type serverSample struct {
 
 // readServer reads a run's serverFile.
 func readServer(r *harness.Run) []serverSample {
-	b, err := os.ReadFile(r.File("fuzz/" + serverFile))
+	b, err := os.ReadFile(r.File(serverFile))
 	if err != nil {
 		return nil
 	}
