@@ -25,9 +25,12 @@ import (
 // conformance suite, caps, v2 frames, settings), and the app's run serves
 // the page on the published port, where the host loads it, reads caps and
 // frames, sets controls and checks that SCPI and the web agree.
+//
+// A second app run loads the phone remote (/remote) at a phone's viewport
+// and sweeps its Menus, and checks the record download (area_web_remote.go).
 func init() {
 	register(area{
-		name: "web", title: "web: page, caps, frames v2, settings, web and SCPI agree",
+		name: "web", title: "web: page, caps, frames v2, settings, web and SCPI agree, phone remote, record.bin",
 		runs: func(e *env) []harness.Spec {
 			return []harness.Spec{
 				{
@@ -39,6 +42,10 @@ func init() {
 					App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
 					Host: func(ctx context.Context, dir string) { webHost(ctx, e, dir) },
 				},
+				{
+					Name: e.prefix + "web-remote", Secs: 300, Ports: true, SimdArgs: signals,
+					App: e.app, Hook: e.hook, GuestBoot: e.guestBoot, Host: webRemoteHost,
+				},
 			}
 		},
 		check: func(_ *env, runs []*harness.Run) []harness.Result {
@@ -48,7 +55,8 @@ func init() {
 			if !strings.Contains(r.Console, "--- PASS: TestWeb") {
 				res = append(res, harness.Fail("web", "go test", "TestWeb did not pass in the guest"))
 			}
-			return append(res, hostResults(runs[1])...)
+			res = append(res, hostResults(runs[1])...)
+			return append(res, hostResultsOf(runs[2], "web", webRemoteFile)...)
 		},
 	})
 }
