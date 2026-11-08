@@ -493,25 +493,28 @@ async function poll() {
     const chip = $('#runchip');
     chip.className = `chip ${run.state}`;
     let info = '';
+    const up = run.state === 'running' || run.state === 'attached';
+    if (up && !run.serving) chip.className += ' booting';
     if (run.state === 'running' && run.secs) {
-      const left = Math.max(0, run.secs - (Date.now() - Date.parse(run.started)) / 1000);
-      info = `run ${run.name} · ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} left (the simulator caps a run; simlab starts the next)`;
+      const left = run.left;
+      info = `run ${run.name} · ${run.serving ? '' : 'the app is starting · '}${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} left (the simulator caps a run; simlab starts the next)`;
     } else if (run.state === 'queued') info = 'waiting for the simulator (other runs hold its lock)';
     else if (run.state === 'attached') info = `attached to ${run.name}`;
     else if (run.err) info = run.err.split('\n')[0];
-    chip.textContent = run.state || '?';
+    chip.textContent = up && !run.serving ? 'starting' : (run.state || '?');
+    document.body.dataset.run = up && run.serving ? 'serving' : (run.state || '');
+    document.body.dataset.runs = String(run.runs || 0);
     $('#runinfo').textContent = info;
     showLamps(st.lamps || []);
     renderSigTable();
     const url = st.web_url.replace('127.0.0.1', location.hostname || '127.0.0.1');
     for (const a of ['#weblink', '#weblink2']) $(a).href = url;
     $('#webhint').textContent = url;
+    // the web UI loads once this run's app serves, and again for each new run
     const fr = $('#webframe');
-    if ((run.state === 'running' || run.state === 'attached') && fr.dataset.src !== url) {
-      fr.dataset.src = url;
-      setTimeout(() => { fr.src = url; }, 4000); // the app serves a few seconds after the run starts
-    }
-    if (run.state !== 'running' && run.state !== 'attached') { fr.dataset.src = ''; }
+    const want = up && run.serving ? `${url}#run${run.runs}` : '';
+    if (want && fr.dataset.src !== want) { fr.dataset.src = want; fr.dataset.url = url; fr.src = url; }
+    if (!want) { fr.dataset.src = ''; }
     if (first || formFor === null) buildForm();
   } catch { /* simlab itself is gone: keep trying */ }
   polling = false;
@@ -522,7 +525,7 @@ $('#restart').addEventListener('click', async () => {
   flash(r.ok ? 'restarting the simulator run…' : r.err, !r.ok);
   poll();
 });
-$('#webreload').addEventListener('click', () => { const fr = $('#webframe'); if (fr.dataset.src) fr.src = fr.dataset.src; });
+$('#webreload').addEventListener('click', () => { const fr = $('#webframe'); if (fr.dataset.url && fr.dataset.src) fr.src = fr.dataset.url; });
 
 buildPanel();
 buildTabs();

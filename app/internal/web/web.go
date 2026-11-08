@@ -27,7 +27,7 @@ const Port = ":80"
 // PNG at its native 1024×600 (nil: none).
 func Scope(b hal.Board, ctl *instrument.Model, frames *fanout.Fanout[sample.Frame], version string, ui webserver.UIModel, setups webserver.Setups, parts scopeweb.Parts, screen func() []byte) webserver.Scope {
 	return scopeweb.New(scopeweb.Config{
-		Board: b, Instrument: ctl, Frames: frames, Version: version, UI: ui, Setups: setups, Parts: parts, Screen: screen,
+		Board: b, Instrument: ctl, Frames: frames, Version: version, Product: "open-sds800xhd", UI: ui, Setups: setups, Parts: parts, Screen: screen,
 		Probes:   probes(),
 		BWLimits: []string{"full", "20M"}, // spec 06: one 20 MHz limit
 	}).WithCaps()

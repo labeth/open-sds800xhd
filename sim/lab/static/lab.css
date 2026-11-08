@@ -5,6 +5,7 @@ body { display: block; overflow: auto; height: auto; min-height: 100%; }
   border-radius: 10px; border: 1px solid var(--edge); color: var(--dim); background: var(--well); white-space: nowrap; }
 .chip.running, .chip.attached { color: var(--run); border-color: color-mix(in srgb, var(--run) 50%, var(--edge)); }
 .chip.queued { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--edge)); }
+.chip.booting { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--edge)); }
 .chip.ended { color: var(--stop); }
 h2 { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 0; }
 
