@@ -44,7 +44,7 @@ const maskHostFile = "mask-host.txt"
 // maskCounts parses :MTESt:COUNt?'s FAIL,f,PASS,p,TOTAL,t.
 func maskCounts(s string) (fail, pass int, ok bool) {
 	f := strings.Split(s, ",")
-	if len(f) != 6 || f[0] != "FAIL" || f[4] != "TOTAL" {
+	if len(f) != 6 || f[0] != failWord || f[4] != "TOTAL" {
 		return 0, 0, false
 	}
 	a, e1 := strconv.Atoi(f[1])
