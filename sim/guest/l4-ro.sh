@@ -18,5 +18,6 @@ usleep 500000
 say "storage-ro acquire-held boot $(boot)"
 echo "fault key release" >/dev/simd_mark
 echo "fault clear key" >/dev/simd_mark
+usleep 500000
 say "storage-ro final boot $(boot)"
 while [ ! -e /sim/fw/stop ]; do sleep 1; done
