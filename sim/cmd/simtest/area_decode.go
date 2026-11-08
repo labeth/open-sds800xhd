@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -377,7 +378,7 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 		}
 		return o
 	}
-	f, raw, err := u.rawFrame()
+	f, raw, err := u.settledFrame()
 	if err != nil {
 		o.Reason = "record: " + err.Error()
 		return o
@@ -476,6 +477,29 @@ func baudOf(t string) int {
 	return int(v*mul + 0.5)
 }
 
+// settledFrame is the app's record once one of the timebase AUTO set has
+// come (TDIV?): the frame AUTO left on screen may still be of the timebase
+// it searched at, the new timebase's first capture seconds away under the
+// emulator (a frame-start trigger's image loads first). The newest record
+// after 60 s when none matches.
+func (u *uiRig) settledFrame() (*sample.Frame, []byte, error) {
+	var tdiv float64
+	if t, err := scpiQuery(u.ctx, "TDIV?"); err == nil {
+		_, _ = fmt.Sscanf(strings.TrimSuffix(strings.TrimSpace(t), "S"), "%g", &tdiv) // unread: any record stands
+	}
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		f, raw, err := u.rawFrame()
+		if err != nil || !(tdiv > 0) || time.Now().After(deadline) || u.ctx.Err() != nil {
+			return f, raw, err
+		}
+		if math.Abs(f.Snapshot.TdivS-tdiv) <= 1e-3*tdiv {
+			return f, raw, nil
+		}
+		time.Sleep(time.Second)
+	}
+}
+
 // decodeRecordFile is the file of a run's directory holding a case's
 // record: the v2 frame the app served.
 func decodeRecordFile(id string) string {
@@ -510,7 +534,10 @@ func (u *uiRig) rawFrame() (*sample.Frame, []byte, error) {
 // channel.
 func sampleFrame(wf wire.Frame) (*sample.Frame, error) {
 	h := wf.Header
-	f := &sample.Frame{Content: sample.RawFullRate, Flags: sample.Ordered, SampleS: h.SampleS, CaptureS: h.CaptureS, TriggerAt: h.TriggerAt, Seq: h.Seq}
+	f := &sample.Frame{
+		Content: sample.RawFullRate, Flags: sample.Ordered, SampleS: h.SampleS, CaptureS: h.CaptureS, TriggerAt: h.TriggerAt, Seq: h.Seq,
+		Snapshot: sample.Settings{TdivS: h.TdivS},
+	}
 	n := 0
 	for _, t := range wf.Traces {
 		n = max(n, t.Codes.Len())
