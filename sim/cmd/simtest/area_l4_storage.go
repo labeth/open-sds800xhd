@@ -77,8 +77,9 @@ func storageChecks(runs []*harness.Run) []harness.Result {
 	l = line(full, "storage-full boot")
 	check("storage-full/boot", knownBoot.MatchString(l), l)
 	l = line(full, "storage-full update")
-	check("storage-full/update-fails-cleanly", !strings.HasPrefix(l, "rc 0") && strings.Contains(l, "current=a") &&
-		!strings.Contains(l, "trial=") && strings.HasSuffix(l, "slot-a app") && !strings.Contains(l, ".new:"), l)
+	_, lay, _ := strings.Cut(l, " layout [") // the layout the failed update left
+	check("storage-full/update-fails-cleanly", !strings.HasPrefix(l, "rc 0") && strings.Contains(lay, "current=a") &&
+		!strings.Contains(lay, "trial=") && strings.HasSuffix(lay, "slot-a app") && !strings.Contains(lay, ".new:"), l)
 	l = line(full, "storage-full alive-at-end")
 	check("storage-full/alive", strings.HasPrefix(l, "app "), l)
 
