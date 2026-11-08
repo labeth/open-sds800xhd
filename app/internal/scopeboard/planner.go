@@ -111,6 +111,14 @@ func (p *plannerFacet) Plan(r hal.Request) (hal.Plan, error) {
 		notes = append(notes, "peak detect has no effect at this undecimated rate (spec 04 §5.2): plain samples")
 	}
 	pl.Note = strings.Join(notes, "; ")
+	for _, f := range r.Need {
+		if f.Accepts&pl.Content == 0 {
+			return hal.Plan{}, hal.Refuse(f.Name, fmt.Sprintf("this timebase gives %v records, which it does not take", pl.Content))
+		}
+		if f.MinDepth > pl.Depth {
+			return hal.Plan{}, hal.Refuse(f.Name, fmt.Sprintf("needs %d samples, the record holds %d", f.MinDepth, pl.Depth))
+		}
+	}
 	return pl, nil
 }
 

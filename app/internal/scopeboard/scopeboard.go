@@ -43,7 +43,7 @@ type Board struct {
 	stored  bool       // a halted record is in the record memory and may be read
 	status  hal.Status // of the stored record
 	stream  *streamer  // the roll stream while it runs
-	errs    struct{ readouts, arms int }
+	errs    struct{ readouts, arms, reloads int }
 	scope   uint64 // PL device DNA
 	ui      ui     // UI layer, capture, front panel (display.go, input.go)
 	ctr     *counter.Counter
@@ -92,7 +92,7 @@ func (b *Board) profile1() hal.Profile {
 		Vertical:   hal.VerticalSpec{Probes: frontend.Probes(), BWLimits: frontend.BWLimits()},
 		Inputs:     inputSpec(),
 		Supervisor: hal.SupervisorSpec{Restart: "software-health"},
-		Options:    hal.OptCounter,
+		Options:    hal.OptCounter | hal.OptSegments,
 		Absent:     absentParts,
 		Budget:     hal.Budget{RAMBytes: 504 << 20, Cores: 2},
 		Stage:      1,

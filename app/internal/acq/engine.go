@@ -1,6 +1,7 @@
 package acq
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/labeth/open-sds800xhd/app/internal/board"
@@ -35,6 +36,10 @@ type Engine struct {
 	recency    []int // channels, most recently switched on or selected first
 	rolling    bool  // the roll stream runs
 	redrawn    bool  // the banks hold a stored-record set (Redraw): the next Commit rewrites the live set
+
+	ver      [3]uint16 // the PL image's version words at start-up (ACQ 0x000–0x002)
+	sentinel bool      // ACQ 0x1EF read back the 1 the start-up wrote: a reload shows as 0
+	checkAt  time.Time // the last reload check
 
 	log func(string, ...any)
 }
@@ -105,6 +110,7 @@ func (e *Engine) Startup(s Settings) {
 	// A. Chip creation and init.
 	platform.Mark("startup A")
 	ver := [3]uint16{a.HW(0x000), a.HW(0x001), a.HW(0x002)}
+	e.ver = ver
 	e.log("PL version %04x-%04x-%04x", ver[2], ver[1], ver[0])
 	a.Set(0x1FB, uint16(e.id.ADC)) //nolint:gosec // G115: a 16-bit register takes the value's low 16 bits
 	e.FE.OffsetDACInit()
@@ -114,6 +120,8 @@ func (e *Engine) Startup(s Settings) {
 	a.Field(0x019, 3, 3, 1)
 	time.Sleep(10 * time.Millisecond)
 	a.Set(0x1EF, 1)
+	e.sentinel = a.HW(0x1EF)&1 == 1
+	e.checkAt = time.Now()
 	e.FE.VGAInit()
 	e.FE.ADC.Init()
 	a.Set(0x04F, 1, 0)
@@ -199,6 +207,39 @@ func (e *Engine) Startup(s Settings) {
 	e.Map.ShowWaveforms(true)
 	e.Map.PassFailHold(false)
 	platform.Mark("startup done")
+}
+
+// reloadEvery is how often Reloaded reads the PL: two register reads.
+const reloadEvery = 500 * time.Millisecond
+
+// Reloaded reports a PL that was reconfigured under the running firmware
+// since the start-up: its image identity (ACQ 0x002) changed, or ACQ 0x1EF,
+// which the start-up set to 1 and nothing else writes, reads 0 again (a
+// reconfigured PL is at its power-up values). Which ACQ registers read
+// back what was written is UNVERIFIED: the 0x1EF check is used only when
+// it read back the start-up's 1. It reads the PL at most every
+// reloadEvery; a caller then runs Restart.
+func (e *Engine) Reloaded() (bool, string) {
+	if time.Since(e.checkAt) < reloadEvery {
+		return false, ""
+	}
+	e.checkAt = time.Now()
+	if v := e.acq.HW(0x002); v != e.ver[2] {
+		return true, fmt.Sprintf("PL image identity changed: ACQ 0x002 %04x, %04x at start-up", v, e.ver[2])
+	}
+	if e.sentinel && e.acq.HW(0x1EF)&1 == 0 {
+		return true, "PL registers back at power-up values (ACQ 0x1EF reads 0): the PL was reconfigured"
+	}
+	return false, ""
+}
+
+// Restart runs the start-up again with the settings last committed, after
+// a PL reload: every register the firmware set is lost (spec 01 §12.2 step
+// 8: never rely on state the PL holds).
+func (e *Engine) Restart() {
+	s := e.cur
+	e.recency, e.armed, e.rolling, e.redrawn = nil, false, false, false
+	e.Startup(s)
 }
 
 func (e *Engine) onList(s *Settings) []bool {

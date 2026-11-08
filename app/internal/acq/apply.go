@@ -1,5 +1,10 @@
 package acq
 
+import (
+	"github.com/labeth/open-sds800xhd/app/internal/timebase"
+	"github.com/labeth/open-sds800xhd/app/internal/trigger"
+)
+
 // Commit brings the hardware to s in the order of spec 03 §3.3: stop, the
 // channel enables and setups (with the ADC mode refresh when the channel set
 // or the rate changes), the timebase pass, the trigger. The arm that follows
@@ -59,6 +64,13 @@ func (e *Engine) Commit(s Settings) bool {
 			e.softReset() // a sweep-mode change resets once (spec 03 §3.5)
 		}
 		e.programTrigger(&s)
+		if old.Trig.Sweep == trigger.Force && s.Trig.Sweep != trigger.Force && !passRan {
+			// The Force row left both timeouts at 1 (spec 05 §7); the
+			// timebase's own come back with the sweep that needs them.
+			ntr, tr := timebase.Timeouts(h.Enum, autoOvertime)
+			a.Set32(0x00C, 0x00D, ntr, 0xFFFF)
+			a.Set32(0x02A, 0x02B, tr, 0xFFFF)
+		}
 	}
 	if seqOn && (!wasOn || s.Segments != old.Segments) {
 		e.softReset()

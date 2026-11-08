@@ -82,6 +82,10 @@ func (e *Engine) timebasePass(s *Settings, h timebase.Set) {
 	e.acq.Set(0x1FF, timebase.FIRSelector(e.id.BandwidthMHz, h.R))
 }
 
+// autoOvertime is the auto-trigger overtime the timebase setup programs
+// (spec 05 §7: TR_TIMEOUT = 2·v).
+const autoOvertime = 12_500_000
+
 func b2u(b bool) uint16 {
 	if b {
 		return 1
@@ -128,7 +132,7 @@ func writeTimebase(t *mmio.Tx, h timebase.Set) {
 	t.Set(0x027, uint16(sv))               //nolint:gosec // G115: a 16-bit register takes the value's low 16 bits
 	t.Field(0x05B, 7, 7, uint16(sv>>16)&1) //nolint:gosec // G115: a 16-bit register takes the value's low 16 bits
 	// 7.–10.
-	ntr, tr := timebase.Timeouts(h.Enum, 12_500_000)
+	ntr, tr := timebase.Timeouts(h.Enum, autoOvertime)
 	t.Set32(0x00C, 0x00D, ntr, 0xFFFF)
 	t.Set32(0x02A, 0x02B, tr, 0xFFFF)
 	t.Field(0x039, 3, 0, timebase.TDCInsert(h.M, h.Enum))

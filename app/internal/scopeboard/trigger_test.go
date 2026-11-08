@@ -191,3 +191,35 @@ func TestRestagingChangesNothing(t *testing.T) {
 		t.Fatalf("configured again: %v, staged changed %v", err, b.staged != staged)
 	}
 }
+
+// A free-running spec is accepted: its stages convert as given and the
+// sweep becomes the Force row (both timeouts 1, spec 05 §7), so every
+// acquisition completes forced.
+func TestFreeRunIsTheForceRow(t *testing.T) {
+	b, tr, ch, ab, _ := goldenBoard()
+	spec := hal.TriggerSpec{Sweep: hal.NormalSweep, FreeRun: true, Stages: []hal.TrigStage{{
+		Node: hal.NodeEdge, Source: hal.Source{Kind: hal.Analog, Index: 1}, Levels: hal.Levels{High: 0.5, Slope: hal.Falling},
+	}}}
+	ts, err := b.triggerSettings(spec)
+	if err != nil {
+		t.Fatalf("FreeRun refused: %v", err)
+	}
+	spec.FreeRun = false
+	plain, err := b.triggerSettings(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ts.Sweep != trigger.Force || plain.Sweep != trigger.Normal {
+		t.Fatalf("sweeps %v (free run) and %v (normal)", ts.Sweep, plain.Sweep)
+	}
+	plain.Sweep = trigger.Force
+	if ts != plain {
+		t.Errorf("free-run stages differ from the stages as given:\n%+v\n%+v", ts, plain)
+	}
+	tr.Program(ts, ch)
+	for _, r := range []uint32{0x00C, 0x02A} {
+		if v, _ := ab.Last(r * 4); v != 1 {
+			t.Errorf("ACQ %#03x = %d, want the Force row's 1", r, v)
+		}
+	}
+}
