@@ -63,6 +63,8 @@ the board tests drive the board through the HAL as the core engine will, and the
 reached the simulated hardware (register values per case, SPI frames, the framebuffer dump), the
 guest's own assertions, SCPI replies, and the start-up registers against a private reference run. It prints
 pass/fail per area, mapped onto the CML 1.2 regression areas, and writes `build/sim-test.txt`.
+[`docs/parity.md`](docs/parity.md) is the parity table: every item of the SDS1000CML+ 1.2 regression checklist
+against what covers it here, the result of a run of every lane and a verdict, with the gaps ranked.
 
 ```sh
 make sim-test                       # every area (about eight minutes; selfcal alone takes four)

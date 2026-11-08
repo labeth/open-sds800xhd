@@ -28,7 +28,9 @@ func uiPattern(x, y int) (a, r, g, b uint8) {
 // timebase while the device model's log records what reached the map
 // engine, and reads /api/screen.png against fb0.
 func init() {
-	board := boardArea("display", "", "Display", 120, "", []string{"@30 shotfb 0 display-fb0.png"}, checkFB0)
+	// the board test checks registers, not firing (trigfire's): on idle
+	// inputs a modelled trigger would never close its records
+	board := boardArea("display", "", "Display", 120, "-no-trig-model", []string{"@30 shotfb 0 display-fb0.png"}, checkFB0)
 	register(area{
 		name: "display", title: "display: UI layer, renderer, capture; the UI's zoom and timebase drive the PL; screen.png",
 		runs: func(e *env) []harness.Spec {
