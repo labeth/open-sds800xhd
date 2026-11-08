@@ -25,7 +25,7 @@ import (
 //	L4_FUZZ_SEEDS  seeds: "1-20" (default) or "3,7,11"
 //	L4_FUZZ_ITERS  actions per seed (default 60: one seed fits one run)
 //	DEBUG_AT       passed to the fuzzer: diagnostics before that iteration
-//	L4_FUZZ_STALL_MS  the fuzzer's frame-stall window (STALL_MS; default 5000)
+//	L4_FUZZ_STALL_MS  the fuzzer's frame-stall window (STALL_MS; default 15000)
 //
 // The host samples the app's frame counter during the run (fuzz-server.txt),
 // so each frame stall the fuzzer reports says whether the app published
@@ -130,9 +130,7 @@ func fuzzHost(ctx context.Context, e *env, dir string, seed int) {
 		cmd.Dir = e2e
 		cmd.Env = append(os.Environ(), "SCOPE_URL="+webBase, "SEED="+strconv.Itoa(seed), "ITERS="+strconv.Itoa(fuzzIters()),
 			"OUT="+out, "VIEWPORT=1024x600", "CHROMIUM_ARGS=--use-gl=egl --ignore-gpu-blocklist", "TMPDIR="+tmp)
-		if stall := os.Getenv("L4_FUZZ_STALL_MS"); stall != "" {
-			cmd.Env = append(cmd.Env, "STALL_MS="+stall)
-		}
+		cmd.Env = append(cmd.Env, "STALL_MS="+strconv.Itoa(int(stallWindow().Milliseconds())))
 		log, err := os.Create(filepath.Join(out, "fuzz.txt")) //nolint:gosec // G304: the run's own directory
 		if err == nil {
 			cmd.Stdout, cmd.Stderr = log, log
@@ -315,12 +313,15 @@ func fuzzChecks(r *harness.Run) []harness.Result {
 	return res
 }
 
-// stallWindow is the fuzzer's I2 window (L4_FUZZ_STALL_MS, else its 5 s).
+// stallWindow is the fuzzer's I2 window: L4_FUZZ_STALL_MS, else 15 s. The
+// fuzzer's own 5 s is a unit's: under the emulator a 50 ms/div record (half
+// a second) comes every 4 to 7 s, and the first after a setting change up to
+// 12 s later, while the app keeps publishing.
 func stallWindow() time.Duration {
 	if n, err := strconv.Atoi(os.Getenv("L4_FUZZ_STALL_MS")); err == nil && n > 0 {
 		return time.Duration(n) * time.Millisecond
 	}
-	return 5 * time.Second
+	return 15 * time.Second
 }
 
 func lastLines(s string, n int) string {
