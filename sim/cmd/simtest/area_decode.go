@@ -370,6 +370,11 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 	switch {
 	case p.Proto == framecalc.ProtoOff || p.Proto == framecalc.ProtoAuto:
 		o.Reason = strings.TrimSpace(o.Reason + " AUTO named no bus")
+		// the record AUTO left on screen, for its search to be run again
+		// off the simulator
+		if _, raw, err := u.rawFrame(); err == nil {
+			_ = os.WriteFile(filepath.Join(u.dir, decodeRecordFile(c.ID)), raw, 0o644) //nolint:gosec // G306: a run's output, not a secret
+		}
 		return o
 	case named != bus.Proto:
 		o.Reason = fmt.Sprintf("AUTO named %s, the bus is %s", named, bus.Proto)
