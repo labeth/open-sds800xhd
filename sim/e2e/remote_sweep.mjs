@@ -24,9 +24,10 @@ try {
 
 // Tabs whose rows act on the scope beyond a setting (setups, the system,
 // sound captures) are opened and drawn but not changed; rows that start
-// streams, decoders, sweeps or change the view are never changed.
+// streams, decoders, sweeps or change the view are never changed, nor the
+// memory depth, whose choices the page redraws as the timebase moves.
 const NO_CHANGE_TABS = new Set(["file", "sys", "snd"]);
-const NO_CHANGE_ROW = /stream|protocol|roll|default|screen|saver|lang|reset|update|boot|setup|record|stack|master|mask|mode|view|layer|match|persist|ref|math|on$|sound|clicks|\.run$|\.sr_|superres/;
+const NO_CHANGE_ROW = /stream|protocol|roll|default|screen|saver|lang|reset|update|boot|setup|record|stack|master|mask|mode|view|layer|match|persist|ref|math|on$|sound|clicks|depth|\.run$|\.sr_|superres/;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sheets = async () => {
