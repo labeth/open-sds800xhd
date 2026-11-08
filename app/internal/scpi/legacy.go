@@ -69,7 +69,11 @@ func (d *dialect) legacy() []core.Command {
 			if err != nil || fn == nil {
 				return err
 			}
-			return changeCh(c, n, fn)
+			if err := changeCh(c, n, fn); err != nil {
+				return err
+			}
+			d.selected(short, n)
+			return nil
 		})
 	}
 	volts := func(apply func(ch *hal.Channel, v float64)) func(c *core.Call) (func(*hal.Channel), error) {

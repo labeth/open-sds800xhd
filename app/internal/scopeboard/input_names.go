@@ -77,6 +77,13 @@ func (n *names) translate(ev hal.InputEvent) (hal.InputEvent, bool) {
 	return ev, true
 }
 
+// selectCh makes channel ch the one the vertical knobs act on.
+func (n *names) selectCh(ch int) {
+	n.mu.Lock()
+	n.sel = ch
+	n.mu.Unlock()
+}
+
 // forward passes src's events under the UI model's names to dst until src
 // closes, dropping what the UI model has no key for.
 func (n *names) forward(src <-chan hal.InputEvent, dst chan<- hal.InputEvent) {

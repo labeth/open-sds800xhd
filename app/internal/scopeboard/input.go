@@ -71,6 +71,16 @@ func (in *inputFacet) SetTouch(on bool) error {
 	return nil
 }
 
+// SelectChannel makes channel ch (0-based) the selected channel, the one
+// the panel's shared vertical knobs and their pushes act on, as its channel
+// key does; a V/div or offset set over SCPI selects its channel (spec 07
+// §7.1). A channel this model lacks is ignored.
+func (b *Board) SelectChannel(ch int) {
+	if ch >= 0 && ch < b.id.Channels {
+		b.ui.names.selectCh(ch)
+	}
+}
+
 // panelDiag is the panel's counters for Platform.Diag.
 func (b *Board) panelDiag() map[string]any {
 	if b.ui.panel == nil {

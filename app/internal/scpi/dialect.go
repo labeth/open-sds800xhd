@@ -39,6 +39,21 @@ type Config struct {
 	// Mask is the mask test the owner runs on the frames; nil: the :MTESt
 	// commands are refused.
 	Mask MaskTest
+	// Select makes channel ch (0-based) the selected one, the channel the
+	// panel's shared vertical knobs act on: a V/div or offset set over SCPI
+	// selects its channel (spec 07 §7.1). Nil: nothing is selected.
+	Select func(ch int)
+}
+
+// selects are the headers whose setting selects the channel (spec 07 §7.1:
+// V/div and offset).
+var selects = map[string]bool{":CHANnel#:SCALe": true, ":CHANnel#:OFFSet": true, "C#:VDIV": true, "C#:OFST": true}
+
+// selected selects channel n after header set it, when header selects.
+func (d *dialect) selected(header string, n int) {
+	if selects[header] && d.cfg.Select != nil {
+		d.cfg.Select(n)
+	}
 }
 
 // specHeaders are headers spec 11's text gives whose form the inventory
@@ -366,7 +381,11 @@ func (d *dialect) channels() []core.Command {
 			if err != nil || fn == nil {
 				return err
 			}
-			return changeCh(c, n, fn)
+			if err := changeCh(c, n, fn); err != nil {
+				return err
+			}
+			d.selected(header, n)
+			return nil
 		})
 	}
 	numeric := func(apply func(ch *hal.Channel, v float64)) func(c *core.Call) (func(*hal.Channel), error) {

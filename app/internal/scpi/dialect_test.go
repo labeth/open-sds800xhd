@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -447,6 +448,37 @@ func TestModeAfterSingleShot(t *testing.T) {
 		e.Exec([]byte(":TRIG:RUN"))
 		if s := m.State(); s.Sweep != hal.Auto || !s.Running {
 			t.Errorf("STOP;RUN: sweep %v running %v, want AUTO running", s.Sweep, s.Running)
+		}
+	}
+}
+
+// A V/div or offset set over SCPI selects its channel (spec 07 §7.1); the
+// other channel settings, the queries and a refused value do not.
+func TestVdivSelectsChannel(t *testing.T) {
+	var got []int
+	x := &fake{s: Defaults(4), run: core.Triggered}
+	d, err := Dialect(Config{Identity: Identity{Model: "SDS824X HD"}, Channels: 4, Select: func(ch int) { got = append(got, ch) }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := core.New(d, x)
+	for _, c := range []struct {
+		cmd  string
+		want []int
+	}{
+		{":CHAN2:SCAL 0.5", []int{1}},
+		{":CHAN3:OFFS 0.1", []int{2}},
+		{"C4:VDIV 1", []int{3}},
+		{"C1:OFST 0", []int{0}},
+		{":CHAN2:SCAL?", nil},
+		{"C3:TRA ON", nil},
+		{":CHAN2:COUP AC", nil},
+		{":CHAN5:SCAL 1", nil},
+	} {
+		got = nil
+		e.Exec([]byte(c.cmd))
+		if !slices.Equal(got, c.want) {
+			t.Errorf("%s selected %v, want %v", c.cmd, got, c.want)
 		}
 	}
 }
