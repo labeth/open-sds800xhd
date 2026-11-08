@@ -370,17 +370,14 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 	switch {
 	case p.Proto == framecalc.ProtoOff || p.Proto == framecalc.ProtoAuto:
 		o.Reason = strings.TrimSpace(o.Reason + " AUTO named no bus")
-		// the record AUTO left on screen, for its search to be run again
-		// off the simulator
-		if _, raw, err := u.rawFrame(); err == nil {
-			_ = os.WriteFile(filepath.Join(u.dir, decodeRecordFile(c.ID)), raw, 0o644) //nolint:gosec // G306: a run's output, not a secret
-		}
+		u.keepRecord(c.ID)
 		return o
 	case named != bus.Proto:
 		o.Reason = fmt.Sprintf("AUTO named %s, the bus is %s", named, bus.Proto)
 		if slices.Contains(bus.Truth.Alike, named) {
 			o.Reason += " (the same line read coarser)"
 		}
+		u.keepRecord(c.ID)
 		return o
 	}
 	f, raw, err := u.settledFrame()
@@ -502,6 +499,14 @@ func (u *uiRig) settledFrame() (*sample.Frame, []byte, error) {
 			return f, raw, nil
 		}
 		time.Sleep(time.Second)
+	}
+}
+
+// keepRecord keeps the record AUTO left on screen when it named no bus or
+// another, for its search to be run again off the simulator.
+func (u *uiRig) keepRecord(id string) {
+	if _, raw, err := u.rawFrame(); err == nil {
+		_ = os.WriteFile(filepath.Join(u.dir, decodeRecordFile(id)), raw, 0o644) //nolint:gosec // G306: a run's output, not a secret
 	}
 }
 
