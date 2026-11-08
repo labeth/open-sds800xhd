@@ -83,6 +83,10 @@ func (b *Board) openProfile(p hal.Profile) hal.Profile {
 	if !o.pl.Has(openpl.CapStacker) {
 		absent["stacker"] = "this open image has no stacker"
 	}
+	delete(absent, "zones")
+	if !p.Triggers.Has(hal.NodeZone) {
+		absent["zones"] = "this open image has no zone engine (spec 20 §7.8)"
+	}
 	absent["images"] = "one open image (" + o.pl.ID.Image + "); switching images is the boot target's (vendor or open)"
 	p.Absent = absent
 	return p
