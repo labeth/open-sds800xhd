@@ -39,7 +39,7 @@ const decodeSimd = "-afe real,seed=1 -signals C1=dc,0,0,0;C2=dc,0,0,0;C3=dc,0,0,
 
 // decodeCasesPerRun bounds one simulator run (300 s at most, the app's start
 // included): AUTO in BUS takes 10 to 120 s in the simulator.
-const decodeCasesPerRun = 4
+const decodeCasesPerRun = 3
 
 // decodeHostFile holds a run's cases as JSON lines.
 const decodeHostFile = "decode-host.jsonl"
