@@ -16,12 +16,37 @@
 # previous slot. Disable switch: open/disable (every boot until removed), or
 # the Acquire key held at power-up (this boot only). Deleting this script
 # returns the unit to the vendor firmware at the next boot.
+#
+# Nothing of ours on p12 is a symlink, so one there was planted or is
+# damage, and a write through it could land anywhere (p9 included): the hook
+# tests every path it writes with [ -L ] first and writes nothing through a
+# link, and with open/ itself a link it does nothing at all.
 dir=$(dirname "$0")
 open=$dir/open
+[ -L "$open" ] && exit 0
 [ -e "$open/disable" ] && exit 0
 
+# plain NAME... succeeds when no open/NAME, nor any directory of it below
+# open/, is a symlink.
+plain() {
+	for name in "$@"; do
+		p=$open
+		rest=$name
+		while [ -n "$rest" ]; do
+			part=${rest%%/*}
+			[ "$part" = "$rest" ] && rest= || rest=${rest#*/}
+			p=$p/$part
+			[ -L "$p" ] && return 1
+		done
+	done
+	return 0
+}
+
+# log writes a line to open/log/launch.log, or nowhere when a link is in
+# the way.
 log() {
-	mkdir -p "$open/log" 2>/dev/null && echo "$(date +%s) $*" >>"$open/log/launch.log"
+	plain log log/launch.log || return 0
+	mkdir -p "$open/log" 2>/dev/null && plain log && echo "$(date +%s) $*" >>"$open/log/launch.log"
 }
 
 # Key held at power-up: Acquire (MAP idx 0x162 = 0x80040588 bit 3, active
@@ -43,6 +68,7 @@ esac
 
 # put NAME VALUE writes open/NAME durably: temporary file, sync, rename, sync.
 put() {
+	plain "$1" "$1.new" || return 1
 	echo "$2" >"$open/$1.new" && sync && mv -f "$open/$1.new" "$open/$1" && sync
 }
 
@@ -55,7 +81,7 @@ if [ -f "$open/trial" ] && read -r tslot starts <"$open/trial" && [ "$tslot" = "
 	if [ "$starts" -ge 1 ] && { [ "$prev" = a ] || [ "$prev" = b ]; } && [ "$prev" != "$slot" ] && [ -x "$open/$prev/app" ]; then
 		log "slot $slot unconfirmed after $starts start(s): back to slot $prev"
 		put current "$prev"
-		rm -f "$open/trial" && sync
+		plain trial && rm -f "$open/trial" && sync
 		slot=$prev
 	else
 		put trial "$slot $((starts + 1))"
@@ -63,8 +89,9 @@ if [ -f "$open/trial" ] && read -r tslot starts <"$open/trial" && [ "$tslot" = "
 fi
 
 app=$open/$slot/app
-[ -x "$app" ] || app=$open/app # a single binary, before slots were installed
-[ -x "$app" ] || exit 0
+plain "$slot/app" || app=
+[ -n "$app" ] && [ -x "$app" ] || { plain app && app=$open/app; } # a single binary, before slots were installed
+[ -n "$app" ] && [ -x "$app" ] || exit 0
 log "starting slot $slot: $app"
 OTA_DIR=$open OTA_SLOT=$slot OTA_HEALTH_PATH=$open/health "$app" </dev/null >/dev/null 2>&1 &
 exit 0

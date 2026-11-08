@@ -17,7 +17,8 @@
 //   - inside p12, the two directories the vendor boot turns into eMMC
 //     writes: updatefile/ (U-Boot flashes BOOT.bin, the kernel and raw
 //     partition images found there) and usr/upgrade/ (update.sh runs as
-//     root with / writable);
+//     root with / writable), as targets and as roots;
+//   - any path through a symlink below p12's root;
 //   - a U-Boot environment file anywhere (uboot.env: a valid one replaces
 //     U-Boot's built-in boot command for good) and the stick's recovery
 //     environment;
@@ -83,7 +84,11 @@ var Policy = fsguard.Policy{
 		{Base: 0xFFCC_0000, Size: 0x1_0000, What: "eFuse controller"},
 		{Base: 0xFFCD_0000, Size: 0x1_0000, What: "BBRAM key controller"},
 	},
-	Device: P12Device, DeviceFS: "ext4",
+	// Nothing of ours lives behind a symlink on p12 (the slot layout is plain
+	// directories), so a link there is planted or damage: never written
+	// through, even where it stays on p12 (SAFETY.txt rule 4).
+	NoLinks: true,
+	Device:  P12Device, DeviceFS: "ext4",
 	UnitSources: []string{"/dev/mmcblk", "/dev/root", "/dev/mtd", "/dev/disk/"},
 }
 

@@ -49,14 +49,18 @@ to the eMMC. It NEVER:
 These rules are enforced in code, not only by convention. Every file write,
 rename and delete of the supervisor, the installer, the census and the app
 goes through one write guard (open-dso-core's fsguard with this unit's
-policy, app/hdguard). It refuses, with an error that
-says why, any path outside p12's root after resolving ".." and symlinks, the
-two vendor update directories, any uboot.env, BOOT.bin or uEnv.txt, block
-devices, eFuse/BBRAM/nvmem paths, and /dev/mem windows over the CSU, eFuse,
-BBRAM and SD/eMMC controllers. The install stick's /init writes only after the
-kernel's mount table shows /dev/mmcblk0p12 (ext4) on its mount point and no
-other eMMC partition mounted writable. The census writes nothing to the eMMC
-at all: its report goes to the stick or to RAM.
+policy, app/hdguard). It refuses, with an error that says why, any path
+outside p12's root after resolving ".." and symlinks, any path through a
+symlink on p12 at all, the two vendor update directories and any root in
+or resolving into them, any uboot.env, BOOT.bin or uEnv.txt, block devices,
+eFuse/BBRAM/nvmem paths, and /dev/mem windows over the CSU, eFuse, BBRAM and
+SD/eMMC controllers. The launch hook, a shell script outside the guard,
+tests every path it writes with [ -L ] first: it writes nothing through a
+symlink, and does nothing at all when open/ itself is one. The install
+stick's /init writes only after the kernel's mount table shows
+/dev/mmcblk0p12 (ext4) on its mount point and no other eMMC partition
+mounted writable. The census writes nothing to the eMMC at all: its report
+goes to the stick or to RAM.
 
 
 The programmable logic (PL): why a wrong pin map is a hardware risk

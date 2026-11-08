@@ -46,7 +46,6 @@ func TestCheckInsideOutside(t *testing.T) {
 		filepath.Join(root, "open", "a", "app"),
 		filepath.Join(root, "open", "not", "yet", "there"),
 		filepath.Join(root, "open", "..", "open", "current"),
-		filepath.Join(root, "inner", "current"), // a symlink that stays inside
 		filepath.Join(root, "config", "settings.xml"),
 	}
 	for _, p := range ok {
@@ -65,6 +64,7 @@ func TestCheckInsideOutside(t *testing.T) {
 		filepath.Join(root, "open", "away", "x"), // a symlinked directory leading out
 		filepath.Join(root, "open", "away", "new", "y"), // ... with parts that do not exist yet
 		filepath.Join(root, "open", "away-file"),        // a symlinked file leading out
+		filepath.Join(root, "inner", "current"),         // a symlink that stays inside: no link on p12 is written through
 		filepath.Join(root, "updatefile", "BOOT.bin"),
 		filepath.Join(root, "updatefile", "rootfs.ext4.gz"),
 		filepath.Join(root, "usr", "upgrade", "update.sh"),
@@ -276,5 +276,61 @@ func TestCheckOffUnit(t *testing.T) {
 		if !refused(FS.CheckOffUnit(p, strings.NewReader(unitMounts))) {
 			t.Errorf("%s not refused", p)
 		}
+	}
+}
+
+// The vendor update trees are never a root: not p12's own, not below
+// another root, not through a symlink (SAFETY.txt rule 6).
+// TRLC-LINKS: REQ-HD-016
+func TestSetRootRefusesUpdateTrees(t *testing.T) {
+	other := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(other, "usr", "upgrade"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(other, "p12")
+	if err := os.Symlink(filepath.Join(other, "usr", "upgrade"), link); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{
+		P12 + "/updatefile", P12 + "/updatefile/x", P12 + "/usr/upgrade", P12 + "/usr/upgrade/y",
+		"/mnt/updatefile", "/mnt/usr/upgrade", filepath.Join(other, "usr", "upgrade"), link,
+	} {
+		if r, err := FS.SetRoot(d); err == nil {
+			r()
+			t.Errorf("root %q accepted", d)
+		}
+	}
+	if FS.Root() != P12 {
+		t.Fatalf("root left at %s", FS.Root())
+	}
+}
+
+// A symlink planted on p12 carries no write, whether it leads to p9, to an
+// update tree or stays on p12 (SAFETY.txt rule 4).
+// TRLC-LINKS: REQ-HD-016
+func TestNoWriteThroughSymlinks(t *testing.T) {
+	root := useRoot(t)
+	open := filepath.Join(root, "open")
+	if err := os.MkdirAll(filepath.Join(open, "a"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, to := range map[string]string{"log": "/usr/bin/siglent/firmdata0", "b": filepath.Join(root, "updatefile"), "state": filepath.Join(open, "a")} {
+		if err := os.Symlink(to, filepath.Join(open, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range []string{"log/launch.log", "log", "b/app", "state/settings", "state"} {
+		if err := FS.WriteFile(filepath.Join(open, p), []byte("x"), 0o644); !refused(err) {
+			t.Errorf("open/%s: %v", p, err)
+		}
+	}
+	if err := FS.WriteFile(filepath.Join(open, "a", "app"), []byte("x"), 0o644); err != nil {
+		t.Errorf("open/a/app: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(root, "elsewhere"), filepath.Join(root, "open2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := FS.MkdirAll(filepath.Join(root, "open2", "a")); !refused(err) {
+		t.Errorf("a symlinked open directory created through: %v", err)
 	}
 }

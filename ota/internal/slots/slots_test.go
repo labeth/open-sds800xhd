@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/labeth/open-dso-core/fsguard"
 	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
@@ -213,5 +214,95 @@ func TestHookKeyHeld(t *testing.T) {
 	devmem("0x0000FFFF")
 	if got := hook(); got != "one a" {
 		t.Fatalf("hook started %q with no key held", got)
+	}
+}
+
+// The hook writes nothing through a symlink on p12: with open/log planted
+// to another directory it starts the app and logs nowhere, a linked state
+// file is left as it is, and with open/ itself a link it does nothing.
+// TRLC-LINKS: REQ-HD-016
+func TestHookWritesNoSymlink(t *testing.T) {
+	root, l := p12(t)
+	if err := l.Bootstrap(fakeApp("good"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.Install(fakeApp("new"), "2"); err != nil {
+		t.Fatal(err)
+	}
+	away := t.TempDir() // stands for p9
+	if err := os.RemoveAll(filepath.Join(l.Dir, "log")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(away, filepath.Join(l.Dir, "log")); err != nil {
+		t.Fatal(err)
+	}
+	trial := filepath.Join(l.Dir, "trial")
+	before, _ := os.ReadFile(trial)
+	if err := os.Rename(trial, filepath.Join(away, "trial")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(away, "trial"), trial); err != nil {
+		t.Fatal(err)
+	}
+	if got := boot(t, root, l); got != "new b" {
+		t.Fatalf("started %q with the links planted", got)
+	}
+	if ents, _ := os.ReadDir(away); len(ents) != 1 {
+		t.Fatalf("the hook wrote through a link: %v", ents)
+	}
+	if b, _ := os.ReadFile(filepath.Join(away, "trial")); string(b) != string(before) {
+		t.Fatalf("the linked trial file became %q, was %q", b, before)
+	}
+
+	root2, l2 := p12(t)
+	if err := l2.Bootstrap(fakeApp("good"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	moved := filepath.Join(t.TempDir(), "open")
+	if err := os.Rename(l2.Dir, moved); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(moved, l2.Dir); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.CommandContext(t.Context(), "sh", filepath.Join(root2, "extra.sh")).CombinedOutput(); err != nil {
+		t.Fatalf("hook: %v: %s", err, out)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if _, err := os.Stat(filepath.Join(moved, "started")); err == nil {
+		t.Fatal("the hook ran an app from a linked open/")
+	}
+	if _, err := os.Stat(filepath.Join(moved, "log")); err == nil {
+		t.Fatal("the hook logged into a linked open/")
+	}
+}
+
+// A bootstrap or an install never goes through a linked open/ or slot: the
+// write guard refuses every write below a symlink on p12.
+// TRLC-LINKS: REQ-HD-012, REQ-HD-016
+func TestNoInstallThroughSymlinks(t *testing.T) {
+	_, l := p12(t)
+	away := t.TempDir()
+	if err := os.Remove(l.Dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(away, l.Dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Bootstrap(fakeApp("good"), "1"); !errors.Is(err, fsguard.ErrRefused) {
+		t.Fatalf("bootstrap into a linked open/: %v", err)
+	}
+	_, l2 := p12(t)
+	if err := l2.Bootstrap(fakeApp("good"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(away, filepath.Join(l2.Dir, "b")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l2.Install(fakeApp("new"), "2"); !errors.Is(err, fsguard.ErrRefused) {
+		t.Fatalf("install into a linked slot: %v", err)
+	}
+	if ents, _ := os.ReadDir(away); len(ents) != 0 {
+		t.Fatalf("written through a link: %v", ents)
 	}
 }
