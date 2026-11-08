@@ -17,6 +17,7 @@ import (
 	"github.com/labeth/open-sds800xhd/app/internal/acq"
 	"github.com/labeth/open-sds800xhd/app/internal/board"
 	"github.com/labeth/open-sds800xhd/app/internal/counter"
+	"github.com/labeth/open-sds800xhd/app/internal/frontend"
 	"github.com/labeth/open-sds800xhd/app/internal/openpl"
 	"github.com/labeth/open-sds800xhd/app/internal/platform"
 	"github.com/labeth/open-sds800xhd/app/internal/timebase"
@@ -86,6 +87,7 @@ func (b *Board) profile1() hal.Profile {
 			W: 1024, H: 600, Format: hal.ARGB8888, Touch: true, HWRenderer: true,
 			DivsH: 10, DivsV: 8, Area: hal.Rect{X: waveArea.Min.X, Y: waveArea.Min.Y, W: waveArea.Dx(), H: waveArea.Dy()},
 		},
+		Vertical:   hal.VerticalSpec{Probes: frontend.Probes(), BWLimits: frontend.BWLimits()},
 		Inputs:     inputSpec(),
 		Supervisor: hal.SupervisorSpec{Restart: "software-health"},
 		Options:    hal.OptCounter,

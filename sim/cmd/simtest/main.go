@@ -39,6 +39,9 @@ type area struct {
 	name, title string
 	runs        func(e *env) []harness.Spec
 	check       func(e *env, runs []*harness.Run) []harness.Result
+	// again, when set, reports that a run was cut short by its simulator
+	// run's end (not by what it checks): the run is made once more.
+	again func(r *harness.Run) bool
 }
 
 var areas []area
@@ -83,6 +86,7 @@ func main() {
 	list := flag.Bool("list", false, "list the areas")
 	cosim := flag.Bool("cosim", false, "run the open-PL co-simulation areas (fpga/build/cosim/opl_cosim, simd -pl open)")
 	cases := flag.String("cases", "", "in the areas of many cases (decode), run those whose name holds this")
+	l4 := flag.Bool("l4", false, "run the fault-injection areas (test-bench layer L4: the device model's fault knobs, power cuts, damaged storage)")
 	flag.Parse()
 
 	root, err := os.Getwd()
@@ -101,6 +105,12 @@ func main() {
 		areas, e.cosim = cosimAreas, filepath.Join(root, "fpga", "build", "cosim", "opl_cosim")
 		if *prefix == "o800-" {
 			e.prefix = "cos-"
+		}
+	}
+	if *l4 {
+		areas = l4Areas
+		if *prefix == "o800-" {
+			e.prefix = "l4-"
 		}
 	}
 	if *list {
@@ -136,11 +146,17 @@ func main() {
 	if e.cosim != "" {
 		report += renderCosim(results, names)
 	}
+	if *l4 {
+		report += renderL4(results)
+	}
 	fmt.Print(report)
 	_ = os.MkdirAll(filepath.Join(root, "build"), 0o755) //nolint:gosec // G301: a build output directory of the repository
 	out := "sim-test.txt"
-	if e.cosim != "" {
+	switch {
+	case e.cosim != "":
 		out = "cosim-test.txt"
+	case *l4:
+		out = "l4-test.txt"
 	}
 	_ = os.WriteFile(filepath.Join(root, "build", out), []byte(report), 0o644) //nolint:gosec // G306: a build report of the repository
 	for _, r := range results {
@@ -162,6 +178,10 @@ func run(e *env, a area) ([]*harness.Run, error) {
 			r, err = harness.Load(s.Name)
 		} else {
 			r, err = harness.Exec(s)
+			if err == nil && a.again != nil && a.again(r) {
+				fmt.Fprintf(os.Stderr, "simtest: %s was cut by its run's end: once more\n", s.Name)
+				r, err = harness.Exec(s)
+			}
 		}
 		if err != nil {
 			return nil, err
