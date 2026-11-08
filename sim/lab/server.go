@@ -37,11 +37,16 @@ type Server struct {
 	input chan inputCmd // key, knob and touch commands, in order
 
 	shotMu   sync.Mutex
-	shotAt   time.Time
-	shotPNG  []byte
-	shotErr  error
+	shots    map[string]shot // by source: the last dump of each
 	appShot  func(ctx context.Context) ([]byte, error)
 	inputGap time.Duration
+}
+
+// shot is one screen dump and when it was taken.
+type shot struct {
+	at  time.Time
+	png []byte
+	err error
 }
 
 type inputCmd struct {
@@ -69,7 +74,7 @@ func (s *Server) Serve(ctx context.Context) {
 		case in := <-s.input:
 			var err error
 			for _, c := range in.cmds {
-				if _, err = ctl(ctx, s.run.ctlPath(), c); err != nil {
+				if _, err = s.ctl(ctx, s.run.ctlPath(), c); err != nil {
 					break
 				}
 				// the next record after the key is released, so the driver
@@ -107,6 +112,17 @@ func (s *Server) Handler() http.Handler {
 		reply(w, nil, nil)
 	})
 	return mux
+}
+
+// ctl sends one command to the run's device model; a model that is gone
+// marks the run as no longer serving.
+func (s *Server) ctl(ctx context.Context, path, cmd string) (string, error) {
+	rep, err := ctl(ctx, path, cmd)
+	if errors.Is(err, errModelGone) {
+		s.run.lost(path)
+		err = fmt.Errorf("%w (%w)", errNoSim, err)
+	}
+	return rep, err
 }
 
 // reply writes {"ok":true, ...extra} or {"ok":false,"err":...}.
@@ -172,15 +188,15 @@ func (s *Server) hState(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(st.Knobs)
 	path := s.run.ctlPath()
 	if path != "" {
-		lo, e1 := ctl(r.Context(), path, fmt.Sprintf("peek %#x", ledLoAddr))
-		hi, e2 := ctl(r.Context(), path, fmt.Sprintf("peek %#x", ledHiAddr))
+		lo, e1 := s.ctl(r.Context(), path, fmt.Sprintf("peek %#x", ledLoAddr))
+		hi, e2 := s.ctl(r.Context(), path, fmt.Sprintf("peek %#x", ledHiAddr))
 		if e1 == nil && e2 == nil {
 			l, _ := strconv.ParseUint(lo, 0, 32)
 			h, _ := strconv.ParseUint(hi, 0, 32)
 			st.LEDWord = uint32(l&0xffff | (h&0xffff)<<16) //nolint:gosec // G115: two 16-bit halves
 			st.Lamps = lampsOn(st.LEDWord)
 		}
-		if j, err := ctl(r.Context(), path, "sigshow"); err == nil {
+		if j, err := s.ctl(r.Context(), path, "sigshow"); err == nil {
 			_ = json.Unmarshal([]byte(j), &st.Signals) // an older model without sigshow: no signals shown
 			s.run.remember(st.Signals)
 		}
@@ -199,10 +215,13 @@ const screenMaxAge = 120 * time.Millisecond
 func (s *Server) hScreen(w http.ResponseWriter, r *http.Request) {
 	var b []byte
 	var err error
-	if r.URL.Query().Get("src") == "app" {
+	switch r.URL.Query().Get("src") {
+	case "app":
 		b, err = s.appShot(r.Context())
-	} else {
-		b, err = s.simScreen(r.Context())
+	case "fb0":
+		b, err = s.simScreen(r.Context(), "fb0")
+	default:
+		b, err = s.simScreen(r.Context(), "sim")
 	}
 	if err != nil {
 		reply(w, err, nil)
@@ -213,25 +232,35 @@ func (s *Server) hScreen(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
-// simScreen is the device model's picture of the panel: the UI layer
-// (fb0) blended over the waveform plane, as the PL's mixer shows it.
-func (s *Server) simScreen(ctx context.Context) ([]byte, error) {
+// simScreen is the device model's picture of the panel: with src "sim"
+// the UI layer (fb0) blended over the waveform plane, as the PL's mixer
+// shows it; with "fb0" the UI layer alone, opaque (what the firmware
+// drew, without the traces moving under it).
+func (s *Server) simScreen(ctx context.Context, src string) ([]byte, error) {
 	s.shotMu.Lock()
 	defer s.shotMu.Unlock()
-	if time.Since(s.shotAt) < screenMaxAge && s.shotPNG != nil {
-		return s.shotPNG, s.shotErr
+	if sh, ok := s.shots[src]; ok && time.Since(sh.at) < screenMaxAge && sh.png != nil {
+		return sh.png, sh.err
 	}
 	path := s.run.ctlPath()
 	if path == "" {
 		return nil, errNoSim
 	}
-	f := filepath.Join(s.tmp, "screen.png")
-	_, err := ctl(ctx, path, "shotcomp "+f)
+	f := filepath.Join(s.tmp, src+".png")
+	cmd := "shotcomp " + f
+	if src == "fb0" {
+		cmd = "shotfb 0 " + f + " rgb"
+	}
+	_ = os.Remove(f) // never serve an earlier dump
+	_, err := s.ctl(ctx, path, cmd)
 	var b []byte
 	if err == nil {
-		b, err = os.ReadFile(f) //nolint:gosec // G304: simlab's own scratch file
+		b, err = readDump(ctx, f)
 	}
-	s.shotAt, s.shotPNG, s.shotErr = time.Now(), b, err
+	if s.shots == nil {
+		s.shots = map[string]shot{}
+	}
+	s.shots[src] = shot{at: time.Now(), png: b, err: err}
 	return b, err
 }
 
@@ -333,7 +362,7 @@ func (s *Server) hSignal(w http.ResponseWriter, r *http.Request) {
 		reply(w, errNoSim, nil)
 		return
 	}
-	_, err := ctl(r.Context(), path, "signals "+req.Ch+"="+req.Spec)
+	_, err := s.ctl(r.Context(), path, "signals "+req.Ch+"="+req.Spec)
 	if err == nil {
 		s.run.remember(map[string]string{req.Ch: req.Spec})
 	}
@@ -407,7 +436,7 @@ func (s *Server) hBus(w http.ResponseWriter, r *http.Request) {
 		reply(w, errNoSim, nil)
 		return
 	}
-	rep, err := ctl(r.Context(), path, cmd)
+	rep, err := s.ctl(r.Context(), path, cmd)
 	if err == nil {
 		// "ok C1=spec;C2=spec"
 		m := map[string]string{}
@@ -428,4 +457,16 @@ func (r *Runner) remembered() map[string]string {
 	m := make(map[string]string, len(r.signals))
 	maps.Copy(m, r.signals)
 	return m
+}
+
+// readDump reads a dump the model writes: the file may land a moment after
+// the model's reply.
+func readDump(ctx context.Context, f string) ([]byte, error) {
+	for end := time.Now().Add(2 * time.Second); ; {
+		b, err := os.ReadFile(f) //nolint:gosec // G304: simlab's own scratch file
+		if err == nil || !errors.Is(err, fs.ErrNotExist) || time.Now().After(end) || ctx.Err() != nil {
+			return b, err
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
