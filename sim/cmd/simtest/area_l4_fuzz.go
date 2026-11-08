@@ -32,7 +32,7 @@ func init() {
 			var specs []harness.Spec
 			for _, seed := range fuzzSeeds() {
 				specs = append(specs, harness.Spec{
-					Name: fmt.Sprintf("%sfuzz-%d", e.prefix, seed), Secs: 295, Ports: true, SimdArgs: uiSignals,
+					Name: fmt.Sprintf("%sfuzz-%d", e.prefix, seed), Secs: fuzzRunSecs, Ports: true, SimdArgs: uiSignals,
 					Guest: l4Guest(e, "l4-super.sh"), Files: l4Files(e),
 					Host: func(ctx context.Context, dir string) { fuzzHost(ctx, e, dir, seed) },
 				})
@@ -46,7 +46,26 @@ func init() {
 			}
 			return res
 		},
+		// a seed the run's end cut, or that did not start for want of
+		// time, runs again on a fresh run (a restart is not a finding)
+		again: func(r *harness.Run) bool {
+			txt, _ := os.ReadFile(r.File("fuzz/fuzz.txt"))
+			return !strings.Contains(string(txt), "\ndone: ")
+		},
 	})
+}
+
+// fuzzRunSecs is a fuzz run's limit.
+const fuzzRunSecs = 295
+
+// runLeft is the time left in the run of dir, started when its control
+// socket's path was written, with a limit of secs.
+func runLeft(dir string, secs int) time.Duration {
+	fi, err := os.Stat(filepath.Join(dir, "ctl.path"))
+	if err != nil {
+		return 0
+	}
+	return time.Until(fi.ModTime().Add(time.Duration(secs) * time.Second))
 }
 
 // fuzzSeeds are the seeds of L4_FUZZ_SEEDS.
@@ -91,6 +110,13 @@ func fuzzHost(ctx context.Context, e *env, dir string, seed int) {
 	_ = os.MkdirAll(out, 0o755) //nolint:gosec // G301: a run's output directory
 	u, done, ok := l4Rig(ctx, dir, "fuzz-host.txt")
 	defer done()
+	// never start a seed on a run with too little time left for it: about
+	// 3.5 s an action under the emulator, and the page's load
+	need := time.Duration(fuzzIters())*3500*time.Millisecond + 30*time.Second
+	if left := runLeft(dir, fuzzRunSecs); ok && left < need {
+		u.h.check("fuzz-run", false, "seed %d: %v left in the run, %v needed: not started", seed, left.Round(time.Second), need)
+		ok = false
+	}
 	if ok {
 		e2e := filepath.Join(filepath.Dir(e.root), "open-dso-core", "webclient", "e2e")
 		tmp := filepath.Join(e.root, "build", "e2e-tmp")                                            // Chromium on a real disk, not a tmpfs

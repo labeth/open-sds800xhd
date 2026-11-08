@@ -38,6 +38,9 @@ type area struct {
 	name, title string
 	runs        func(e *env) []harness.Spec
 	check       func(e *env, runs []*harness.Run) []harness.Result
+	// again, when set, reports that a run was cut short by its simulator
+	// run's end (not by what it checks): the run is made once more.
+	again func(r *harness.Run) bool
 }
 
 var areas []area
@@ -172,6 +175,10 @@ func run(e *env, a area) ([]*harness.Run, error) {
 			r, err = harness.Load(s.Name)
 		} else {
 			r, err = harness.Exec(s)
+			if err == nil && a.again != nil && a.again(r) {
+				fmt.Fprintf(os.Stderr, "simtest: %s was cut by its run's end: once more\n", s.Name)
+				r, err = harness.Exec(s)
+			}
 		}
 		if err != nil {
 			return nil, err

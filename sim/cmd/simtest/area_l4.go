@@ -144,6 +144,9 @@ func logHas(area, c string, r *harness.Run, re, what string) harness.Result {
 	return harness.Fail(area, c, "the app's log has no line for %s (/%s/)", what, re)
 }
 
+// failWord is a failed case's verdict word.
+const failWord = "FAIL"
+
 // evMMIO is the device log's register access event.
 const evMMIO = "mmio"
 
@@ -249,7 +252,7 @@ func renderL4(results []harness.Result) string {
 		w := rows[f]
 		v := passWord
 		if w.fail > 0 {
-			v = "FAIL"
+			v = failWord
 		}
 		_, _ = fmt.Fprintf(tw, "%s\t%s\t%d\t%d\t%s\n", f, l4Required[f], w.pass, w.fail, v)
 	}
