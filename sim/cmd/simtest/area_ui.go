@@ -283,16 +283,13 @@ func uiHost(ctx context.Context, dir string) {
 	u.ctl(keyRun)
 	h.check("run", u.until(func() bool { return running(u.status()) }), "RUN/STOP runs again: %v", u.status()["running"])
 
-	// a touch on the softkey column presses its F-key: F2 on the rail is the
-	// next workspace, F1 the SCOPE
+	// the touch-first layout: the touch bar, the readouts, a row's
+	// controls and the gestures on the waveform
 	if u.panel().Mode != modeWorkspace { // CH1's key opened its sheet: MENU closes it
 		u.ctl(keyMenu)
 		u.until(func() bool { return u.panel().Mode == modeWorkspace })
 	}
-	rep = u.ctl("touch 1010 200")
-	h.check("touch-f2", u.until(func() bool { return u.panel().Workspace == "BUS" }), "a touch on F2 (%s): %s, %s", rep, u.panel().Workspace, u.panel().Mode)
-	rep = u.ctl("touch 1010 100")
-	h.check("touch-f1", u.until(func() bool { return u.panel().Workspace == "SCOPE" }), "a touch on F1 (%s): %s", rep, u.panel().Workspace)
+	uiTouch(u)
 
 	// the web's sheets are the same rows
 	var sheets uimodel.SheetsModel

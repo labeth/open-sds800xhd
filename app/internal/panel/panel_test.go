@@ -101,23 +101,93 @@ func TestSetLamps(t *testing.T) {
 }
 
 func TestTouch(t *testing.T) {
-	var s touchState
+	s := newTouchState()
 	feed := s.feed
+	one := func(evs []hal.InputEvent) hal.InputEvent {
+		t.Helper()
+		if len(evs) != 1 {
+			t.Fatalf("%d events: %+v", len(evs), evs)
+		}
+		return evs[0]
+	}
 	feed(evAbs, absMTX, 300)
 	feed(evAbs, absMTY, 200)
 	feed(evKey, btnTouch, 1)
-	ev, ok := feed(evSyn, 0, 0)
-	if want := (hal.InputEvent{Source: hal.FromTouch, Kind: hal.TouchEvent, TouchX: 300, TouchY: 200, Down: true}); !ok || ev != want {
-		t.Errorf("down: %+v %v", ev, ok)
+	if ev, want := one(feed(evSyn, 0, 0)), (hal.InputEvent{Source: hal.FromTouch, Kind: hal.TouchEvent, TouchX: 300, TouchY: 200, Down: true}); ev != want {
+		t.Errorf("down: %+v", ev)
+	}
+	feed(evAbs, absMTX, 301)
+	if evs := feed(evSyn, 0, 0); len(evs) != 0 {
+		t.Errorf("a jitter of a pixel gave %+v", evs)
 	}
 	feed(evAbs, absMTX, 310)
-	if _, ok := feed(evSyn, 0, 0); ok {
-		t.Error("a move gave an event")
+	if ev := one(feed(evSyn, 0, 0)); ev.Gesture != hal.TouchMove || !ev.Down || ev.TouchX != 310 {
+		t.Errorf("move: %+v", ev)
 	}
 	feed(evKey, btnTouch, 0)
-	ev, ok = feed(evSyn, 0, 0)
-	if !ok || ev.Down || ev.TouchX != 310 {
-		t.Errorf("up: %+v %v", ev, ok)
+	if ev := one(feed(evSyn, 0, 0)); ev.Down || ev.TouchX != 310 {
+		t.Errorf("up: %+v", ev)
+	}
+}
+
+// Protocol B: two fingers in two slots, each its own contact.
+func TestTouchSlots(t *testing.T) {
+	s := newTouchState()
+	f := s.feed
+	f(evAbs, absMTSlot, 0)
+	f(evAbs, absMTTrackID, 7)
+	f(evAbs, absMTX, 100)
+	f(evAbs, absMTY, 300)
+	f(evKey, btnTouch, 1)
+	if evs := f(evSyn, 0, 0); len(evs) != 1 || evs[0].Contact != 0 || !evs[0].Down || evs[0].Gesture != "" {
+		t.Fatalf("first finger: %+v", evs)
+	}
+	f(evAbs, absMTSlot, 1)
+	f(evAbs, absMTTrackID, 8)
+	f(evAbs, absMTX, 600)
+	f(evAbs, absMTY, 300)
+	if evs := f(evSyn, 0, 0); len(evs) != 1 || evs[0].Contact != 1 || evs[0].TouchX != 600 {
+		t.Fatalf("second finger: %+v", evs)
+	}
+	f(evAbs, absMTSlot, 0)
+	f(evAbs, absMTX, 80)
+	f(evAbs, absMTSlot, 1)
+	f(evAbs, absMTX, 640)
+	if evs := f(evSyn, 0, 0); len(evs) != 2 || evs[0].Gesture != hal.TouchMove || evs[1].Gesture != hal.TouchMove || evs[0].TouchX != 80 || evs[1].TouchX != 640 {
+		t.Fatalf("a pinch: %+v", evs)
+	}
+	f(evAbs, absMTSlot, 0)
+	f(evAbs, absMTTrackID, -1)
+	if evs := f(evSyn, 0, 0); len(evs) != 1 || evs[0].Contact != 0 || evs[0].Down {
+		t.Fatalf("first finger up: %+v", evs)
+	}
+	f(evAbs, absMTSlot, 1)
+	f(evAbs, absMTTrackID, -1)
+	f(evKey, btnTouch, 0)
+	if evs := f(evSyn, 0, 0); len(evs) != 1 || evs[0].Contact != 1 || evs[0].Down || evs[0].TouchX != 640 {
+		t.Fatalf("second finger up: %+v", evs)
+	}
+}
+
+// Protocol A, as the simulator's tap: the contact closed by SYN_MT_REPORT,
+// the lift an empty report.
+func TestTouchProtocolA(t *testing.T) {
+	s := newTouchState()
+	f := s.feed
+	f(evAbs, absMTTrackID, 0)
+	f(evAbs, absMTX, 50)
+	f(evAbs, absMTY, 60)
+	f(evSyn, synMT, 0)
+	f(evKey, btnTouch, 1)
+	f(evAbs, absX, 50)
+	f(evAbs, absY, 60)
+	if evs := f(evSyn, 0, 0); len(evs) != 1 || !evs[0].Down || evs[0].TouchX != 50 || evs[0].TouchY != 60 {
+		t.Fatalf("down: %+v", evs)
+	}
+	f(evKey, btnTouch, 0)
+	f(evSyn, synMT, 0)
+	if evs := f(evSyn, 0, 0); len(evs) != 1 || evs[0].Down || evs[0].TouchX != 50 {
+		t.Fatalf("up: %+v", evs)
 	}
 }
 
