@@ -26,7 +26,7 @@ const Port = ":80"
 // (scopeapp.WebParts: the frequency response).
 func Scope(b hal.Board, ctl *instrument.Model, frames *fanout.Fanout[sample.Frame], version string, ui webserver.UIModel, setups webserver.Setups, parts scopeweb.Parts) webserver.Scope {
 	return scopeweb.New(scopeweb.Config{
-		Board: b, Instrument: ctl, Frames: frames, Version: version, UI: ui, Setups: setups, Parts: parts,
+		Board: b, Instrument: ctl, Frames: frames, Version: version, Product: "open-sds800xhd", UI: ui, Setups: setups, Parts: parts,
 		Probes:   probes(),
 		BWLimits: []string{"full", "20M"}, // spec 06: one 20 MHz limit
 	}).WithCaps()
