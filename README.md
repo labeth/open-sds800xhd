@@ -96,6 +96,43 @@ next run when one ends (the simulated p12 and the generator settings carry over)
 left. `SIMLAB_ARGS="-attach NAME"` follows a run started elsewhere (e.g. `sim/run.sh -n NAME`)
 instead; `./build/simlab -h` lists the flags. `make sim-test AREA=lab` is its smoke test.
 
+#### End-to-end suites (simlab-e2e)
+
+`make simlab-e2e` runs browser suites (Node and Playwright, headless Chromium) against simlab: a
+simlab already serving on :8090 is used, else one is started for the run. `SUITES=` picks suites,
+`REPEAT=N` repeats them; results land in `build/e2e/results.jsonl` and
+`node sim/e2e/report.mjs` prints pass rates per suite and step.
+
+| Suite | What it checks |
+|---|---|
+| `simlab` | the bench page loads and shows the run serving, the screen and the panel; the embedded web UI has the four channels; the generator's form changes C1 and SCPI measures it; CH keys and the V/H-scale knobs change the scope, read back over SCPI, the LCD's UI model, the web UI and fb0; the UART, SPI and I²C presets decode in BUS's packet table; Restart brings a new run that keeps the generator |
+| `operator` | the core's operator workflows (`webclient/e2e` in open-dso-core, used as they are) with each bench source made by simlab's generator; `SOURCES=` and `WORKFLOWS=` narrow it |
+| `fuzz` | the core's operator fuzzer, bounded (`FUZZ_ITERS`, default 40; seed = repetition) |
+
+The suites wait on state, never on time: a suite starts once simlab reports the run `serving`
+(the app answers its web API and SCPI) with enough of its five minutes left, checks before each
+step that its run still serves, restarts a run too close to its end, and retries a step a restart
+cut on the next run. App findings the suites know of are recorded as seen or not, never failed.
+The operator workflows' waits for an observable state are stretched three times
+(`E2E_TIME_SCALE`): the app runs under qemu, several times slower than on the unit.
+
+Pass rates on the simulator shared with other runs (host load 4–35 on 8 CPUs, from other
+simulator, Verilator and test runs). One suite repetition passes when every step passes;
+`report.mjs` gives them per step:
+
+| Suite | Repetitions | Passed | Host load at start |
+|---|---|---|---|
+| `simlab` | 10 | 10 | 3.8–6.9 |
+| `simlab` with four extra busy loops | 3 | 3 | 17.6–30.5 |
+| `operator` (`SOURCES=tone1M,maskviol`, the 17 workflows the simulator can make) | 10 | 0 (tone workflows 140/140; M3 5/10, M9 3/10: from a fast timebase the autoset of a low-duty pulse train sometimes ends on one edge) | 12.9–32.2 |
+| `fuzz` (40 iterations) | 10 | 10 (0 findings) | 6.9–14.7 |
+
+Load stretches steps (the slowest bench step from 2.0 to 7.8 s at load 24) but failed none; what
+remains are app findings, listed with their checks in the suites. The operator workflows the
+simulator cannot serve are skipped with the reason: UART, SPI and PRBS (the generator's protocol
+frames start idle at the trigger point, so autoset's window around it is flat), and those that
+need a feature the HD's caps lack (mask, zones, the pulse trigger).
+
 ## Licence
 
 MIT, see [LICENSE](LICENSE).

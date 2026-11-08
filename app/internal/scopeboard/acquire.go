@@ -99,8 +99,8 @@ func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.St
 		ready = func() bool { done, _ := b.eng.SequenceDone(); return done }
 	}
 	for !ready() {
-		if timeout > 0 && time.Now().After(deadline) {
-			return hal.Status{}, hal.ErrTimeout
+		if timeout <= 0 || time.Now().After(deadline) {
+			return hal.Status{}, hal.ErrTimeout // a zero timeout polls once
 		}
 		select {
 		case <-ctx.Done():
