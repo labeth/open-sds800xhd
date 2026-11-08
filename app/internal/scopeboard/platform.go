@@ -75,7 +75,7 @@ func (p *platformFacet) Reboot(string) error {
 func (p *platformFacet) Diag() json.RawMessage {
 	b := (*Board)(p)
 	d, _ := json.Marshal(map[string]any{
-		"frames": b.seq, "readout_errors": b.errs.readouts, "arm_failures": b.errs.arms,
+		"frames": b.seq, "readout_errors": b.errs.readouts, "arm_failures": b.errs.arms, "pl_reloads": b.errs.reloads,
 		"scope_id": fmt.Sprintf("%016X", b.scope), "panel": b.panelDiag(),
 	})
 	return d

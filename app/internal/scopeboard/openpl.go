@@ -200,6 +200,11 @@ func (b *Board) openArm() error {
 	}
 	b.open.pl.Arm()
 	b.state, b.stored, b.rerun, b.forced = hal.Armed, false, false, false
+	if b.staged.Trig.Sweep == trigger.Force {
+		// Free running: every acquisition completes forced.
+		b.open.pl.Force()
+		b.forced = true
+	}
 	return nil
 }
 
@@ -216,7 +221,7 @@ func (b *Board) openWait(ctx context.Context, timeout time.Duration) (hal.Status
 		}
 		if st == openpl.Idle {
 			b.state = hal.Idle
-			return hal.Status{}, nil
+			return hal.Status{}, errors.New("the acquisition went idle without a record")
 		}
 		if timeout >= 0 && time.Now().After(deadline) {
 			return hal.Status{Triggered: st == openpl.Post}, hal.ErrTimeout

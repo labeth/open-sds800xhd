@@ -70,7 +70,7 @@ func TestInstallConfirm(t *testing.T) {
 	if got := boot(t, root, l); got != "good a" {
 		t.Fatalf("first boot started %q", got)
 	}
-	s, err := l.Install(fakeApp("new"), "2")
+	s, err := l.Install(fakeApp("new"), "2", DigestOf(fakeApp("new")))
 	if err != nil || s != B {
 		t.Fatalf("install: %s %v", s, err)
 	}
@@ -78,7 +78,7 @@ func TestInstallConfirm(t *testing.T) {
 	if st.Current != B || st.Previous != A || !st.Trial || st.Starts != 0 || st.Versions[B] != "2" {
 		t.Fatalf("after install: %+v", st)
 	}
-	if _, err := l.Install(fakeApp("other"), "3"); !errors.Is(err, ErrOnTrial) {
+	if _, err := l.Install(fakeApp("other"), "3", DigestOf(fakeApp("other"))); !errors.Is(err, ErrOnTrial) {
 		t.Fatalf("install on trial: %v", err)
 	}
 	if got := boot(t, root, l); got != "new b" {
@@ -102,7 +102,7 @@ func TestInstallConfirm(t *testing.T) {
 func TestHookRollsBackUnconfirmed(t *testing.T) {
 	root, l := p12(t)
 	_ = l.Bootstrap(fakeApp("good"), "1")
-	if _, err := l.Install([]byte("#!/bin/sh\nexit 3\n"), "broken"); err != nil {
+	if _, err := l.Install([]byte("#!/bin/sh\nexit 3\n"), "broken", DigestOf([]byte("#!/bin/sh\nexit 3\n"))); err != nil {
 		t.Fatal(err)
 	}
 	_ = boot(t, root, l) // the broken app starts and dies; nothing confirms it
@@ -128,7 +128,7 @@ func TestRollbackAndDisable(t *testing.T) {
 	if _, err := l.Rollback(); err == nil {
 		t.Fatal("rollback without a previous slot")
 	}
-	_, _ = l.Install(fakeApp("new"), "2")
+	_, _ = l.Install(fakeApp("new"), "2", DigestOf(fakeApp("new")))
 	if s, err := l.Rollback(); err != nil || s != A {
 		t.Fatalf("rollback: %s %v", s, err)
 	}
@@ -218,15 +218,16 @@ func TestHookKeyHeld(t *testing.T) {
 }
 
 // The hook writes nothing through a symlink on p12: with open/log planted
-// to another directory it starts the app and logs nowhere, a linked state
-// file is left as it is, and with open/ itself a link it does nothing.
+// to another directory it starts an app and logs nowhere, a linked state
+// file is left as it is (a linked trial count cannot be written, so the
+// previous slot starts), and with open/ itself a link it does nothing.
 // TRLC-LINKS: REQ-HD-016
 func TestHookWritesNoSymlink(t *testing.T) {
 	root, l := p12(t)
 	if err := l.Bootstrap(fakeApp("good"), "1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := l.Install(fakeApp("new"), "2"); err != nil {
+	if _, err := l.Install(fakeApp("new"), "2", DigestOf(fakeApp("new"))); err != nil {
 		t.Fatal(err)
 	}
 	away := t.TempDir() // stands for p9
@@ -244,8 +245,8 @@ func TestHookWritesNoSymlink(t *testing.T) {
 	if err := os.Symlink(filepath.Join(away, "trial"), trial); err != nil {
 		t.Fatal(err)
 	}
-	if got := boot(t, root, l); got != "new b" {
-		t.Fatalf("started %q with the links planted", got)
+	if got := boot(t, root, l); got != "good a" {
+		t.Fatalf("started %q with the links planted, want the previous slot", got)
 	}
 	if ents, _ := os.ReadDir(away); len(ents) != 1 {
 		t.Fatalf("the hook wrote through a link: %v", ents)
@@ -299,10 +300,99 @@ func TestNoInstallThroughSymlinks(t *testing.T) {
 	if err := os.Symlink(away, filepath.Join(l2.Dir, "b")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := l2.Install(fakeApp("new"), "2"); !errors.Is(err, fsguard.ErrRefused) {
+	if _, err := l2.Install(fakeApp("new"), "2", DigestOf(fakeApp("new"))); !errors.Is(err, fsguard.ErrRefused) {
 		t.Fatalf("install into a linked slot: %v", err)
 	}
 	if ents, _ := os.ReadDir(away); len(ents) != 0 {
 		t.Fatalf("written through a link: %v", ents)
+	}
+}
+
+// A trial start the hook cannot count (here trial.new is in the way, as a
+// read-only p12 refuses the write) is not made: the previous slot starts,
+// on every boot, and with no previous slot nothing does.
+func TestHookUncountedTrial(t *testing.T) {
+	root, l := p12(t)
+	_ = l.Bootstrap(fakeApp("good"), "1")
+	if _, err := l.Install(fakeApp("new"), "2", DigestOf(fakeApp("new"))); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(l.Dir, "trial.new"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := range 3 {
+		if got := boot(t, root, l); got != "good a" {
+			t.Fatalf("boot %d started %q, want the previous slot", i+1, got)
+		}
+	}
+	if st := l.Status(); st.Current != B || st.Starts != 0 {
+		t.Fatalf("layout changed: %+v", st)
+	}
+	_ = os.Remove(filepath.Join(l.Dir, "previous"))
+	if got := boot(t, root, l); got != "" {
+		t.Fatalf("no previous slot: started %q, want nothing (vendor)", got)
+	}
+	log, _ := os.ReadFile(filepath.Join(l.Dir, "log", "launch.log"))
+	if !strings.Contains(string(log), "cannot be counted: vendor firmware") {
+		t.Errorf("launch.log: %s", log)
+	}
+}
+
+// An image that is not the one it was built as (a byte flipped, cut short)
+// is refused before anything of the slot changes; the built one installs.
+// TRLC-LINKS: REQ-HD-012
+func TestInstallChecksDigest(t *testing.T) {
+	_, l := p12(t)
+	if err := l.Bootstrap(fakeApp("good"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	built := fakeApp("new")
+	want := DigestOf(built)
+	flipped := append([]byte(nil), built...)
+	flipped[len(flipped)/2] ^= 0x5A
+	for name, img := range map[string][]byte{"flipped": flipped, "truncated": built[:len(built)/2]} {
+		if _, err := l.Install(img, "2", want); !errors.Is(err, ErrDigest) {
+			t.Fatalf("%s image: %v, want ErrDigest", name, err)
+		}
+		if st := l.Status(); st.Current != A || st.Trial || st.Versions[B] != "" {
+			t.Fatalf("%s image changed the layout: %+v", name, st)
+		}
+	}
+	d, err := ParseDigest(want.String()[:64], want.Size)
+	if err != nil || d != want {
+		t.Fatalf("ParseDigest(%s): %v %v", want, d, err)
+	}
+	if _, err := ParseDigest("abc", 3); err == nil {
+		t.Fatal("a short hex digest parsed")
+	}
+	if s, err := l.Install(built, "2", want); err != nil || s != B {
+		t.Fatalf("the built image: %s %v", s, err)
+	}
+}
+
+// A slot's app damaged after its install fails Verify; an intact one and a
+// slot with no recorded digest pass.
+// TRLC-LINKS: REQ-HD-012
+func TestVerifySlot(t *testing.T) {
+	_, l := p12(t)
+	if err := l.Bootstrap(fakeApp("good"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Verify(A); err != nil {
+		t.Fatalf("intact slot: %v", err)
+	}
+	app := filepath.Join(l.Dir, A, "app")
+	b, _ := os.ReadFile(app)
+	if err := os.WriteFile(app, b[:len(b)/2], 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Verify(A); !errors.Is(err, ErrDigest) {
+		t.Fatalf("cut slot: %v, want ErrDigest", err)
+	}
+	if err := os.Remove(filepath.Join(l.Dir, A, "sha256")); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Verify(A); err != nil {
+		t.Fatalf("a slot without a recorded digest: %v", err)
 	}
 }

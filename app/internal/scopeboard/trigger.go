@@ -151,9 +151,6 @@ func (b *Board) triggerSettings(s hal.TriggerSpec) (trigger.Settings, error) {
 	if s.HoldoffEv != 0 {
 		return ts, hal.Refuse("holdoff by events", "this trigger engine has only time holdoff")
 	}
-	if s.FreeRun {
-		return ts, hal.Refuse("free-running trigger", "the trigger engine arms what it is given; AUTO runs it free")
-	}
 	if s.HoldoffS != 0 && (s.HoldoffS < minHoldoffS || s.HoldoffS > maxHoldoffS) {
 		return ts, hal.Refuse("holdoff", fmt.Sprintf("%g s is outside 8 ns … 30 s", s.HoldoffS))
 	}
@@ -167,6 +164,12 @@ func (b *Board) triggerSettings(s hal.TriggerSpec) (trigger.Settings, error) {
 		ts.Sweep = trigger.Single
 	default:
 		return ts, hal.Refuse("sweep", "not a sweep mode of this scope")
+	}
+	if s.FreeRun {
+		// The PL has no untriggered arm: the Force row (both timeouts 1,
+		// spec 05 §7) completes every acquisition at once, forced, over
+		// the stages converted below.
+		ts.Sweep = trigger.Force
 	}
 	switch s.Coupling {
 	case hal.TrigDC:

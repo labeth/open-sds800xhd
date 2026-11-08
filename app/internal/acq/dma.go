@@ -3,6 +3,7 @@ package acq
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -120,10 +121,54 @@ func (d *DMA) Transfer(dst []byte, n int, start func()) error {
 		d.drain()
 		return fmt.Errorf("DMA block of %d bytes timed out, status %#x", n8, sr)
 	}
+	if sr := d.reg.Read32(board.S2MMSR); sr&dmaErrBits != 0 {
+		// The completion interrupt also ends a transfer that failed: the
+		// window then holds stale data, which must not become a record.
+		d.reset()
+		d.reg.Write32(board.S2MMSR, sr&dmaIrqBits) // the interrupt bits clear on a write of 1
+		d.drain()
+		return dmaStatusErr(n8, sr)
+	}
 	if dst != nil {
 		copy(dst, d.buf[:n])
 	}
 	return nil
+}
+
+// The S2MM status register's error and interrupt bits (the AXI DMA's
+// public register map): the internal, slave and decode errors, and the
+// completion, delay and error interrupts.
+const (
+	dmaIntErr  = 1 << 4
+	dmaSlvErr  = 1 << 5
+	dmaDecErr  = 1 << 6
+	dmaErrIrq  = 1 << 14
+	dmaErrBits = dmaIntErr | dmaSlvErr | dmaDecErr | dmaErrIrq
+	dmaIrqBits = 0x7 << 12
+)
+
+// dmaStatusErr is the error of an n-byte block whose transfer ended with
+// status sr, nil when sr has no error bit.
+// TRLC-LINKS: REQ-HD-005
+func dmaStatusErr(n int, sr uint32) error {
+	if sr&dmaErrBits == 0 {
+		return nil
+	}
+	return fmt.Errorf("DMA block of %d bytes ended in an error, status %#x (%s): no record", n, sr, dmaErrText(sr))
+}
+
+// dmaErrText names the error bits of a status value.
+func dmaErrText(sr uint32) string {
+	var names []string
+	for _, e := range []struct {
+		bit  uint32
+		name string
+	}{{dmaIntErr, "internal error"}, {dmaSlvErr, "slave error"}, {dmaDecErr, "decode error"}, {dmaErrIrq, "error interrupt"}} {
+		if sr&e.bit != 0 {
+			names = append(names, e.name)
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 // MaxBlock is the largest block one Transfer moves.

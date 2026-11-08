@@ -69,7 +69,11 @@ func (d *dialect) legacy() []core.Command {
 			if err != nil || fn == nil {
 				return err
 			}
-			return changeCh(c, n, fn)
+			if err := changeCh(c, n, fn); err != nil {
+				return err
+			}
+			d.selected(short, n)
+			return nil
 		})
 	}
 	volts := func(apply func(ch *hal.Channel, v float64)) func(c *core.Call) (func(*hal.Channel), error) {
@@ -160,14 +164,10 @@ func (d *dialect) legacy() []core.Command {
 		if err != nil {
 			return err
 		}
-		return change(c, func(s *core.State) error {
-			if i == 3 {
-				s.Running = false
-				return nil
-			}
-			s.Sweep, s.Running = [...]hal.Sweep{hal.Auto, hal.NormalSweep, hal.Single}[i], true
-			return nil
-		})
+		if i == 3 {
+			return setRun(c, hal.Auto, false)
+		}
+		return setRun(c, [...]hal.Sweep{hal.Auto, hal.NormalSweep, hal.Single}[i], true)
 	})
 	both("TRMD?", func(c *core.Call) error {
 		s := c.Instrument().State()
@@ -218,10 +218,10 @@ func (d *dialect) legacy() []core.Command {
 		return nil
 	}))
 	both("ARM", func(c *core.Call) error {
-		return change(c, func(s *core.State) error { s.Sweep, s.Running = hal.Single, true; return nil })
+		return setRun(c, hal.Single, true)
 	})
 	cmds = append(cmds, d.bind("STOP", func(c *core.Call) error {
-		return change(c, func(s *core.State) error { s.Running = false; return nil })
+		return setRun(c, hal.Auto, false)
 	}))
 	for _, cmd := range core.CommHeader() {
 		both(cmd.Pattern, cmd.Handler)

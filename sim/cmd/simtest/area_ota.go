@@ -26,6 +26,15 @@ func init() {
 				"broken":   filepath.Join(e.root, "sim", "guest", "broken-app.sh"),
 				"extra.sh": e.hook,
 			}
+			// the update's manifest, as its build writes it
+			if b, err := os.ReadFile(files["broken"]); err == nil {
+				dir := filepath.Join(e.root, "build", "ota")
+				if os.MkdirAll(dir, 0o755) == nil { //nolint:gosec // G301: a build output directory of the repository
+					if m, err := writeManifest(dir, "broken", b); err == nil {
+						files["broken.sha256"] = m
+					}
+				}
+			}
 			name := e.prefix + "ota"
 			return []harness.Spec{
 				{Name: name, Secs: 150, Guest: filepath.Join(e.root, "sim", "guest", "ota-install.sh"), Files: files},

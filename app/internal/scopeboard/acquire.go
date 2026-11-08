@@ -3,6 +3,7 @@ package scopeboard
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/labeth/open-dso-core/hal"
@@ -49,6 +50,13 @@ func (a *acquirerFacet) Arm() error {
 	if err := sequenceSweep(&b.staged); err != nil {
 		return err
 	}
+	if reloaded, why := b.eng.Reloaded(); reloaded {
+		b.log.Printf("%s; running the start-up again", why)
+		b.regs.Quiesce()
+		b.eng.Restart()
+		b.rerun = true
+		b.errs.reloads++
+	}
 	if b.eng.Rolling() {
 		b.eng.RollStop()
 	}
@@ -79,8 +87,9 @@ func sequenceSweep(s *acq.Settings) error {
 }
 
 // Wait polls the last-frame flag (spec 03 §3.6), then halts the record so
-// Readout can run. Status.Done is false when the halt did not complete or
-// the record's parameters are not valid; the owner then re-arms.
+// Readout can run. Status.Done is false when the record's parameters are
+// not valid. A halt that does not complete leaves no record: Wait returns
+// an error, the owner reports it and re-arms.
 func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.Status, error) {
 	b := (*Board)(a)
 	if b.open != nil {
@@ -112,7 +121,7 @@ func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.St
 	halted, valid := b.eng.Halt()
 	if !halted {
 		b.state = hal.Idle
-		return hal.Status{}, nil
+		return hal.Status{}, errNoHalt
 	}
 	if n := b.eng.Settings().Segments; n > 1 {
 		// Sequence mode: the frame is the N segments (spec 03 §6.2); the
@@ -120,14 +129,16 @@ func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.St
 		done, got := b.eng.SequenceDone()
 		if !done || got < n {
 			b.state = hal.Idle
-			return hal.Status{}, nil
+			return hal.Status{}, fmt.Errorf("sequence: %d of %d segments held after the halt: no record", got, n)
 		}
 		b.eng.SequenceComplete(n)
 		b.rerun = true
 	}
 	b.seq++
 	b.state, b.stored = hal.Ready, true
-	forced := b.forced
+	// A free-running sweep (the Force row) completes every acquisition
+	// without a trigger: each of its records is forced.
+	forced := b.forced || b.eng.Settings().Trig.Sweep == trigger.Force
 	b.forced = false
 	h := b.eng.Timebase()
 	_, tr := timebase.Timeouts(h.Enum, autoOvertime)
@@ -138,6 +149,10 @@ func (a *acquirerFacet) Wait(ctx context.Context, timeout time.Duration) (hal.St
 	}
 	return b.status, nil
 }
+
+// errNoHalt is a frame whose stop request the PL did not complete (spec 03
+// §3.6): no record is held; the owner reports it and arms again.
+var errNoHalt = errors.New("the record did not halt (spec 03 §3.6): no record")
 
 // autoOvertime is the auto-trigger overtime the timebase setup programs
 // (spec 05 §7: TR_TIMEOUT = 2·v).

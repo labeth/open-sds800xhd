@@ -12,6 +12,7 @@ package board
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -209,6 +210,10 @@ func (b *Board) Takeover(ctx context.Context) error {
 	return nil
 }
 
+// ErrUncounted is a reboot the policy refused because it cannot record it
+// (p12 read-only or full): an uncounted reboot could repeat for ever.
+var ErrUncounted = errors.New("the reboot count cannot be written")
+
 // Reboot is the supervisor's last resort. It is refused once MaxReboots
 // reboots followed each other without a healthy app (Confirmed resets the
 // count): the open firmware then disables itself so the unit returns to
@@ -216,7 +221,7 @@ func (b *Board) Takeover(ctx context.Context) error {
 // Every reboot and refusal is logged on p12 first.
 func (b *Board) Reboot(reason string) error {
 	if err := hdguard.FS.MkdirAll(b.SlotsDir()); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrUncounted, err)
 	}
 	n := b.reboots()
 	if n >= MaxReboots {
@@ -227,7 +232,8 @@ func (b *Board) Reboot(reason string) error {
 			"the open firmware is disabled and the next power-up keeps the vendor firmware", n))
 	}
 	if err := slots.WriteFile(b.rebootsPath(), []byte(strconv.Itoa(n+1)+"\n"), 0o644); err != nil {
-		return err
+		b.rebootLog("refused: the reboot count cannot be written (%v): %s", err, reason)
+		return fmt.Errorf("%w: %w", ErrUncounted, err)
 	}
 	b.rebootLog("reboot %d: %s", n+1, reason)
 	return b.reboot()

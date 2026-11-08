@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // TestGuestPayload runs the install stick's copy on the simulated unit's
@@ -19,8 +19,8 @@ func TestGuestPayload(t *testing.T) {
 	if os.Getenv("L4_GUEST") != "1" {
 		t.Skip("runs only in the simulator's fault lane (L4_GUEST=1)")
 	}
-	const src, p12, mark = "/tmp/l4-payload", fsguard.P12, "open/installed-2"
-	if _, err := fsguard.SetRoot(p12); err != nil {
+	const src, p12, mark = "/tmp/l4-payload", hdguard.P12, "open/installed-2"
+	if _, err := hdguard.FS.SetRoot(p12); err != nil {
 		t.Fatal(err)
 	}
 	if err := Payload(src, p12, mark, "l4-2"); err != nil {

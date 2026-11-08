@@ -39,6 +39,21 @@ type Config struct {
 	// Mask is the mask test the owner runs on the frames; nil: the :MTESt
 	// commands are refused.
 	Mask MaskTest
+	// Select makes channel ch (0-based) the selected one, the channel the
+	// panel's shared vertical knobs act on: a V/div or offset set over SCPI
+	// selects its channel (spec 07 §7.1). Nil: nothing is selected.
+	Select func(ch int)
+}
+
+// selects are the headers whose setting selects the channel (spec 07 §7.1:
+// V/div and offset).
+var selects = map[string]bool{":CHANnel#:SCALe": true, ":CHANnel#:OFFSet": true, "C#:VDIV": true, "C#:OFST": true}
+
+// selected selects channel n after header set it, when header selects.
+func (d *dialect) selected(header string, n int) {
+	if selects[header] && d.cfg.Select != nil {
+		d.cfg.Select(n)
+	}
 }
 
 // specHeaders are headers spec 11's text gives whose form the inventory
@@ -188,6 +203,42 @@ func change(c *core.Call, fn func(s *core.State) error) error {
 	return nil
 }
 
+// runControl is the instrument model's run control (instrument.Controls):
+// its setters carry the meaning of the press they stand for, which a raw
+// Change of Sweep and Running cannot (a NORM written after a single shot
+// would read as RUN and bring back the mode the shot replaced).
+type runControl interface {
+	SetRunning(on bool)
+	SetNorm(on bool)
+	SetSingle()
+}
+
+// setRun sets the trigger mode and run state as the panel's keys do: STOP
+// (running false), SINGLE (a shot armed), or AUTO/NORM running. An
+// instrument without the explicit setters takes the raw change.
+func setRun(c *core.Call, sw hal.Sweep, running bool) error {
+	rc, ok := c.Instrument().(runControl)
+	if !ok {
+		return change(c, func(s *core.State) error {
+			s.Running = running
+			if running {
+				s.Sweep = sw
+			}
+			return nil
+		})
+	}
+	switch {
+	case !running:
+		rc.SetRunning(false)
+	case sw == hal.Single:
+		rc.SetSingle()
+	default:
+		rc.SetNorm(sw == hal.NormalSweep)
+		rc.SetRunning(true)
+	}
+	return nil
+}
+
 // changeCh stages fn on channel ch.
 func changeCh(c *core.Call, ch int, fn func(ch *hal.Channel)) error {
 	return change(c, func(s *core.State) error {
@@ -330,7 +381,11 @@ func (d *dialect) channels() []core.Command {
 			if err != nil || fn == nil {
 				return err
 			}
-			return changeCh(c, n, fn)
+			if err := changeCh(c, n, fn); err != nil {
+				return err
+			}
+			d.selected(header, n)
+			return nil
 		})
 	}
 	numeric := func(apply func(ch *hal.Channel, v float64)) func(c *core.Call) (func(*hal.Channel), error) {

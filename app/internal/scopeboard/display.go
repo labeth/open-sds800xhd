@@ -20,6 +20,7 @@ type ui struct {
 	capture *display.Capturer
 	panel   *panel.Panel
 	events  chan hal.InputEvent // the panel's events under the UI model's names
+	names   names               // the panel's names: which channel the vertical knobs act on
 }
 
 // The device nodes of the UI layer and the capture buffer (spec 07 §2).
@@ -43,7 +44,7 @@ func (b *Board) bringUpUI() {
 		b.log.Printf("front panel unavailable: %v", err)
 	}
 	b.ui.events = make(chan hal.InputEvent, 64)
-	go new(names).forward(b.ui.panel.Events(), b.ui.events)
+	go b.ui.names.forward(b.ui.panel.Events(), b.ui.events)
 	lit := []string{"auto", "run", "touch"}
 	for c := range b.id.Channels {
 		if b.staged.Ch[c].On {

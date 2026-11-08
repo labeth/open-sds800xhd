@@ -6,6 +6,7 @@ import (
 	"github.com/labeth/open-dso-core/hal"
 	coreui "github.com/labeth/open-dso-core/uimodel/panel"
 	"github.com/labeth/open-sds800xhd/app/internal/panel"
+	"github.com/labeth/open-sds800xhd/app/internal/platform"
 )
 
 // Every key and knob of the panel reaches the UI model under one of its
@@ -66,5 +67,20 @@ func TestForwardNames(t *testing.T) {
 	}
 	if len(got) != 1 || got[0] != coreui.KeyAuto {
 		t.Fatalf("forwarded %v", got)
+	}
+}
+
+// A channel selected without its key (a V/div set over SCPI) is the one
+// the shared vertical knob then turns.
+func TestSelectChannelMovesTheKnob(t *testing.T) {
+	b := &Board{id: platform.Identity{Channels: 4}}
+	b.SelectChannel(2)
+	ev, ok := b.ui.names.translate(hal.InputEvent{Kind: hal.KnobEvent, Knob: "vscale", Steps: 1})
+	if !ok || ev.Knob != "ch3vdiv" {
+		t.Fatalf("vscale after selecting C3: %+v", ev)
+	}
+	b.SelectChannel(7) // no such channel: the selection stays
+	if ev, _ := b.ui.names.translate(hal.InputEvent{Kind: hal.KnobEvent, Knob: "vpos", Steps: 1}); ev.Knob != "ch3pos" {
+		t.Fatalf("vpos after a channel the model lacks: %+v", ev)
 	}
 }

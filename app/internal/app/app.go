@@ -89,12 +89,22 @@ func scpiEngine(env *scopeapp.Env, b hal.Board, log *platform.Log, version strin
 		SelfCalState:   cal.state,
 		TriggerDefault: b.Trigger().Default,
 		Mask:           maskTest(env),
+		Select:         selectChannel(b),
 	})
 	if err != nil {
 		log.Printf("%v", err)
 	}
 	eng := core.New(dl, env.Model)
 	return scopeapp.SCPI{Exec: eng.Exec, Report: eng.Report}, nil
+}
+
+// selectChannel is the board's channel selection for the dialect; nil on
+// a board without one.
+func selectChannel(b hal.Board) func(ch int) {
+	if s, ok := b.(interface{ SelectChannel(ch int) }); ok {
+		return s.SelectChannel
+	}
+	return nil
 }
 
 // maskTest is the owner's software mask test for the dialect; nil
