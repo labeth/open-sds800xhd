@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -94,8 +95,16 @@ func (f *fakeModel) take() []string {
 	return keep
 }
 
-// bench is a simlab attached to a fake model's run directory.
+// bench is a simlab attached to a fake model's run directory, whose app
+// serves.
 func bench(t *testing.T) (*httptest.Server, *fakeModel) {
+	t.Helper()
+	hs, m, _ := benchProbe(t, func(context.Context) bool { return true })
+	return hs, m
+}
+
+// benchProbe is bench with the app's serving probe given.
+func benchProbe(t *testing.T, probe func(context.Context) bool) (*httptest.Server, *fakeModel, *Runner) {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "lab") //nolint:usetesting // short: a unix socket path is limited, t.TempDir's are long
 	if err != nil {
@@ -111,6 +120,7 @@ func bench(t *testing.T) (*httptest.Server, *fakeModel) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	run := NewRunner(nil)
+	run.Probe = probe
 	go run.Attach(ctx, dir)
 	for run.ctlPath() == "" {
 		time.Sleep(5 * time.Millisecond)
@@ -120,7 +130,7 @@ func bench(t *testing.T) (*httptest.Server, *fakeModel) {
 	go s.Serve(ctx)
 	hs := httptest.NewServer(s.Handler())
 	t.Cleanup(hs.Close)
-	return hs, m
+	return hs, m, run
 }
 
 func post(t *testing.T, hs *httptest.Server, path, body string) (int, map[string]any) {
@@ -251,5 +261,69 @@ func TestRunnerSignalArgs(t *testing.T) {
 	r.remember(map[string]string{"C3": "uart,9600,3.3,1.65,data=41", "C4": ""})
 	if got := r.signalArgs(); got != "-signals C1=sine,1,1,0;C3=uart,9600,3.3,1.65,data=41" {
 		t.Errorf("%q", got)
+	}
+}
+
+// TestServing: the state says the app serves only once the probe passes,
+// and again not when it stops passing, within the same run.
+func TestServing(t *testing.T) {
+	var up atomic.Bool
+	hs, _, _ := benchProbe(t, func(context.Context) bool { return up.Load() })
+	state := func() RunState {
+		r, err := http.Get(hs.URL + "/api/state") //nolint:noctx // a test against a local server
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = r.Body.Close() }()
+		var st State
+		if err := json.NewDecoder(r.Body).Decode(&st); err != nil {
+			t.Fatal(err)
+		}
+		return st.Run
+	}
+	wait := func(want bool) RunState {
+		t.Helper()
+		var st RunState
+		for end := time.Now().Add(5 * time.Second); time.Now().Before(end); time.Sleep(20 * time.Millisecond) {
+			if st = state(); st.Serving == want {
+				return st
+			}
+		}
+		t.Fatalf("serving never became %v: %+v", want, st)
+		return st
+	}
+	st := wait(false)
+	if st.State != "attached" || st.Runs == 0 {
+		t.Fatalf("run %+v", st)
+	}
+	up.Store(true)
+	st2 := wait(true)
+	if st2.Runs != st.Runs || st2.ServingAt.IsZero() {
+		t.Errorf("serving changed the run or has no time: %+v", st2)
+	}
+	up.Store(false)
+	wait(false)
+}
+
+// TestModelGone: a control socket that refuses ends the run's serving at
+// once, and the API answers 503 as with no simulator.
+func TestModelGone(t *testing.T) {
+	hs, _, run := benchProbe(t, func(context.Context) bool { return true })
+	for end := time.Now().Add(5 * time.Second); !run.State().Serving; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(end) {
+			t.Fatal("never serving")
+		}
+	}
+	path := run.ctlPath()
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	code, out := post(t, hs, "/api/signal", `{"ch":"C1","spec":"sine,1,1,0"}`)
+	if code != http.StatusServiceUnavailable || run.State().Serving {
+		t.Errorf("after the model went: %d %v, serving %v", code, out, run.State().Serving)
+	}
+	time.Sleep(1500 * time.Millisecond) // a probe that passes again does not bring the run back
+	if run.State().Serving {
+		t.Error("serving again after the model went")
 	}
 }
