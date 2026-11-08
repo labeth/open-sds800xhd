@@ -8,9 +8,12 @@ import (
 	"github.com/labeth/open-sds800xhd/app/internal/panel"
 )
 
-// inputSpec is the panel's controls by core name (spec 08 §2, §6).
+// inputSpec is the panel's controls by core name (spec 08 §2, §6): the
+// names its key table sends (KeyTable), the shared vertical controls' for
+// every channel.
 func inputSpec() hal.InputSpec {
-	return hal.InputSpec{Keys: panel.Keys(), Knobs: panel.Knobs(), Lamps: panel.Lamps(), Touch: true, Beeper: true}
+	keys, knobs := KeyTable().Names()
+	return hal.InputSpec{Keys: keys, Knobs: knobs, Lamps: panel.Lamps(), Touch: true, Beeper: true}
 }
 
 // inputFacet is the front panel. Its events come from the panel's two
@@ -37,8 +40,8 @@ func (in *inputFacet) SetLamps(on []string) error {
 	return p.SetLamps(on)
 }
 
-func (in *inputFacet) Keys() []string  { return panel.Keys() }
-func (in *inputFacet) Knobs() []string { return panel.Knobs() }
+func (in *inputFacet) Keys() []string  { return inputSpec().Keys }
+func (in *inputFacet) Knobs() []string { return inputSpec().Knobs }
 
 // SetSound switches the key and touch clicks of the beeper (the Sound
 // setting, on at bring-up).

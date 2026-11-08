@@ -46,7 +46,7 @@ func TestInput(t *testing.T) {
 
 	c := begin(t, "input/profile")
 	p := board.Profile().Inputs
-	c.check(len(p.Keys) == 37 && len(p.Knobs) == 6 && len(p.Lamps) == 19 && p.Touch,
+	c.check(len(p.Keys) == 33 && len(p.Knobs) == 12 && len(p.Lamps) == 19 && p.Touch,
 		"%d keys, %d knobs, %d lamps, touch %v", len(p.Keys), len(p.Knobs), len(p.Lamps), p.Touch)
 	c.check(slices.Equal(in.Keys(), p.Keys), "Keys() matches the profile")
 
