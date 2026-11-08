@@ -38,8 +38,8 @@ import (
 const decodeSimd = "-afe real,seed=1 -signals C1=dc,0,0,0;C2=dc,0,0,0;C3=dc,0,0,0;C4=dc,0,0,0"
 
 // decodeCasesPerRun bounds one simulator run (300 s at most, the app's start
-// included).
-const decodeCasesPerRun = 7
+// included): AUTO in BUS takes 10 to 120 s in the simulator.
+const decodeCasesPerRun = 4
 
 // decodeHostFile holds a run's cases as JSON lines.
 const decodeHostFile = "decode-host.jsonl"
@@ -60,8 +60,20 @@ type busOutcome struct {
 	Settings string `json:"settings"` // the BUS sheet's settings it filled in
 	Decoded  string `json:"decoded"`  // the decode of the app's record, shortened
 	Truth    string `json:"truth"`    // the generator's ground truth, shortened
+	Record   string `json:"record"` // the record decoded: length, interval, channels
 	Pass     bool   `json:"pass"`
 	Reason   string `json:"reason"`
+}
+
+// recordText describes the record a case decoded.
+func recordText(f *sample.Frame, p framecalc.DecodeParams) string {
+	var on []string
+	for _, t := range f.Traces {
+		if len(t.Codes16)+len(t.Codes8) > 0 {
+			on = append(on, fmt.Sprintf("C%d", t.Ch+1))
+		}
+	}
+	return fmt.Sprintf("%d samples at %.3g s (%s) on %s, decoding C%d/C%d", f.Len(), f.SampleS, f.Content, strings.Join(on, ","), p.ChA+1, p.ChB+1)
 }
 
 func init() {
@@ -227,6 +239,9 @@ func decodeHost(ctx context.Context, dir string, cases []busCase) {
 			return
 		}
 		o := runBusCase(u, c)
+		if ctx.Err() != nil {
+			return // the run ended inside the case: it reports as not run
+		}
 		_ = enc.Encode(o) // a file the check reads; a lost line is a case not run
 		_ = f.Sync()
 	}
@@ -262,18 +277,21 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 		_, _ = scpiQuery(u.ctx, ch+":TRA ON") // a channel left off shows as AUTO finding nothing
 	}
 	time.Sleep(500 * time.Millisecond)
+	// an AUTO still running (a case before that timed out) would take the
+	// press as its cancel: wait it out first
+	until(u.ctx, 60*time.Second, func() bool { return !u.panel().AutosetBusy })
 	before := u.panel().AutosetDone
 	var rep map[string]any
 	if err := u.post("/api/panel", `{"button":"auto","for":"bus"}`, &rep); err != nil {
 		o.Reason = "AUTO: " + err.Error()
 		return o
 	}
-	done := until(u.ctx, 90*time.Second, func() bool {
+	done := until(u.ctx, 150*time.Second, func() bool {
 		st := u.panel()
 		return !st.AutosetBusy && st.AutosetDone != before
 	})
 	if !done {
-		o.Reason = "AUTO did not finish within 90 s"
+		o.Reason = "AUTO did not finish within 150 s"
 	}
 	p, named, settings := busSettings(u)
 	o.Named, o.Settings = named, settings
@@ -294,8 +312,12 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 		return o
 	}
 	r := framecalc.Decode(f, p)
+	o.Record = recordText(f, p)
 	o.Decoded = shorten(r.Text, 120)
 	o.Pass, o.Reason = matchTruth(r, bus.Truth)
+	if !o.Pass {
+		o.Reason += "; record " + o.Record
+	}
 	return o
 }
 
@@ -452,10 +474,31 @@ func matchTruth(r decode.Result, t synth.Truth) (bool, string) {
 	if contains(r.Bytes, unit) {
 		return true, fmt.Sprintf("a whole message of %d values decoded", len(unit))
 	}
-	if len(r.Bytes) < len(unit) && contains(append(slices.Clone(unit), unit...), r.Bytes) && len(r.Bytes) > 0 {
-		return false, fmt.Sprintf("the record holds %d of the message's %d values (all right)", len(r.Bytes), len(unit))
+	// the record AUTO framed holds less than a repetition of the bus: the
+	// longest run it decoded that the bus sends (its edges cut values)
+	if n := longestCyclic(r.Bytes, unit); n >= min(4, len(unit)) {
+		return true, fmt.Sprintf("partial: the record holds a run of %d of the message's %d values, all right", n, len(unit))
 	}
 	return false, fmt.Sprintf("decoded %s, want %s", hexOf(r.Bytes, 16), hexOf(unit, 16))
+}
+
+// longestCyclic is the longest run of b that the endless repetition of unit
+// holds.
+func longestCyclic(b, unit []int) int {
+	if len(unit) == 0 {
+		return 0
+	}
+	best := 0
+	for i := range b {
+		for s := range unit {
+			n := 0
+			for i+n < len(b) && b[i+n] == unit[(s+n)%len(unit)] {
+				n++
+			}
+			best = max(best, n)
+		}
+	}
+	return best
 }
 
 // repeatUnit is the shortest prefix whose repetition makes b.

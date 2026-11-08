@@ -220,7 +220,7 @@ func afeLadder(a *afeRig, fail func(string, error)) {
 	for _, vd := range []float64{0.005, 0.02, 0.1, 0.5, 2} {
 		c := fmt.Sprintf("ladder/%gV", vd)
 		amp := 4 * vd
-		if err := a.setup(fmt.Sprintf("square,1e3,%g,0", amp), ":CHAN1:COUP DC", ":CHAN1:BWL FULL", ":CHAN1:PROB 1",
+		if err := a.setup(fmt.Sprintf("square,1e3,%g,0", amp), ":CHAN1:COUP DC", ":CHAN1:BWL FULL", ":CHAN1:PROB VAL,1",
 			fmt.Sprintf(":CHAN1:SCAL %g", vd), ":CHAN1:OFFS 0", ":TIM:SCAL 2E-4"); err != nil {
 			fail(c, err)
 			continue
@@ -256,13 +256,14 @@ func afeOffset(a *afeRig, fail func(string, error)) {
 	}
 }
 
-// afeCoupling: a quarter-duty square off its mid level, DC (the true mean),
-// AC (the mean blocked) and GND (no input).
+// afeCoupling: a quarter-duty square off its mid level, read as its top and
+// base: DC keeps the levels, AC blocks the true mean (0.2 V: the levels move
+// to +0.3 and -0.1 V, not to the swing's mid level), GND reads no input.
 func afeCoupling(a *afeRig, fail func(string, error)) {
 	const sig = "square,1e3,0.4,0.3,duty=0.25" // 0.1 … 0.5 V, mean 0.2 V
 	for _, cpl := range []string{"DC", "AC", "GND"} {
 		c := "coupling/" + cpl
-		if err := a.setup(sig, ":CHAN1:SCAL 0.1", ":CHAN1:OFFS 0", ":CHAN1:COUP "+cpl, ":TIM:SCAL 2E-4"); err != nil {
+		if err := a.setup(sig, ":CHAN1:SCAL 0.2", ":CHAN1:OFFS 0", ":CHAN1:COUP "+cpl, ":TIM:SCAL 2E-4"); err != nil {
 			fail(c, err)
 			continue
 		}
@@ -271,14 +272,38 @@ func afeCoupling(a *afeRig, fail func(string, error)) {
 			fail(c, err)
 			continue
 		}
-		in := map[string]float64{"DC": 0.2, "AC": 0, "GND": 0}[cpl]
-		want := m.reading(in)
-		if cpl == "GND" {
-			want = 0 // the PL's substitution: the trace at its position, no input
+		note := fmt.Sprintf("model coupling dc=%v gnd=%v", m.DC, m.GndSub)
+		tol := 0.006*0.4 + 4*m.NoiseV + 0.2/48 + 0.002
+		switch cpl {
+		case "GND":
+			a.check(c, "MEAN", 0, 0, tol, note) // the PL's substitution: the trace at its position, no input
+		default:
+			shift := map[string]float64{"DC": 0, "AC": 0.2}[cpl]
+			a.check(c, "TOP", m.reading(0.5-shift), 0.5-shift, tol, note)
+			a.check(c, "BASE", m.reading(0.1-shift), 0.1-shift, tol, "")
 		}
-		a.check(c, "MEAN", want, in, 0.006*0.4+4*m.NoiseV+0.1/48+0.002, fmt.Sprintf("model coupling dc=%v gnd=%v", m.DC, m.GndSub))
 	}
 	_, _ = scpiQuery(a.ctx, ":CHAN1:COUP DC") // a later case sets what it needs
+	afeClip(a, fail)
+}
+
+// afeClip: a square whose top lies past the converter's range reads at the
+// rail (code 4095), its base as it is.
+func afeClip(a *afeRig, fail func(string, error)) {
+	c := "clip/0.1V"
+	if err := a.setup("square,1e3,0.4,0.3,duty=0.25", ":CHAN1:SCAL 0.1", ":CHAN1:OFFS 0", ":CHAN1:COUP DC", ":TIM:SCAL 2E-4"); err != nil {
+		fail(c, err)
+		return
+	}
+	m, err := a.model(0)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	rail := (4095.0-2048)/480*m.VdivSet - m.VoffSet
+	tol := 0.1/48 + 4*m.NoiseV + 0.002
+	a.check(c, "TOP", rail, 0.5, tol, fmt.Sprintf("0.5 V in, the rail at %.3f V", rail))
+	a.check(c, "BASE", m.reading(0.1), 0.1, tol, "")
 }
 
 // afeBandwidth: a fast square's rise time with the 20 MHz limit on and off,
@@ -305,7 +330,7 @@ func afeBandwidth(a *afeRig, fail func(string, error)) {
 // afeProbe: a 20 Vpp tip voltage through a 10x probe, the scope told so.
 func afeProbe(a *afeRig, fail func(string, error)) {
 	c := "probe/10x"
-	if err := a.setup("square,1e3,20,0,probe=10", ":CHAN1:COUP DC", ":CHAN1:PROB 10", ":CHAN1:SCAL 5", ":CHAN1:OFFS 0", ":TIM:SCAL 2E-4"); err != nil {
+	if err := a.setup("square,1e3,20,0,probe=10", ":CHAN1:COUP DC", ":CHAN1:PROB VAL,10", ":CHAN1:SCAL 5", ":CHAN1:OFFS 0", ":TIM:SCAL 2E-4"); err != nil {
 		fail(c, err)
 		return
 	}
@@ -317,5 +342,5 @@ func afeProbe(a *afeRig, fail func(string, error)) {
 	// the model reads at the BNC (2 Vpp); the scope scales by the probe
 	want := 10 * (m.reading(1) - m.reading(-1))
 	a.check(c, "AMPL", want, 20, 0.006*20+40*m.NoiseV+5.0/48, "")
-	_, _ = scpiQuery(a.ctx, ":CHAN1:PROB 1") // back to 1x
+	_, _ = scpiQuery(a.ctx, ":CHAN1:PROB VAL,1") // back to 1x
 }
