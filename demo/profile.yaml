@@ -51,6 +51,12 @@ display:
   divs_h: 10
   divs_v: 8
 
+# The probe factors and bandwidth limits the product offers (the front
+# end's 1-2-5 range and its one 20 MHz limit, spec 06).
+vertical:
+  probes: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+  bw_limits: [full, 20M]
+
 # The panel's keys, knob pushes and knobs by the UI model's names (the
 # board's input names map spec 08's physical names to these); the vertical
 # knobs are shared by the channels on this panel.

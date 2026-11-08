@@ -18,7 +18,6 @@ import (
 	"github.com/labeth/open-dso-core/scopeapp"
 	core "github.com/labeth/open-dso-core/scpi"
 	"github.com/labeth/open-dso-core/scpi/host"
-	"github.com/labeth/open-dso-core/webserver"
 	"github.com/labeth/open-sds800xhd/app/internal/frontend"
 	"github.com/labeth/open-sds800xhd/app/internal/measurement"
 	"github.com/labeth/open-sds800xhd/app/internal/platform"
@@ -45,8 +44,21 @@ func Run() int {
 	log.Printf("start pid %d", os.Getpid())
 	b := scopeboard.New(log)
 	version := platform.VersionPrefix() + "." + appVersion
-	err = scopeapp.Run(ctx, b, scopeapp.Options{
-		Logf: log.Printf, Product: "open-sds800xhd " + version, Version: version,
+	err = scopeapp.Run(ctx, b, options(b, log, version))
+	if err != nil {
+		log.Printf("bring-up: %v", err)
+		return 1
+	}
+	return 0
+}
+
+// options are this scope's parts of the core's application: its SCPI
+// dialect on its LAN transports, its default state and state check, the
+// web page on the instrument's port (the core's web scope, with the
+// profile's probe and bandwidth lists) and a log of the measurements.
+func options(b hal.Board, log *platform.Log, version string) scopeapp.Options {
+	return scopeapp.Options{
+		Logf: log.Printf, Name: "open-sds800xhd", Product: "open-sds800xhd " + version, Version: version,
 		Defaults: scpi.Defaults, Check: checkState,
 		Publish: func(f *sample.Frame) { report(log, f) },
 		SCPI:    func(env *scopeapp.Env) (scopeapp.SCPI, error) { return scpiEngine(env, b, log, version) },
@@ -55,15 +67,7 @@ func Run() int {
 		// unit).
 		SCPIHost: host.Config{Raw: rawPort, Telnet: telnetPort, VXI11: true, Register: true},
 		Listen:   web.Port,
-		Web: func(env *scopeapp.Env) (webserver.Scope, error) {
-			return web.Scope(b, env.Model, env.Frames, version, env.UI, scopeapp.WebSetups{SharedSetups: env.Setups}, scopeapp.WebParts(env), env.ScreenPNG), nil
-		},
-	})
-	if err != nil {
-		log.Printf("bring-up: %v", err)
-		return 1
 	}
-	return 0
 }
 
 // scpiEngine is the core SCPI engine with this scope's dialect: *IDN? from

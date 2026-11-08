@@ -82,3 +82,33 @@ func si(v float64) string {
 	}
 	return fmt.Sprintf("%g µV", math.Round(v*1e9)/1e3)
 }
+
+// Probes are the probe factors the product offers: 1-2-5 steps across the
+// front end's range (any factor in the range is taken over SCPI).
+func Probes() []float64 {
+	var out []float64
+	for d := MinProbe; d <= MaxProbe; d *= 10 {
+		for _, m := range []float64{1, 2, 5} {
+			if v := d * m; v <= MaxProbe*(1+1e-9) {
+				out = append(out, sig3(v))
+			}
+		}
+	}
+	return out
+}
+
+// BWLimits are the bandwidth limits by name: one 20 MHz limit (spec 06).
+func BWLimits() []string { return []string{"full", "20M"} }
+
+// sig3 rounds v to three significant digits: the decades' products carry
+// binary noise (0.1·10 is not 1 in float).
+func sig3(v float64) float64 {
+	e := 1.0
+	for v*e < 100 {
+		e *= 10
+	}
+	for v*e >= 1000 {
+		e /= 10
+	}
+	return float64(int64(v*e+0.5)) / e
+}

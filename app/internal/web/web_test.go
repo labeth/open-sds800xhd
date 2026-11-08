@@ -15,6 +15,7 @@ import (
 	"github.com/labeth/open-dso-core/webserver"
 	"github.com/labeth/open-dso-core/webserver/webtest"
 
+	"github.com/labeth/open-sds800xhd/app/internal/frontend"
 	"github.com/labeth/open-sds800xhd/app/internal/scpi"
 )
 
@@ -47,7 +48,7 @@ func fakeScope(t *testing.T) webserver.Scope {
 	pc := panel.New(us.Engine(), us.Analog(), us.Levels(), us.Hardware(), us.Tdivs(), st.TimeDivS, t.Logf)
 	pc.SetFrameSource(frames.WithFrame)
 	go us.Watch(frames, ctx.Done())
-	return Scope(b, ctl, frames, "test", pc, nil, scopeweb.Parts{Bode: us.Bode()}, func() []byte { return []byte("\x89PNG") })
+	return Scope(b, ctl, frames, "test", pc, nil, scopeweb.Parts{Bode: us.Bode()})
 }
 
 // The page's web scope over a fake of this scope's shape passes the core's
@@ -58,7 +59,7 @@ func TestConformance(t *testing.T) {
 
 // The probe factors offered are 1-2-5 steps from 0.1x to 10000x.
 func TestProbes(t *testing.T) {
-	p := probes()
+	p := frontend.Probes()
 	if len(p) != 16 || p[0] != 0.1 || p[3] != 1 || p[6] != 10 || p[len(p)-1] != 10000 {
 		t.Fatalf("%v", p)
 	}
