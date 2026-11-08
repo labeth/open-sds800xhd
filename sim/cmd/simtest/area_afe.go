@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -84,8 +85,10 @@ func init() {
 					continue
 				}
 				outs = append(outs, o)
-				res = append(res, harness.Result{Area: "afe", Case: o.Case + "/" + o.Item, Pass: o.Pass,
-					Detail: fmt.Sprintf("measured %.4g, model %.4g ± %.2g (ideal %.4g) %s", o.Measured, o.Model, o.Tol, o.Ideal, o.Note)})
+				res = append(res, harness.Result{
+					Area: "afe", Case: o.Case + "/" + o.Item, Pass: o.Pass,
+					Detail: fmt.Sprintf("measured %.4g, model %.4g ± %.2g (ideal %.4g) %s", o.Measured, o.Model, o.Tol, o.Ideal, o.Note),
+				})
 			}
 			if len(res) == 0 {
 				res = append(res, harness.Fail("afe", "host", "the host checks reported nothing"))
@@ -104,7 +107,7 @@ func writeAFETable(e *env, outs []afeOutcome) {
 	_, _ = fmt.Fprintln(tw, "CASE\tREADING\tMEASURED\tMODEL\tTOL\tIDEAL\tRESULT\tNOTE") // a strings.Builder does not fail
 	pass := 0
 	for _, o := range outs {
-		v := "FAIL"
+		v := failWord
 		if o.Pass {
 			v, pass = passWord, pass+1
 		}
@@ -112,7 +115,7 @@ func writeAFETable(e *env, outs []afeOutcome) {
 	}
 	_ = tw.Flush()
 	fmt.Fprintf(&b, "\n%d/%d pass\n", pass, len(outs))
-	_ = os.MkdirAll(filepath.Join(e.root, "build"), 0o755)                                          //nolint:gosec // G301: a build output directory of the repository
+	_ = os.MkdirAll(filepath.Join(e.root, "build"), 0o755)                                       //nolint:gosec // G301: a build output directory of the repository
 	_ = os.WriteFile(filepath.Join(e.root, "build", "afe-table.txt"), []byte(b.String()), 0o644) //nolint:gosec // G306: a build report of the repository
 	fmt.Fprint(os.Stderr, "\n"+b.String())
 }
@@ -200,7 +203,7 @@ func afeHost(ctx context.Context, dir string) {
 		_ = a.out.Encode(afeOutcome{Case: c, Item: "setup", Note: err.Error()}) // a file the check reads
 	}
 	if !until(ctx, 120*time.Second, func() bool { var st map[string]any; return a.get("/api/status", &st) == nil }) {
-		fail("app", fmt.Errorf("the app's web server never answered"))
+		fail("app", errors.New("the app's web server never answered"))
 		return
 	}
 	if _, err := scpiQuery(ctx, ":MEAS:SIMP:SOUR C1"); err != nil {

@@ -60,7 +60,7 @@ type busOutcome struct {
 	Settings string `json:"settings"` // the BUS sheet's settings it filled in
 	Decoded  string `json:"decoded"`  // the decode of the app's record, shortened
 	Truth    string `json:"truth"`    // the generator's ground truth, shortened
-	Record   string `json:"record"` // the record decoded: length, interval, channels
+	Record   string `json:"record"`   // the record decoded: length, interval, channels
 	Pass     bool   `json:"pass"`
 	Reason   string `json:"reason"`
 }
@@ -196,7 +196,7 @@ func writeDecodeTable(e *env, area string, outs []busOutcome) {
 	_, _ = fmt.Fprintln(tw, "BUS\tON\tAUTO\tDECODED\tTRUTH\tRESULT\tREASON") // a strings.Builder does not fail
 	pass := 0
 	for _, o := range outs {
-		v := "FAIL"
+		v := failWord
 		if o.Pass {
 			v, pass = passWord, pass+1
 		}
@@ -208,7 +208,7 @@ func writeDecodeTable(e *env, area string, outs []busOutcome) {
 	}
 	_ = tw.Flush()
 	fmt.Fprintf(&b, "\n%d/%d pass\n", pass, len(outs))
-	_ = os.MkdirAll(filepath.Join(e.root, "build"), 0o755)                                          //nolint:gosec // G301: a build output directory of the repository
+	_ = os.MkdirAll(filepath.Join(e.root, "build"), 0o755)                                         //nolint:gosec // G301: a build output directory of the repository
 	_ = os.WriteFile(filepath.Join(e.root, "build", area+"-table.txt"), []byte(b.String()), 0o644) //nolint:gosec // G306: a build report of the repository
 	fmt.Fprint(os.Stderr, "\n"+b.String())
 }
