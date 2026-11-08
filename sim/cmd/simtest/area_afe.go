@@ -175,6 +175,10 @@ func (a *afeRig) setup(signal string, scpi ...string) error {
 		}
 	}
 	time.Sleep(1500 * time.Millisecond)
+	// two published frames after the change: the measurement then reads
+	// frames of the new setup, not two equal readings of an older one
+	a.flowing(10 * time.Second)
+	a.flowing(10 * time.Second)
 	return nil
 }
 
