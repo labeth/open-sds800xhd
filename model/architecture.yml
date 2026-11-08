@@ -155,9 +155,9 @@ architecture:
     name: Supervisor board side
     group: FG-HD-OPERATIONS
     prose: 'The board side of the core''s supervisor, its manual controller and the owner''s boot target (next boot:
-      open or vendor firmware). (ota/internal/board, ota/cmd/otactl, ota/boottarget)'
+      open or vendor firmware, the core''s boottarget). (ota/internal/board, ota/cmd/otactl)'
     tags:
-    - package:ota/internal/board, ota/cmd/otactl, ota/boottarget
+    - package:ota/internal/board, ota/cmd/otactl
   - id: FU-HD-CENSUS
     name: Census
     group: FG-HD-OPERATIONS
@@ -168,9 +168,10 @@ architecture:
     name: Write guard
     group: FG-HD-OPERATIONS
     prose: 'The one write guard every file, device-node and /dev/mem write of the unit goes through: p12''s root only,
-      never the boot, kernel, vendor or factory partitions, a U-Boot environment, raw eMMC, eFuses or BBRAM. (ota/fsguard)'
+      never the boot, kernel, vendor or factory partitions, a U-Boot environment, raw eMMC, eFuses or BBRAM: this unit''s
+      policy for the core''s fsguard, imported by the app and the ota module. (app/hdguard)'
     tags:
-    - package:ota/fsguard
+    - package:app/hdguard
   - id: FU-HD-BOARDTEST
     name: Board tests
     group: FG-HD-VERIFICATION

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/labeth/open-dso-core/fsguard"
 	"github.com/labeth/open-sds800xhd/app/internal/mmio"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
 )
 
 // A writable window over the eFuse, BBRAM, CSU or SD/eMMC controllers is

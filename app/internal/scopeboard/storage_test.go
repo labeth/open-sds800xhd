@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labeth/open-dso-core/fsguard"
 	"github.com/labeth/open-dso-core/hal"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // guardedDir is a temporary directory the write guard is rooted at for one
@@ -17,7 +18,7 @@ import (
 func guardedDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	restore, err := fsguard.SetRoot(dir)
+	restore, err := hdguard.FS.SetRoot(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

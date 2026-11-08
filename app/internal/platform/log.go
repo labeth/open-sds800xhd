@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 )
 
 // maxLogBytes is where the log file is rotated to <name>.1.
@@ -33,10 +33,10 @@ func OpenLog(name string) (*Log, error) {
 }
 
 func (l *Log) open() error {
-	if err := fsguard.MkdirAll(filepath.Dir(l.path)); err != nil {
+	if err := hdguard.FS.MkdirAll(filepath.Dir(l.path)); err != nil {
 		return err
 	}
-	f, err := fsguard.OpenFile(l.path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
+	f, err := hdguard.FS.OpenFile(l.path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (l *Log) Printf(format string, a ...any) {
 	if l.size+int64(len(line)) > maxLogBytes {
 		_ = l.f.Close()
 		l.f = nil
-		_ = fsguard.Rename(l.path, l.path+".1")
+		_ = hdguard.FS.Rename(l.path, l.path+".1")
 		if l.open() != nil {
 			return
 		}
@@ -91,7 +91,7 @@ const markNode = "/dev/simd_mark"
 // Mark records a milestone in the test environment's trace; on a unit it does
 // nothing.
 func Mark(text string) {
-	if fsguard.CheckDevice(markNode) != nil {
+	if hdguard.FS.CheckDevice(markNode) != nil {
 		return
 	}
 	f, err := os.OpenFile(markNode, os.O_WRONLY, 0)

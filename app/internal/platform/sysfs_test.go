@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-dso-core/fsguard"
 )
 
 // Attribute writes to raw eMMC, eFuse and nvmem paths are refused before

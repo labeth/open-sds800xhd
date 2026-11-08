@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/app/internal/platform"
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
 )
 
 // lineProber is a channel whose mean code is a straight line in the DAC
@@ -201,7 +201,7 @@ func modelFE(t *testing.T, part platform.ADCPart, overflow int) (*FrontEnd, *int
 func guardedDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	restore, err := fsguard.SetRoot(dir)
+	restore, err := hdguard.FS.SetRoot(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

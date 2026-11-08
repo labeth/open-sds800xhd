@@ -170,7 +170,7 @@ func TestWeb(t *testing.T) {
 	for _, body := range []string{
 		`{"control":"vdiv","ch":1,"value":0.3}`,
 		`{"control":"vdiv","ch":9,"value":1}`,
-		`{"control":"trigtype","value":1}`,
+		`{"control":"trigtype","value":7}`, // no such type: 0 edge, 1 pulse, 2 slope, 3 video
 	} {
 		out := set(body)
 		c.check(out["ok"] == false && out["err"] != "", "%s refused: %v", body, out["err"])

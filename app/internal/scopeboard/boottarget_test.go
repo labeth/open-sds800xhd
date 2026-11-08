@@ -8,15 +8,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labeth/open-dso-core/boottarget"
 	"github.com/labeth/open-dso-core/hal"
+	"github.com/labeth/open-sds800xhd/app/internal/platform"
 )
 
 // :SYSTem:BOOT and /api/boot write and remove the disable file the launch
 // hook honours, through the write guard.
 // TRLC-LINKS: REQ-HD-002, REQ-HD-016
 func TestBootTargetExtension(t *testing.T) {
+	if bt, ok := (&Board{}).BootTarget(); !ok || bt != bootSwitch(platform.OpenDir) {
+		t.Fatalf("the board's boot target %+v: want the disable file in %s", bt, platform.OpenDir)
+	}
 	dir := filepath.Join(guardedDir(t), "open")
-	x := bootTarget(dir)
+	x := boottarget.Extension(bootSwitch(dir))
 	h := x.SCPI[0]
 	disabled := func() bool { _, err := os.Stat(filepath.Join(dir, "disable")); return err == nil }
 	query := func() string { b, _ := h.Query(""); return string(b) }

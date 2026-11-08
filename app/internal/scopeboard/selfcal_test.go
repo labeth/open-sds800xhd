@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/labeth/open-dso-core/boottarget"
 	"github.com/labeth/open-dso-core/hal"
 )
 
@@ -18,7 +19,7 @@ func TestSelfCalBeforeBringUp(t *testing.T) {
 		t.Fatalf("err %v, want a refusal", err)
 	}
 	for _, x := range b.Extensions() {
-		if x.Feature != bootTargetFeature {
+		if x.Feature != boottarget.Feature {
 			t.Errorf("extension %q", x.Feature)
 		}
 	}

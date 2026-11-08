@@ -18,12 +18,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/labeth/open-sds800xhd/ota/fsguard"
+	"github.com/labeth/open-sds800xhd/app/hdguard"
 	"github.com/labeth/open-sds800xhd/ota/internal/install"
 )
 
 const (
-	p12Dev = fsguard.P12Device
+	p12Dev = hdguard.P12Device
 	mnt    = "/mnt"
 )
 
@@ -95,10 +95,10 @@ func guardP12() error {
 		return err
 	}
 	defer func() { _ = m.Close() }() // read only: nothing to flush
-	if err := fsguard.CheckInstallMounts(m, mnt); err != nil {
+	if err := hdguard.FS.CheckInstallMounts(m, mnt); err != nil {
 		return err
 	}
-	_, err = fsguard.SetRoot(mnt)
+	_, err = hdguard.FS.SetRoot(mnt)
 	return err
 }
 

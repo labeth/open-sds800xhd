@@ -16,12 +16,12 @@ the staged first contact with a unit.
 
 | Path | What |
 |---|---|
-| `app/` | Go module `github.com/labeth/open-sds800xhd/app`: the scope app, Go standard library, open-dso-core and this repository's write guard (`ota/fsguard`) only |
+| `app/` | Go module `github.com/labeth/open-sds800xhd/app`: the scope app, Go standard library and open-dso-core only |
 | `app/cmd/app` | the one device main; the launch hook on p12 starts it (spec 01 §12) |
 | `app/internal/` | the hardware code of this scope: register planes (`mmio`), platform and takeover, front end and ADCs, timebase arithmetic, trigger, map engine, acquisition and readout |
 | `app/internal/scopeboard` | the board interface of open-dso-core (package `hal`) implemented over those packages; trigger node configurations are the core's `hal.TrigStage` fields and `hal/prototrig` |
 | `ota/boot/extra.sh` | the launch hook on p12 that starts the app (spec 01 §12) |
-| `ota/fsguard` | the one write guard every file, device-node and `/dev/mem` write goes through: p12's root only, never the boot, kernel, vendor or factory partitions, a U-Boot environment, raw eMMC, eFuses or BBRAM ([`SAFETY.txt`](SAFETY.txt)) |
+| `app/hdguard` | this unit's policy for open-dso-core's write guard (`fsguard`), which every file, device-node and `/dev/mem` write of the app and of `ota/` goes through: p12's root only, never the boot, kernel, vendor or factory partitions, a U-Boot environment, raw eMMC, eFuses or BBRAM ([`SAFETY.txt`](SAFETY.txt)); the `ota` module imports it from the app module |
 | `sim/` | runs the app in the tier-1 simulator of a private reference workspace; `sim/harness` and `sim/cmd/simtest` are the simulator parity harness, `sim/lab` and `sim/cmd/simlab` the virtual bench (module `github.com/labeth/open-sds800xhd/sim`) |
 | `app/internal/boardtest` | the in-guest board tests the harness runs (build tag `simboard`) |
 | `specs/` | the specifications |
