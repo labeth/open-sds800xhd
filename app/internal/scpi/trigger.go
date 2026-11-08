@@ -401,16 +401,20 @@ func (d *dialect) runControl() []core.Command {
 				return d.force(c)
 			}
 			sw := map[string]hal.Sweep{"SINGLE": hal.Single, "NORMAL": hal.NormalSweep, "AUTO": hal.Auto}[strings.ToUpper(modes[i])]
-			return change(c, func(s *core.State) error { s.Sweep, s.Running = sw, true; return nil })
+			return setRun(c, sw, true)
 		}),
 		q(":TRIGger:MODE?", func(c *core.Call, s core.State) {
 			c.Text(map[hal.Sweep]string{hal.Auto: "AUTO", hal.NormalSweep: "NORMal", hal.Single: "SINGle"}[sweepOf(s)])
 		}),
 		d.bind(":TRIGger:RUN", func(c *core.Call) error {
+			if rc, ok := c.Instrument().(runControl); ok {
+				rc.SetRunning(true)
+				return nil
+			}
 			return change(c, func(s *core.State) error { s.Running = true; return nil })
 		}),
 		d.bind(":TRIGger:STOP", func(c *core.Call) error {
-			return change(c, func(s *core.State) error { s.Running = false; return nil })
+			return setRun(c, hal.Auto, false)
 		}),
 		d.bind(":TRIGger:STATus?", func(c *core.Call) error {
 			c.Text(c.Instrument().Acquisition().String())

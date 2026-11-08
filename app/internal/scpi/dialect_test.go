@@ -408,3 +408,45 @@ func TestMaskTest(t *testing.T) {
 		t.Fatal("operate off leaves the test on")
 	}
 }
+
+// A trigger mode written after a single shot taken from AUTO is the mode
+// the user asked for: the dialect drives the model's run control, so NORM
+// is not read as RUN bringing back the mode the shot replaced.
+func TestModeAfterSingleShot(t *testing.T) {
+	for _, form := range []struct{ single, norm, auto, query string }{
+		{":TRIG:MODE SINGLE", ":TRIG:MODE NORM", ":TRIG:MODE AUTO", ":TRIG:MODE?"},
+		{"TRMD SINGLE", "TRMD NORM", "TRMD AUTO", ":TRIG:MODE?"},
+		{"ARM", "TRMD NORM", "TRMD AUTO", ":TRIG:MODE?"},
+	} {
+		m := instrument.New(Defaults(4), nil)
+		d, err := Dialect(Config{Identity: Identity{Model: "SDS824X HD"}, Channels: 4})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e := core.New(d, m)
+		shot := func() { // the shot fires: the owner stops the run, the shot spent
+			s, gen := m.Wanted()
+			s.Running, s.Single = false, false
+			m.Applied(s, gen)
+		}
+		run(t, e, [][2]string{{form.query, "AUTO\n"}})
+		e.Exec([]byte(form.single))
+		run(t, e, [][2]string{{form.query, "SINGle\n"}})
+		shot()
+		e.Exec([]byte(form.norm))
+		if s := m.State(); s.Sweep != hal.NormalSweep || !s.Running || s.Single {
+			t.Errorf("%s after %s: sweep %v running %v single %v, want NORM running", form.norm, form.single, s.Sweep, s.Running, s.Single)
+		}
+		e.Exec([]byte(form.single))
+		shot()
+		e.Exec([]byte(form.auto))
+		if s := m.State(); s.Sweep != hal.Auto || !s.Running {
+			t.Errorf("%s after %s: sweep %v running %v, want AUTO running", form.auto, form.single, s.Sweep, s.Running)
+		}
+		e.Exec([]byte(":TRIG:STOP"))
+		e.Exec([]byte(":TRIG:RUN"))
+		if s := m.State(); s.Sweep != hal.Auto || !s.Running {
+			t.Errorf("STOP;RUN: sweep %v running %v, want AUTO running", s.Sweep, s.Running)
+		}
+	}
+}

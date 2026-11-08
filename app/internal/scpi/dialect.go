@@ -188,6 +188,42 @@ func change(c *core.Call, fn func(s *core.State) error) error {
 	return nil
 }
 
+// runControl is the instrument model's run control (instrument.Controls):
+// its setters carry the meaning of the press they stand for, which a raw
+// Change of Sweep and Running cannot (a NORM written after a single shot
+// would read as RUN and bring back the mode the shot replaced).
+type runControl interface {
+	SetRunning(on bool)
+	SetNorm(on bool)
+	SetSingle()
+}
+
+// setRun sets the trigger mode and run state as the panel's keys do: STOP
+// (running false), SINGLE (a shot armed), or AUTO/NORM running. An
+// instrument without the explicit setters takes the raw change.
+func setRun(c *core.Call, sw hal.Sweep, running bool) error {
+	rc, ok := c.Instrument().(runControl)
+	if !ok {
+		return change(c, func(s *core.State) error {
+			s.Running = running
+			if running {
+				s.Sweep = sw
+			}
+			return nil
+		})
+	}
+	switch {
+	case !running:
+		rc.SetRunning(false)
+	case sw == hal.Single:
+		rc.SetSingle()
+	default:
+		rc.SetNorm(sw == hal.NormalSweep)
+		rc.SetRunning(true)
+	}
+	return nil
+}
+
 // changeCh stages fn on channel ch.
 func changeCh(c *core.Call, ch int, fn func(ch *hal.Channel)) error {
 	return change(c, func(s *core.State) error {
