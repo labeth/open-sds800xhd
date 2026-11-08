@@ -149,6 +149,7 @@ const (
 
 // dmaStatusErr is the error of an n-byte block whose transfer ended with
 // status sr, nil when sr has no error bit.
+// TRLC-LINKS: REQ-HD-005
 func dmaStatusErr(n int, sr uint32) error {
 	if sr&dmaErrBits == 0 {
 		return nil

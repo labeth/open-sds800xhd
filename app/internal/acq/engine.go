@@ -219,6 +219,7 @@ const reloadEvery = 500 * time.Millisecond
 // back what was written is UNVERIFIED: the 0x1EF check is used only when
 // it read back the start-up's 1. It reads the PL at most every
 // reloadEvery; a caller then runs Restart.
+// TRLC-LINKS: REQ-HD-004
 func (e *Engine) Reloaded() (bool, string) {
 	if time.Since(e.checkAt) < reloadEvery {
 		return false, ""
@@ -236,6 +237,7 @@ func (e *Engine) Reloaded() (bool, string) {
 // Restart runs the start-up again with the settings last committed, after
 // a PL reload: every register the firmware set is lost (spec 01 §12.2 step
 // 8: never rely on state the PL holds).
+// TRLC-LINKS: REQ-HD-004
 func (e *Engine) Restart() {
 	s := e.cur
 	e.recency, e.armed, e.rolling, e.redrawn = nil, false, false, false
