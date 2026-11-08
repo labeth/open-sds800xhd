@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labeth/open-dso-core/engine"
 	"github.com/labeth/open-dso-core/hal"
+	"github.com/labeth/open-dso-core/instrument"
 	"github.com/labeth/open-dso-core/measure"
 	"github.com/labeth/open-dso-core/sample"
 	core "github.com/labeth/open-dso-core/scpi"
@@ -218,19 +220,21 @@ func TestSettings(t *testing.T) {
 		{":TRIG:EDGE:HOLD TIME;HOLD?;HLDT?", "TIME;8.00E-08\n"},
 		{":TRIG:EDGE:HLDT 1E-6;HLDT?", "1.00E-06\n"},
 		{":TRIG:TYPE?", "EDGE\n"},
-		{":TRIG:TYPE PULSE", ""},
+		{":TRIG:TYPE PULSE;TYPE?", "PULSE\n"},
+		{":TRIG:TYPE SENT;TYPE?", "PULSE\n"},
+		{":TRIG:TYPE EDGE", ""},
 		{":TRIG:STAT?", "Trig'd\n"},
 		{":TRIG:STOP;:TRIG:STAT?", "Stop\n"},
-		{":SYST:ERR?;ERR?;ERR?", `-222,"Data out of range";-200,"Execution error";-221,"Settings conflict"` + "\n"},
+		{":SYST:ERR?;ERR?;ERR?", `-222,"Data out of range";-200,"Execution error";-221,"Settings conflict;SENT trigger: the factory PL image has no trigger hardware for this protocol: decode only"` + "\n"},
 	})
 	want := hal.Channel{On: true, Invert: true, VoltsDiv: 10, Probe: 10, Coupling: hal.AC, BWLimit: 20e6, Impedance: 1e6, SkewS: 1e-9}
 	if got := x.s.Channels[1]; !reflect.DeepEqual(got, want) {
 		t.Errorf("C2 = %+v, want %+v", got, want)
 	}
-	tr := x.s.Trigger
+	tr, edge := x.s.Trigger, x.s.Trigger.Active()
 	if x.forced != 1 || x.s.DelayS != -1e-6 || x.s.Depth != 1_000_000 || x.s.Mode != hal.PeakDetect ||
-		tr.Slope != hal.Falling || tr.Coupling != hal.TrigHFReject || !tr.NoiseReject || tr.HoldoffS != 1e-6 ||
-		tr.Source.Kind != hal.ACLine || x.s.Sweep != hal.NormalSweep || x.s.Running {
+		tr.Slope() != hal.Falling || edge.Coupling != hal.TrigHFReject || !edge.NoiseReject || edge.HoldoffS != 1e-6 ||
+		tr.Source().Kind != hal.ACLine || x.s.Sweep != hal.NormalSweep || x.s.Running {
 		t.Errorf("state %+v, forced %d", x.s, x.forced)
 	}
 	run(t, e, [][2]string{{"*RST;:TRIG:MODE?;:CHAN2:SWIT?", "AUTO;OFF\n"}})
@@ -321,4 +325,86 @@ func FuzzDialect(f *testing.F) {
 		e, _ := newEngine(t)
 		e.Exec([]byte(s))
 	})
+}
+
+// Every trigger type's settings read back as they were set, whether the
+// type runs or not, and TYPE picks the type that runs.
+func TestTriggerTypesReadBack(t *testing.T) {
+	e, x := newEngine(t)
+	e.Exec([]byte(":CHAN2:SWIT ON;:CHAN3:SWIT ON;:CHAN4:SWIT ON"))
+	run(t, e, [][2]string{
+		{":TRIG:PULS:SOUR C2;POL NEG;LEV 0.25;LIM INN;TLOW 1E-7;TUPP 1E-6", ""},
+		{":TRIG:PULS:SOUR?;POL?;LEV?;LIM?;TLOW?;TUPP?", "C2;NEGative;2.50E-01;INNer;1.00E-07;1.00E-06\n"},
+		{":TRIG:TYPE?", "EDGE\n"},
+		{":TRIG:SLOP:HLEV 0.5;LLEV -0.5;HLEV?;LLEV?;HOLD TIME;HLDT 1E-6;HOLD?", "5.00E-01;-5.00E-01TIME\n"},
+		{":TRIG:WIND:CLEV 0.1;DLEV 0.2;HLEV?;LLEV?;CLEV?;DLEV?", "3.00E-01;-1.00E-01;1.00E-01;2.00E-01\n"},
+		{":TRIG:DROP:TIME 1E-6;TYPE EDGE;TIME?;TYPE?", "1.00E-06;EDGE\n"},
+		{":TRIG:NEDG:EDGE 7;IDLE 1E-7;EDGE?;IDLE?", "7;1.00E-07\n"},
+		{":TRIG:VID:STAN PAL;SYNC SEL;LINE 20;FRAT 50Hz;STAN?;SYNC?;LINE?;FRAT?", "PAL;SELect;20;50Hz\n"},
+		{":TRIG:PATT:INP H,L,X,H;LEV C2,-0.5;LOG NOR;INP?;LEV? C2;LOG?", "H,L,X,H,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X;-5.00E-01;NOR\n"},
+		{":TRIG:QUAL:TYPE EDGE_DLY,FALL;QS C3;QLEV 0.3;TYPE?;QS?;QLEV?", "EDGE_DLY,FALLing;C3;3.00E-01\n"},
+		{":TRIG:DEL:SOUR H,X,L,X;SOUR2 C3;LEV2 0.05;SOUR?;SOUR2?;LEV2?", "H,X,L,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X;C3;5.00E-02\n"},
+		{":TRIG:SHOL:TYPE HOLD;DS C4;DTHR 0.2;LEV HIGH;TYPE?;DS?;DTHR?;LEV?", "HOLD;C4;2.00E-01;HIGH\n"},
+		{":TRIG:IIC:COND 10ADDR;ADDR 1024;DATA 18;DAT2 256;COND?;ADDR?;DATA?;DAT2?", "10ADDRess;1024;18;256\n"},
+		{":TRIG:SPI:CSTY TIM,1E-6;DLEN 4;DATA 1,0,X,1;CSTY?;DLEN?", "TIMeout,1.00E-06;4\n"},
+		{":TRIG:SPI:TTYP MOSI;MOSIS C3;MISOS C2;TTYP?;MOSIS?;MISOS?", "MOSI;C3;C2\n"},
+		{":TRIG:UART:BAUD CUST,250000;BAUD?;TTYP TX;TXS C4;TXS?;RXS?", "CUSTom,250000C4;C1\n"},
+		{":TRIG:CAN:BAUD 1Mbps;IDL 29BITS;ID 536870912;BAUD?;IDL?;ID?", "1Mbps;29BITS;536870912\n"},
+		{":TRIG:LIN:ID 64;STAN 0;ID?;STAN?", "64;0\n"},
+		{":TRIG:TYPE RUNT;TYPE?", "RUNT\n"},
+		{":TRIG:TYPE A429;TYPE?", "RUNT\n"},
+		{":SYST:ERR?", "-221,\"Settings conflict;A429 trigger: the factory PL image has no trigger hardware for this protocol: decode only\"\n"},
+		{":SYST:ERR?", "0,\"No error\"\n"},
+	})
+	if x.s.Trigger.Type != instrument.TrigRunt {
+		t.Fatalf("type %v", x.s.Trigger.Type)
+	}
+	if spec := x.s.TriggerSpec(); spec.Stages[0].Node != hal.NodeRunt {
+		t.Fatalf("spec %+v", spec)
+	}
+}
+
+// The pass/fail commands drive the software mask test: create builds a
+// mask from the source's waveform, the function and operate switches run
+// it, stop on fail latches, counts read back, other pass criteria and mask
+// files are refused with the reason.
+func TestMaskTest(t *testing.T) {
+	x := &fake{s: Defaults(4), run: core.Triggered}
+	w := square(1000)
+	x.f = &sample.Frame{SampleS: 1e-9, TriggerAt: 500, WinPoints: 1000, Traces: []sample.Trace{{
+		Ch: 0, Format: sample.CodeFormat{Bits: 12, Storage: sample.U16, Shift: 4, Mid: 0x8000},
+		Codes16: w, Valid: len(w), Scale: sample.Scale{PerCode: 1.0 / 7680, Zero: 0x8000}, CodesPerDiv: 7680,
+	}}}
+	mask := engine.NewFrameMask()
+	d, err := Dialect(Config{Channels: 4, Mask: mask})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := core.New(d, x)
+	run(t, e, [][2]string{
+		{":MTES:SOUR C1;:MTES:MASK:CRE 0.2,0.5", ""},
+		{":MTES ON;:MTES:OPER ON;:MTES:FUNC:SOF ON;:MTES?;:MTES:OPER?;:MTES:FUNC:SOF?", "ON;ON;ON\n"},
+		{":MTES:TYPE?", "ALL_IN\n"},
+		{":MTES:TYPE ANY_OUT", ""},
+		{":MTES:MASK:LOAD INT,1", ""},
+		{":SYST:ERR?;ERR?", "-221,\"Settings conflict;mask test ANY_OUT: the mask test passes a frame only with every sample inside the mask (ALL_IN)\";-221,\"Settings conflict;mask load: this firmware keeps no mask files; :MTESt:MASK:CREate builds one\"\n"},
+	})
+	if fail, _ := mask.Test(x.f, .5, false); fail {
+		t.Fatal("the waveform the mask was made from fails it")
+	}
+	bad := *x.f
+	bad.Traces = []sample.Trace{x.f.Traces[0]}
+	bad.Traces[0].Codes16 = append([]uint16(nil), w...)
+	bad.Traces[0].Codes16[600] = 0x8000 + 4*7680
+	if _, stop := mask.Test(&bad, .5, false); !stop {
+		t.Fatal("a sample 4 divisions out passes, or stop on fail did not latch")
+	}
+	run(t, e, [][2]string{{":MTES:COUN?", "FAIL,1,PASS,1,TOTAL,2\n"}, {":MTES:RES;:MTES:COUN?", "FAIL,0,PASS,0,TOTAL,0\n"}})
+	if k := mask.Counts(); k.Mode != engine.MaskStopFail || !k.Set {
+		t.Fatalf("counts %+v", k)
+	}
+	run(t, e, [][2]string{{":MTES:OPER OFF", ""}})
+	if mask.Counts().Mode != engine.MaskOff {
+		t.Fatal("operate off leaves the test on")
+	}
 }

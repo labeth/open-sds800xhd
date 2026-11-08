@@ -30,20 +30,9 @@ import (
 // that the UI layer leaves the waveform plane transparent and draws the
 // rest, and that what a key or knob set reached the board and reads the
 // same over SCPI and the web.
-func init() { //nolint:dupl // each host-driven area's spec is its own
-	register(area{
-		name: "ui", title: "on-device UI: keys, knobs, touch, fb0, settings reach the board",
-		runs: func(e *env) []harness.Spec {
-			return []harness.Spec{{
-				Name: e.prefix + "ui", Secs: 420, Ports: true, SimdArgs: uiSignals,
-				App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
-				Host: func(ctx context.Context, dir string) { uiHost(ctx, dir) },
-			}}
-		},
-		check: func(_ *env, runs []*harness.Run) []harness.Result {
-			return hostResultsOf(runs[0], "ui", uiHostFile)
-		},
-	})
+func init() {
+	register(appHostArea("ui", "on-device UI: keys, knobs, touch, fb0, settings reach the board", 420, uiSignals, uiHostFile,
+		func(ctx context.Context, dir string) { uiHost(ctx, dir) }))
 }
 
 // modeWorkspace is the UI model's mode with no sheet or picker open.

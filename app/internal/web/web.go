@@ -23,7 +23,7 @@ const Port = ":80"
 // shared UI model ui (the sheets, the panel and the phone remote; nil for
 // none), the setup memory the panel shares (nil: the board's setups
 // store holding instrument states) and the core's parts it serves
-// (scopeapp.WebParts: the frequency response).
+// (scopeapp.WebParts: the frequency response, the software mask test).
 func Scope(b hal.Board, ctl *instrument.Model, frames *fanout.Fanout[sample.Frame], version string, ui webserver.UIModel, setups webserver.Setups, parts scopeweb.Parts) webserver.Scope {
 	return scopeweb.New(scopeweb.Config{
 		Board: b, Instrument: ctl, Frames: frames, Version: version, Product: "open-sds800xhd", UI: ui, Setups: setups, Parts: parts,

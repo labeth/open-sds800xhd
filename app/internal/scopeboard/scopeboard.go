@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"image"
 	"strconv"
+	"time"
 
 	"github.com/labeth/open-dso-core/hal"
 	"github.com/labeth/open-dso-core/sample"
@@ -29,23 +30,24 @@ type Board struct {
 	id       platform.Identity
 	vendorFW string // the vendor system's version (boot.rootfs.kernel), read at bring-up
 
-	regs   *board.Board
-	dma    *acq.DMA
-	eng    *acq.Engine
-	staged acq.Settings // what the next Arm commits
-	state  hal.AcqState
-	rerun  bool // the next Arm follows a stop or a change: start delay, pending calibration
-	forced bool // a forced trigger was issued since the last arm
-	seq    uint64
-	epoch  uint32     // bumped by every bring-up: record IDs of an earlier run never match
-	stored bool       // a halted record is in the record memory and may be read
-	status hal.Status // of the stored record
-	stream *streamer  // the roll stream while it runs
-	errs   struct{ readouts, arms int }
-	scope  uint64 // PL device DNA
-	ui     ui     // UI layer, capture, front panel (display.go, input.go)
-	ctr    *counter.Counter
-	open   *openBackend // stage 2: the open PL (openpl.go); nil on the vendor image
+	regs    *board.Board
+	dma     *acq.DMA
+	eng     *acq.Engine
+	staged  acq.Settings // what the next Arm commits
+	state   hal.AcqState
+	rerun   bool      // the next Arm follows a stop or a change: start delay, pending calibration
+	forced  bool      // a forced trigger was issued since the last arm
+	armedAt time.Time // when the last Arm armed the PL
+	seq     uint64
+	epoch   uint32     // bumped by every bring-up: record IDs of an earlier run never match
+	stored  bool       // a halted record is in the record memory and may be read
+	status  hal.Status // of the stored record
+	stream  *streamer  // the roll stream while it runs
+	errs    struct{ readouts, arms int }
+	scope   uint64 // PL device DNA
+	ui      ui     // UI layer, capture, front panel (display.go, input.go)
+	ctr     *counter.Counter
+	open    *openBackend // stage 2: the open PL (openpl.go); nil on the vendor image
 }
 
 // New returns the board before bring-up. log is the app's log.

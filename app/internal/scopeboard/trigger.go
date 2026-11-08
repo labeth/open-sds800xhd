@@ -34,6 +34,7 @@ var trigCaps = hal.TrigCaps{
 		hal.NodeEdge: {
 			Slopes: []hal.Slope{hal.Rising, hal.Falling, hal.Either}, QualOps: allQualOps,
 			MinS: minTimeS, MaxS: maxTimeS, Broken: []string{"interval either", "qualified either", "nth edge either with idle time"},
+			Gate: true, MaxCount: 65535,
 		},
 		hal.NodePulse:     {Slopes: twoSlopes, QualOps: allQualOps, MinS: minTimeS, MaxS: maxTimeS},
 		hal.NodeSlope:     {Slopes: twoSlopes, QualOps: allQualOps, MinS: minTimeS, MaxS: maxTimeS},
@@ -303,8 +304,18 @@ func configOf(st hal.TrigStage) error {
 	return nil
 }
 
+// noOp is st without a time condition whose operator is zero: the HAL's
+// "no condition, limits kept".
+func noOp(st hal.TrigStage) hal.TrigStage {
+	if st.Qual != nil && st.Qual.Op == 0 {
+		st.Qual = nil
+	}
+	return st
+}
+
 // oneStage converts a single-stage trigger.
 func (b *Board) oneStage(ts *trigger.Settings, st hal.TrigStage) error {
+	st = noOp(st)
 	if err := configOf(st); err != nil {
 		return err
 	}
@@ -501,6 +512,7 @@ func (b *Board) edgeStage(ts *trigger.Settings, st hal.TrigStage) error {
 // delayStages is the two-stage form: a pattern (event A), then an edge
 // (event B) within the second stage's time condition.
 func (b *Board) delayStages(ts *trigger.Settings, a, e hal.TrigStage) error {
+	a, e = noOp(a), noOp(e)
 	if err := errors.Join(configOf(a), configOf(e)); err != nil {
 		return err
 	}

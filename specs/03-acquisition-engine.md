@@ -103,6 +103,14 @@ configured PL runs on undefined settings.
 
 Exact pre/post-trigger behaviour of the auto timeout and holdoff are in `05`.
 
+No register tells a frame that met its trigger condition from one the AUTO sweep completed through its
+timeout: both reach DONE the same way. A replacement that reports the trigger state (`:TRIGger:STATus?`
+Trig'd or Auto) needs a rule of its own. This firmware takes an AUTO frame that reached DONE at least the
+trigger timeout after its arm (TR_TIMEOUT of `05` §7 at the 4 ns tick, 100 ms by default) as
+auto-triggered, and any faster frame as triggered (**UNVERIFIED**: which of 0x00C/0x00D and 0x02A/0x02B
+times the auto trigger, and the tick, are not measured; a trigger that comes later than the timeout
+reads as Auto).
+
 ### 3.2 Arm sequence (exact)
 
 0. 0x115 = 0 (draw stop released, §3.3 step 7). If the ADC calibration-pending flag is set, run the ADC internal
