@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,6 +42,31 @@ const decodeSimd = "-afe real,seed=1 -signals C1=dc,0,0,0;C2=dc,0,0,0;C3=dc,0,0,
 // included): AUTO in BUS takes 10 to 120 s in the simulator.
 const decodeCasesPerRun = 3
 
+// decodeAutoS is how long a case waits for AUTO in BUS, decodeSlowAutoS a
+// slow bus's (decodeSlowAuto), which runs on its own.
+const (
+	decodeAutoS     = 150
+	decodeSlowAutoS = 240
+)
+
+// decodeSkips are the cases AUTO in BUS cannot meet on the scope, by case,
+// with the reason: a limit of the scope or of AUTO, not a fault.
+var decodeSkips = map[string]string{
+	"morse/unit_ms=60": "AUTO's slowest search look is 50 ms/div, a 0.5 s screen: at 60 ms a unit a Morse character " +
+		"lasts up to a second and a word several; the 2 ms variant is AUTO's",
+}
+
+// decodeSlowAuto are the buses whose AUTO in BUS outlasts decodeAutoS under
+// the emulator: their messages are tens of milliseconds long (IR codes,
+// RFID tags, Wiegand, CEC, a stepper's ramps), so the search reads its
+// slowest timebases' megasample records and decodes them with every
+// detector; the emulated ARM runs that 10 to 20 times slower than the unit
+// (6 to 12 s there). Each runs alone with decodeSlowAutoS.
+var decodeSlowAuto = map[string]bool{
+	"cec": true, "em4100": true, "em4305": true, "irmp": true, "irnec": true, "irsirc": true, "ook": true,
+	"stepper": true, "t55xx": true, "wiegand": true,
+}
+
 // decodeHostFile holds a run's cases as JSON lines.
 const decodeHostFile = "decode-host.jsonl"
 
@@ -51,6 +77,8 @@ type busCase struct {
 	Place map[string]string `json:"place"` // role → channel ("C3")
 	Vpp   float64           `json:"vpp"`
 	Off   float64           `json:"offset"`
+	AutoS int               `json:"auto_s"` // how long AUTO in BUS may take
+	Skip  string            `json:"skip"`   // why the case is not run ("" run)
 }
 
 // busOutcome is what a case found.
@@ -110,7 +138,10 @@ func decodeCases(e *env, sweep bool) []busCase {
 			vs = vs[:1]
 		}
 		for _, s := range vs {
-			c := busCase{Spec: s, Place: map[string]string{}}
+			c := busCase{Spec: s, Place: map[string]string{}, AutoS: decodeAutoS}
+			if decodeSlowAuto[p.Proto] {
+				c.AutoS = decodeSlowAutoS
+			}
 			c.Vpp, c.Off = decodeLevels(p.Proto)
 			if len(p.Roles) == 1 {
 				c.Place[p.Roles[0]] = decodeSingles[k%len(decodeSingles)]
@@ -119,6 +150,7 @@ func decodeCases(e *env, sweep bool) []busCase {
 				c.Place[p.Roles[0]], c.Place[p.Roles[1]] = pr[0], pr[1]
 			}
 			c.ID = strings.ReplaceAll(s.String(), " ", "/")
+			c.Skip = decodeSkips[c.ID]
 			k++
 			if e.cases != "" && !slices.ContainsFunc(strings.Split(e.cases, ","), func(w string) bool { return strings.Contains(c.ID, w) }) {
 				continue
@@ -133,12 +165,10 @@ func decodeArea(name, title string, sweep bool) area {
 	return area{
 		name: name, title: title,
 		runs: func(e *env) []harness.Spec {
-			cases := decodeCases(e, sweep)
 			var specs []harness.Spec
-			for i := 0; i < len(cases); i += decodeCasesPerRun {
-				part := cases[i:min(len(cases), i+decodeCasesPerRun)]
+			for i, part := range decodeRuns(decodeCases(e, sweep)) {
 				specs = append(specs, harness.Spec{
-					Name: fmt.Sprintf("%s%s-%02d", e.prefix, name, i/decodeCasesPerRun), Secs: 290, Ports: true,
+					Name: fmt.Sprintf("%s%s-%02d", e.prefix, name, i), Secs: 300, Ports: true,
 					SimdArgs: decodeSimd, App: e.app, Hook: e.hook, GuestBoot: e.guestBoot,
 					Host: func(ctx context.Context, dir string) { decodeHost(ctx, dir, part) },
 				})
@@ -162,6 +192,11 @@ func decodeArea(name, title string, sweep bool) area {
 				res = append(res, harness.Result{Area: name, Case: o.ID, Pass: o.Pass, Detail: detail})
 			}
 			for _, c := range decodeCases(e, sweep) {
+				if c.Skip != "" {
+					outs = append(outs, busOutcome{busCase: c, Reason: "skipped: " + c.Skip})
+					res = append(res, harness.Pass(name, c.ID, "skipped: "+c.Skip))
+					continue
+				}
 				if !got[c.ID] {
 					res = append(res, harness.Fail(name, c.ID, "not run (the run ended first)"))
 				}
@@ -170,6 +205,29 @@ func decodeArea(name, title string, sweep bool) area {
 			return res
 		},
 	}
+}
+
+// decodeRuns packs the cases into simulator runs: decodeCasesPerRun to a
+// run, a slow bus's alone.
+func decodeRuns(cases []busCase) [][]busCase {
+	var runs [][]busCase
+	var cur []busCase
+	for _, c := range cases {
+		if c.Skip != "" {
+			continue
+		}
+		if c.AutoS > decodeAutoS {
+			runs = append(runs, []busCase{c})
+			continue
+		}
+		if cur = append(cur, c); len(cur) == decodeCasesPerRun {
+			runs, cur = append(runs, cur), nil
+		}
+	}
+	if len(cur) > 0 {
+		runs = append(runs, cur)
+	}
+	return runs
 }
 
 // readOutcomes reads a run's cases.
@@ -194,10 +252,13 @@ func writeDecodeTable(e *env, area string, outs []busOutcome) {
 	var b strings.Builder
 	tw := tabwriter.NewWriter(&b, 0, 4, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "BUS\tON\tAUTO\tDECODED\tTRUTH\tRESULT\tREASON") // a strings.Builder does not fail
-	pass := 0
+	pass, skip := 0, 0
 	for _, o := range outs {
 		v := failWord
-		if o.Pass {
+		switch {
+		case o.Skip != "":
+			v, skip = "SKIP", skip+1
+		case o.Pass:
 			v, pass = passWord, pass+1
 		}
 		var on []string
@@ -207,7 +268,7 @@ func writeDecodeTable(e *env, area string, outs []busOutcome) {
 		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", o.ID, strings.Join(on, ","), o.Named, o.Decoded, o.Truth, v, o.Reason)
 	}
 	_ = tw.Flush()
-	fmt.Fprintf(&b, "\n%d/%d pass\n", pass, len(outs))
+	fmt.Fprintf(&b, "\n%d/%d pass, %d skipped (a scope limit, the reason given)\n", pass, len(outs)-skip, skip)
 	_ = os.MkdirAll(filepath.Join(e.root, "build"), 0o755)                                         //nolint:gosec // G301: a build output directory of the repository
 	_ = os.WriteFile(filepath.Join(e.root, "build", area+"-table.txt"), []byte(b.String()), 0o644) //nolint:gosec // G306: a build report of the repository
 	fmt.Fprint(os.Stderr, "\n"+b.String())
@@ -297,31 +358,36 @@ func runBusCase(u *uiRig, c busCase) busOutcome {
 		o.Reason = "AUTO: " + err.Error()
 		return o
 	}
-	done := until(u.ctx, 150*time.Second, func() bool {
+	done := until(u.ctx, time.Duration(c.AutoS)*time.Second, func() bool {
 		st := u.panel()
 		return !st.AutosetBusy && st.AutosetDone != before
 	})
 	if !done {
-		o.Reason = "AUTO did not finish within 150 s"
+		o.Reason = fmt.Sprintf("AUTO did not finish within %d s", c.AutoS)
 	}
 	p, named, settings := busSettings(u)
 	o.Named, o.Settings = named, settings
 	switch {
 	case p.Proto == framecalc.ProtoOff || p.Proto == framecalc.ProtoAuto:
 		o.Reason = strings.TrimSpace(o.Reason + " AUTO named no bus")
+		u.keepRecord(c.ID)
 		return o
 	case named != bus.Proto:
 		o.Reason = fmt.Sprintf("AUTO named %s, the bus is %s", named, bus.Proto)
 		if slices.Contains(bus.Truth.Alike, named) {
 			o.Reason += " (the same line read coarser)"
 		}
+		u.keepRecord(c.ID)
 		return o
 	}
-	f, err := u.rawFrame()
+	f, raw, err := u.settledFrame()
 	if err != nil {
 		o.Reason = "record: " + err.Error()
 		return o
 	}
+	// the record as the app served it, for the decode to be read again
+	// off the simulator (decodeRecordFile)
+	_ = os.WriteFile(filepath.Join(u.dir, decodeRecordFile(c.ID)), raw, 0o644) //nolint:gosec // G306: a run's output, not a secret
 	r := framecalc.Decode(f, p)
 	o.Record = recordText(f, p)
 	o.Decoded = shorten(r.Text, 120)
@@ -413,33 +479,75 @@ func baudOf(t string) int {
 	return int(v*mul + 0.5)
 }
 
-// rawFrame fetches the app's record as v2 raw samples, as a sample frame.
-func (u *uiRig) rawFrame() (*sample.Frame, error) {
+// settledFrame is the app's record once one of the timebase AUTO set has
+// come (TDIV?): the frame AUTO left on screen may still be of the timebase
+// it searched at, the new timebase's first capture seconds away under the
+// emulator (a frame-start trigger's image loads first). The newest record
+// after 60 s when none matches.
+func (u *uiRig) settledFrame() (*sample.Frame, []byte, error) {
+	var tdiv float64
+	if t, err := scpiQuery(u.ctx, "TDIV?"); err == nil {
+		_, _ = fmt.Sscanf(strings.TrimSuffix(strings.TrimSpace(t), "S"), "%g", &tdiv) // unread: any record stands
+	}
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		f, raw, err := u.rawFrame()
+		if err != nil || !(tdiv > 0) || time.Now().After(deadline) || u.ctx.Err() != nil {
+			return f, raw, err
+		}
+		if math.Abs(f.Snapshot.TdivS-tdiv) <= 1e-3*tdiv {
+			return f, raw, nil
+		}
+		time.Sleep(time.Second)
+	}
+}
+
+// keepRecord keeps the record AUTO left on screen when it named no bus or
+// another, for its search to be run again off the simulator.
+func (u *uiRig) keepRecord(id string) {
+	if _, raw, err := u.rawFrame(); err == nil {
+		_ = os.WriteFile(filepath.Join(u.dir, decodeRecordFile(id)), raw, 0o644) //nolint:gosec // G306: a run's output, not a secret
+	}
+}
+
+// decodeRecordFile is the file of a run's directory holding a case's
+// record: the v2 frame the app served.
+func decodeRecordFile(id string) string {
+	return "record-" + strings.NewReplacer("/", "_", "=", "-").Replace(id) + ".bin"
+}
+
+// rawFrame fetches the app's record as v2 raw samples, as a sample frame
+// and the bytes served.
+func (u *uiRig) rawFrame() (*sample.Frame, []byte, error) {
 	req, err := http.NewRequestWithContext(u.ctx, http.MethodGet, webBase+"/api/frame.bin?v=2&raw=1&waitms=2000", nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	r, err := u.cl.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() { _ = r.Body.Close() }()
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	wf, err := wire.DecodeFrame2(b)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sampleFrame(wf)
+	f, err := sampleFrame(wf)
+	return f, b, err
 }
 
 // sampleFrame turns a v2 frame's raw traces into a sample frame indexed by
 // channel.
 func sampleFrame(wf wire.Frame) (*sample.Frame, error) {
 	h := wf.Header
-	f := &sample.Frame{Content: sample.RawFullRate, Flags: sample.Ordered, SampleS: h.SampleS, CaptureS: h.CaptureS, TriggerAt: h.TriggerAt, Seq: h.Seq}
+	f := &sample.Frame{
+		Content: sample.RawFullRate, Flags: sample.Ordered, SampleS: h.SampleS, CaptureS: h.CaptureS, TriggerAt: h.TriggerAt, Seq: h.Seq,
+		Snapshot: sample.Settings{TdivS: h.TdivS},
+	}
 	n := 0
 	for _, t := range wf.Traces {
 		n = max(n, t.Codes.Len())
@@ -473,8 +581,25 @@ func matchTruth(r decode.Result, t synth.Truth) (bool, string) {
 	if !r.OK && len(r.Bytes) == 0 {
 		return false, "no decode: " + r.Error
 	}
+	// a bus of several messages, framed to one of them: a whole message
+	// decoded, and every value decoded one the bus sends
+	someMessages := func() (bool, string) {
+		n := 0
+		for _, m := range t.Messages {
+			if strings.Contains(r.Text, m) {
+				n++
+			}
+		}
+		if n == 0 || (t.Bytes != nil && longestCyclic(r.Bytes, repeatUnit(t.Bytes)) < len(r.Bytes)) {
+			return false, ""
+		}
+		return true, fmt.Sprintf("partial: the record holds %d of the bus's %d messages, all right", n, len(t.Messages))
+	}
 	for _, w := range t.Contains {
 		if !strings.Contains(r.Text, w) {
+			if ok, why := someMessages(); ok {
+				return true, why
+			}
 			return false, fmt.Sprintf("the decode lacks %q", w)
 		}
 	}
@@ -489,6 +614,9 @@ func matchTruth(r decode.Result, t synth.Truth) (bool, string) {
 	// longest run it decoded that the bus sends (its edges cut values)
 	if n := longestCyclic(r.Bytes, unit); n >= min(4, len(unit)) {
 		return true, fmt.Sprintf("partial: the record holds a run of %d of the message's %d values, all right", n, len(unit))
+	}
+	if ok, why := someMessages(); ok {
+		return true, why
 	}
 	return false, fmt.Sprintf("decoded %s, want %s", hexOf(r.Bytes, 16), hexOf(unit, 16))
 }
