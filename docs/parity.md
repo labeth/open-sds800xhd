@@ -30,8 +30,8 @@ A/B updates, faults the unit can meet, the diagnostics census, and the RTL of th
 CML's bar is a sweep over the whole product: every key, every bus, SOUND and the BUS Stream view. The sheets,
 the operator workflows, the phone remote, record.bin, the BUS Visual view and SOUND now have sweeps in the HD's
 simulator lanes; SOUND streams over the board's roll stream (the core's engine consumes `hal.Streamer`), the
-Stream view is not built on the HD (the core has no decoded stream over a stream of codes), and the protocol
-sweep fails on about one bus in five.
+Stream view decodes that stream in software for the buses its 41.7 kSa/s resolves (MIDI's is refused with the
+rates), and the protocol sweep fails on about one bus in five.
 
 Where the results come from:
 
@@ -66,7 +66,7 @@ simulator lock (the decode sweep alone about four and a half).
 | Web sweep, 0 page errors; browser and node suites | `web` (page, caps, frames v2, settings both ways, SCPI and the web agree, headless browser with 0 page errors), simlab-e2e `simlab` (bench page, panel, generator, CH keys and knobs read back over SCPI, the UI model, the web and fb0; UART/SPI/I²C presets decode) and `fuzz` (40 actions) | web 64/64, simlab 11/11, fuzz 1/1 (0 findings on the quiet rerun) | PASS |
 | Operator workflows (the core's `webclient/e2e`, as the CML's web actions) | simlab-e2e `operator`: every workflow the simulator's sources can serve | 45 pass (T25 and M10 on rerun), 60 skipped with a reason (protocol sources start idle at the trigger point; zones absent with the board's reason; the burst's spectrum at 2 ns/div holds the screen's 20 samples) | PASS |
 | Phone remote sweep | `web` (`/remote` in the headless browser at a phone's size: every Menus tab, each row's sheet opened and closed, safe values changed from the phone and followed by the scope, the steppers) | 14 tabs, 89 rows, 6 changes and 2 steppers followed, 0 page errors | PASS |
-| Visual view streams (0.2 s, no losses) | `streamviews` (a MIDI bus on C1: BUS Visual on the scope and on the page, captures and messages counted; the Stream view and SOUND started) | Visual from captures: 13 captures in 20 s all decoded, 117 messages, first 0.31 s; page 72 messages, first 0.15 s, 0 page errors | PARTIAL: Visual runs from captures; the Stream view has no decoded stream on the HD (the core decodes no stream of codes yet; its engine consumes `hal.Streamer` for SOUND), and every surface says so |
+| Visual view streams (0.2 s, no losses) | `streamviews` (a MIDI bus on C1: BUS Visual on the scope and on the page, captures and messages counted; the Stream view and SOUND started; then DALI on C1 and the Stream view again) | Visual from captures: 13 captures in 20 s all decoded, 117 messages, first 0.31 s; page 72 messages, first 0.15 s, 0 page errors. Stream view: MIDI refused on every surface with the rates (31250 Bd needs a sample every 9.14 us, the roll stream gives one every 24 us); DALI 1200 Bd streamed, 1776 transcript lines in 20 s, the first 0.26 s after the start, 0 lost | PARTIAL: Visual runs from captures; the Stream view decodes the roll stream in software (the core's decoded stream over `hal.Streamer` codes), so only buses the roll stream's rate resolves stream |
 
 ## Triggers
 
@@ -141,11 +141,10 @@ simulator lock (the decode sweep alone about four and a half).
    Plan: per repeating bus, keep the record and compare AUTO's timebase and trigger choice with the CML's on
    the same synth bus; fix the record window (frame-start trigger, timebase) in the core's AUTO; then run
    each moving case three times and grade on the majority.
-2. **The BUS Stream view.** SOUND streams over the board's roll stream (the core's engine consumes
-   `hal.Streamer`, `streamviews` counts it), but no decoded stream is built over a stream of codes: the
-   Stream view, its page and its endpoints say so (`streamviews`). Plan: the core's software decode of a
-   stream of codes (the CML's soft stream in HAL terms) behind the UI model's decoded stream, then
-   `streamviews` counts its lines against its thresholds.
+2. **The BUS Stream view.** The core decodes the board's roll stream in software (`streamviews`: DALI
+   streams, 0 lost), at the roll stream's 41.7 kSa/s: a bus needs three and a half samples in its shortest
+   feature (MIDI, LIN at 19200 Bd and faster buses are refused with the rates). Faster buses need a faster
+   stream (the open PL's code stream, or its decoded events, PayloadEvents) behind the same view.
 
 Closed since the first run of this table: the sheets sweep (`sheets`), the phone remote and record.bin
 (`web`), BUS Visual from captures (`streamviews`), the zone trigger (absent with the board's reason), the
