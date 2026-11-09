@@ -14,7 +14,7 @@
   "record_depth": 262144,
   "signals": {
     "C1": "square,1e3,3,1.5,rise=1e-7",
-    "C2": "sine,5e3,2,0,noise=0.02",
+    "C2": "sine,2.5e3,2,0,noise=0.02",
     "C3": "uart,115200,3.3,1.65,data=48656c6c6f",
     "C4": "triangle,2e3,1,0"
   },
