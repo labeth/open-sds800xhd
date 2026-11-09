@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"image"
 	"io"
 	"net/http"
 	"os"
@@ -151,10 +152,16 @@ func svVisual(u *uiRig) {
 	if !h.check("visual-start", ok && time.Since(t0) < svStartS*time.Second, "BUS again to Visual in %v: views %v", time.Since(t0).Round(time.Millisecond), seen) {
 		return
 	}
-	time.Sleep(time.Second) // the display loop draws the view
-	vis, _ := u.shot("sv-visual.png")
-	n := differs(packets, vis)
-	h.check("visual-drawn", n > 1000, "the Visual view changed %d pixels of fb0 from the packets", n)
+	// the display loop draws the view: under the emulator's load that can
+	// take seconds, and a dump may land late, so look again for a while
+	n, rep := 0, ""
+	for end := time.Now().Add(10 * time.Second); n <= 1000 && time.Now().Before(end); {
+		time.Sleep(time.Second)
+		var vis *image.NRGBA
+		vis, rep = u.shot("sv-visual.png")
+		n = differs(packets, vis)
+	}
+	h.check("visual-drawn", n > 1000, "the Visual view changed %d pixels of fb0 from the packets (%s)", n, rep)
 
 	p, _, _ := busSettings(u)
 	truth, err := svMIDITruth()

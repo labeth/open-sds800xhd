@@ -143,9 +143,9 @@ func TestWeb(t *testing.T) {
 	set := func(body string) map[string]any { return r.json(http.MethodPost, "/api/set", body) }
 	out := set(`{"control":"vdiv2","value":0.5}`)
 	c.check(out["ok"] == true && out["applied"] == 0.5, "C2 to 0.5 V/div by its v1 name: %v", out)
-	var zero0 float64
+	var off0 float64
 	if t1 := trace(f, 0); t1 != nil {
-		zero0 = t1.Scale.Zero
+		off0 = t1.Scale.OffV
 	}
 	out = set(`{"control":"offset","ch":0,"value":0.5}`)
 	offApplied, _ := out["applied"].(float64)
@@ -156,7 +156,7 @@ func TestWeb(t *testing.T) {
 	c.check(board.FrontEnd().Get(1).VoltsDiv == 0.5, "the board's C2 is at %g V/div", board.FrontEnd().Get(1).VoltsDiv)
 	f, ok = r.settled(func(f wire.Frame) bool {
 		t1 := trace(f, 0)
-		return t1 != nil && t1.Scale.Zero != zero0
+		return t1 != nil && t1.Scale.OffV != off0
 	})
 	if c.check(ok, "a frame at the new offset") {
 		lo1, hi1 := swing(trace(f, 0))
