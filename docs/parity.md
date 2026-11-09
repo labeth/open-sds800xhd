@@ -28,9 +28,10 @@ The HD meets the CML's 1.2 bar where the bar is about the hardware path: trigger
 type the board has, the front end against its model, records, roll, mask, calibration, SCPI, the install stick and
 A/B updates, faults the unit can meet, the diagnostics census, and the RTL of the open PL. It falls short where the
 CML's bar is a sweep over the whole product: every key, every bus, SOUND and the BUS Stream view. The sheets,
-the operator workflows, the phone remote, record.bin and the BUS Visual view now have sweeps in the HD's simulator
-lanes; SOUND and the Stream view are not built on the HD (the core's engine has no consumer of the board's
-stream), and the protocol sweep fails on about one bus in five.
+the operator workflows, the phone remote, record.bin, the BUS Visual view and SOUND now have sweeps in the HD's
+simulator lanes; SOUND streams over the board's roll stream (the core's engine consumes `hal.Streamer`), the
+Stream view is not built on the HD (the core has no decoded stream over a stream of codes), and the protocol
+sweep fails on about one bus in five.
 
 Where the results come from:
 
@@ -65,7 +66,7 @@ simulator lock (the decode sweep alone about four and a half).
 | Web sweep, 0 page errors; browser and node suites | `web` (page, caps, frames v2, settings both ways, SCPI and the web agree, headless browser with 0 page errors), simlab-e2e `simlab` (bench page, panel, generator, CH keys and knobs read back over SCPI, the UI model, the web and fb0; UART/SPI/I²C presets decode) and `fuzz` (40 actions) | web 64/64, simlab 11/11, fuzz 1/1 (0 findings on the quiet rerun) | PASS |
 | Operator workflows (the core's `webclient/e2e`, as the CML's web actions) | simlab-e2e `operator`: every workflow the simulator's sources can serve | 45 pass (T25 and M10 on rerun), 60 skipped with a reason (protocol sources start idle at the trigger point; zones absent with the board's reason; the burst's spectrum at 2 ns/div holds the screen's 20 samples) | PASS |
 | Phone remote sweep | `web` (`/remote` in the headless browser at a phone's size: every Menus tab, each row's sheet opened and closed, safe values changed from the phone and followed by the scope, the steppers) | 14 tabs, 89 rows, 6 changes and 2 steppers followed, 0 page errors | PASS |
-| Visual view streams (0.2 s, no losses) | `streamviews` (a MIDI bus on C1: BUS Visual on the scope and on the page, captures and messages counted; the Stream view and SOUND started) | Visual from captures: 13 captures in 20 s all decoded, 117 messages, first 0.31 s; page 72 messages, first 0.15 s, 0 page errors | PARTIAL: Visual runs from captures; the Stream view has no stream on the HD (the core's engine has no consumer of `hal.Streamer`), and every surface says so |
+| Visual view streams (0.2 s, no losses) | `streamviews` (a MIDI bus on C1: BUS Visual on the scope and on the page, captures and messages counted; the Stream view and SOUND started) | Visual from captures: 13 captures in 20 s all decoded, 117 messages, first 0.31 s; page 72 messages, first 0.15 s, 0 page errors | PARTIAL: Visual runs from captures; the Stream view has no decoded stream on the HD (the core decodes no stream of codes yet; its engine consumes `hal.Streamer` for SOUND), and every surface says so |
 
 ## Triggers
 
@@ -94,7 +95,7 @@ simulator lock (the decode sweep alone about four and a half).
 | record.bin download | `web` (`/api/record.bin` while running, against the raw record and the caps) | 1 µs/div: 20210 bytes, 10000 samples × 2 channels, interval, timebase and volts per code as the caps say, −1…1 V and −0.5…0.5 V as injected; while stopped it refuses with its reason (it serves a capture made after the request) | PASS |
 | Stacking | none on the factory PL; co-sim `stacker` on the open PL; software super-resolution in the demo matrix and simlab-e2e `T18` | co-sim stacker 7/7, demo `superres` pass, T18 pass | N/A: "the vendor bitstream has no hardware stacker" (the page's software stacker runs on the HD) |
 | Stream starts | `roll` (roll through the Streamer), co-sim `stream` (gap-free stream; an injected stall drops whole blocks, counted) | roll 50/50, co-sim stream 10/10 | PASS |
-| SOUND starts without losses | `streamviews` (SOUND's view reached, the caps, `/api/sound.bin` and the page's SOUND tab), `ui` `sound-rows-c3-c4` | the view is reached; caps, endpoint and page all say "this scope's engine does not run it yet" | GAP: SOUND is not built on the HD: the core's engine has no consumer of the board's stream (`hal.Streamer`); new engine work |
+| SOUND starts without losses | `streamviews` (SOUND's view reached, the caps, `/api/sound.bin` and the page's SOUND tab), `ui` `sound-rows-c3-c4` | the view in 72 ms; 470 blocks, 1925120 samples in 20 s at 41667 Sa/s (the roll stream's rate, two lanes), the first after 1 ms, 0 gaps, 0 losses; the page's SOUND tab 469 blocks | PASS: SOUND streams over the board's roll stream (the first two channels on; no level-crossing marks, so no takes) |
 
 ## Front end
 
@@ -140,11 +141,11 @@ simulator lock (the decode sweep alone about four and a half).
    Plan: per repeating bus, keep the record and compare AUTO's timebase and trigger choice with the CML's on
    the same synth bus; fix the record window (frame-start trigger, timebase) in the core's AUTO; then run
    each moving case three times and grade on the majority.
-2. **SOUND and the BUS Stream view.** The HD's board has a streamer (`roll` passes through it), but the core's
-   engine reads no stream from it: nothing leases SOUND's samples or feeds the decoded stream. Caps, the
-   endpoints and the UI all say so (`streamviews`). Plan: an engine consumer of `hal.Streamer` for SOUND and
-   the decoded stream, then `streamviews` counts starts, blocks and losses against its thresholds (half the
-   rate over 20 s, no gaps, no losses).
+2. **The BUS Stream view.** SOUND streams over the board's roll stream (the core's engine consumes
+   `hal.Streamer`, `streamviews` counts it), but no decoded stream is built over a stream of codes: the
+   Stream view, its page and its endpoints say so (`streamviews`). Plan: the core's software decode of a
+   stream of codes (the CML's soft stream in HAL terms) behind the UI model's decoded stream, then
+   `streamviews` counts its lines against its thresholds.
 
 Closed since the first run of this table: the sheets sweep (`sheets`), the phone remote and record.bin
 (`web`), BUS Visual from captures (`streamviews`), the zone trigger (absent with the board's reason), the
