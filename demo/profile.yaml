@@ -80,6 +80,7 @@ options: [counter]
 absent:
   logic-probe: "the SLA1016 logic probe is not driven by this firmware"
   generator: "the external signal generator is not driven by this firmware"
+  zones: "the vendor bitstream has no zone qualifier: the SDS800X HD offers no zone trigger (spec 05 §1, §10.7)"
 
 budget:
   ram_bytes: 528482304

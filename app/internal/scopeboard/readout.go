@@ -213,7 +213,7 @@ func (b *Board) readWindow(sel acq.Selection, p windowPlan, f *sample.Frame, yie
 	sc := b.eng.Scale(p.ch)
 	f.Traces[0] = sample.Trace{
 		Ch: p.ch, Format: format12, Codes16: words, Valid: len(words),
-		Scale:       sample.Scale{PerCode: sc.PerCode, Zero: sc.Zero},
+		Scale:       sample.Scale{PerCode: sc.PerCode, Zero: sc.Zero, OffsetV: sc.OffsetV},
 		CodesPerDiv: codesPerDiv,
 	}
 	return nil
@@ -275,7 +275,7 @@ func (b *Board) peakFrame(p windowPlan, win acq.Window, f *sample.Frame, tr *sam
 	f.Traces[0] = sample.Trace{
 		Ch: p.ch, Format: format12, Max16: mx, Min16: mn, Valid: 2 * n,
 		Codes16:     codes,
-		Scale:       sample.Scale{PerCode: sc.PerCode, Zero: sc.Zero},
+		Scale:       sample.Scale{PerCode: sc.PerCode, Zero: sc.Zero, OffsetV: sc.OffsetV},
 		CodesPerDiv: codesPerDiv,
 	}
 }

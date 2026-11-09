@@ -107,6 +107,7 @@ var absentParts = map[string]string{
 	"stacker":     "the vendor bitstream has no hardware stacker",
 	"logic-probe": "the SLA1016 logic probe is not driven by this firmware",
 	"generator":   "the external signal generator is not driven by this firmware",
+	"zones":       "the vendor bitstream has no zone qualifier: the SDS800X HD offers no zone trigger (spec 05 §1, §10.7)",
 }
 
 // format12 is the record word: 12-bit codes left-aligned in 16 bits,

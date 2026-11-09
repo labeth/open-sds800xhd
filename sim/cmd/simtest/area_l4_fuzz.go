@@ -25,6 +25,11 @@ import (
 //	L4_FUZZ_SEEDS  seeds: "1-20" (default) or "3,7,11"
 //	L4_FUZZ_ITERS  actions per seed (default 60: one seed fits one run)
 //	DEBUG_AT       passed to the fuzzer: diagnostics before that iteration
+//	L4_FUZZ_STALL_MS  the fuzzer's frame-stall window (STALL_MS; default 15000)
+//
+// The host samples the app's frame counter during the run (fuzz-server.txt),
+// so each frame stall the fuzzer reports says whether the app published
+// frames the page did not get, or published none and for how long.
 func init() {
 	l4register(area{
 		name: "l4-fuzz", title: "operator fuzz: seeded random operator on the web UI, 4 channels, 1024x600",
@@ -125,11 +130,17 @@ func fuzzHost(ctx context.Context, e *env, dir string, seed int) {
 		cmd.Dir = e2e
 		cmd.Env = append(os.Environ(), "SCOPE_URL="+webBase, "SEED="+strconv.Itoa(seed), "ITERS="+strconv.Itoa(fuzzIters()),
 			"OUT="+out, "VIEWPORT=1024x600", "CHROMIUM_ARGS=--use-gl=egl --ignore-gpu-blocklist", "TMPDIR="+tmp)
+		cmd.Env = append(cmd.Env, "STALL_MS="+strconv.Itoa(int(stallWindow().Milliseconds())))
 		log, err := os.Create(filepath.Join(out, "fuzz.txt")) //nolint:gosec // G304: the run's own directory
 		if err == nil {
 			cmd.Stdout, cmd.Stderr = log, log
+			sctx, stop := context.WithCancel(ctx)
+			sampled := make(chan struct{})
+			go func() { defer close(sampled); sampleServer(sctx, u, filepath.Join(dir, serverFile)) }()
 			t0 := time.Now()
 			err = cmd.Run()
+			stop()
+			<-sampled
 			_ = log.Close()
 			u.h.check("fuzz-run", true, "seed %d: the fuzzer ended after %v (%v)", seed, time.Since(t0).Round(time.Second), err)
 		}
@@ -138,10 +149,107 @@ func fuzzHost(ctx context.Context, e *env, dir string, seed int) {
 	_ = os.WriteFile(filepath.Join(dir, "fw", "stop"), nil, 0o644)                               //nolint:gosec // G306: a marker the guest reads
 }
 
+// serverFile is the app's frame counter as the host samples it during a
+// fuzz run (in the run's directory: the fuzzer clears its own), one line a sample: unix ms, published frames, fps,
+// run state, time/div, the record's length in seconds.
+const serverFile = "fuzz-server.txt"
+
+// sampleServer writes the app's status every 500 ms until ctx ends, so a
+// frame stall the fuzzer reports can be told apart: frames the app
+// published that the page did not get (the transport), or none published.
+func sampleServer(ctx context.Context, u *uiRig, file string) {
+	f, err := os.Create(file) //nolint:gosec // G304: the run's own directory
+	if err != nil {
+		return
+	}
+	defer func() { _ = f.Close() }()
+	for ctx.Err() == nil {
+		st := u.status()
+		if len(st) > 0 {
+			_, _ = fmt.Fprintf(f, "%d %v %.1f %v %v %v\n", time.Now().UnixMilli(), st["seq"], st["fps"], st["run_state"], st["tdiv_set_s"], st["record_s"])
+		}
+		select {
+		case <-ctx.Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+// serverSample is one line of serverFile.
+type serverSample struct {
+	at  time.Time
+	seq float64
+}
+
+// readServer reads a run's serverFile.
+func readServer(r *harness.Run) []serverSample {
+	b, err := os.ReadFile(r.File(serverFile))
+	if err != nil {
+		return nil
+	}
+	var out []serverSample
+	for l := range strings.SplitSeq(string(b), "\n") {
+		f := strings.Fields(l)
+		if len(f) < 2 {
+			continue
+		}
+		ms, err1 := strconv.ParseInt(f[0], 10, 64)
+		seq, err2 := strconv.ParseFloat(f[1], 64)
+		if err1 == nil && err2 == nil {
+			out = append(out, serverSample{time.UnixMilli(ms), seq})
+		}
+	}
+	return out
+}
+
+// stallClass says what the app did around a frame stall the page saw,
+// which ended at `at` after `window`: how many frames it published in that
+// window, and how long its own gap without a frame lasted (from its last
+// frame before the window to its next one).
+func stallClass(samples []serverSample, at time.Time, window time.Duration) string {
+	from := at.Add(-window)
+	var before, after *serverSample
+	published := 0.0
+	var lastBefore, firstAfter time.Time
+	for i := range samples {
+		s := &samples[i]
+		switch {
+		case !s.at.After(from):
+			before = s
+		case !s.at.After(at):
+			after = s
+		}
+	}
+	if before == nil || after == nil {
+		return "no server samples around the stall"
+	}
+	published = after.seq - before.seq
+	for i := range samples {
+		if samples[i].seq == before.seq && !samples[i].at.After(from) {
+			lastBefore = samples[i].at
+		}
+	}
+	for i := range samples {
+		if samples[i].at.After(at) && samples[i].seq > after.seq {
+			firstAfter = samples[i].at
+			break
+		}
+	}
+	gap := "no frame by the run's end"
+	if !firstAfter.IsZero() && !lastBefore.IsZero() {
+		gap = fmt.Sprintf("its own gap %.1f s", firstAfter.Sub(lastBefore).Seconds())
+	}
+	if published > 0 {
+		return fmt.Sprintf("transport: the app published %.0f frames the page did not get", published)
+	}
+	return "acquisition: the app published no frame in the window, " + gap
+}
+
 // fuzzFinding is one line of the fuzzer's findings.jsonl.
 type fuzzFinding struct {
 	Iter   int    `json:"iter"`
 	Seed   int    `json:"seed"`
+	At     string `json:"at"`
 	Action string `json:"action"`
 	Detail string `json:"detail"`
 	Errs   []struct {
@@ -163,6 +271,7 @@ func fuzzChecks(r *harness.Run) []harness.Result {
 	if strings.Contains(s, "SKIP: playwright") {
 		return []harness.Result{harness.Fail(a, c, "playwright is not installed")}
 	}
+	samples := readServer(r)
 	f, err := os.Open(r.File("fuzz/findings.jsonl"))
 	n := 0
 	if err == nil {
@@ -176,7 +285,11 @@ func fuzzChecks(r *harness.Run) []harness.Result {
 			n++
 			var errs []string
 			for _, e := range x.Errs {
-				errs = append(errs, e.Inv+": "+e.Detail)
+				d := e.Inv + ": " + e.Detail
+				if at, err := time.Parse(time.RFC3339Nano, x.At); err == nil && e.Inv == "I2-stalled" {
+					d += " [" + stallClass(samples, at, stallWindow()) + "]"
+				}
+				errs = append(errs, d)
 			}
 			res = append(res, harness.Fail(a, fmt.Sprintf("%s-iter-%d", c, x.Iter), "%s(%s): %s; replay L4_FUZZ_SEEDS=%s DEBUG_AT=%d",
 				x.Action, x.Detail, strings.Join(errs, " | "), seed, x.Iter))
@@ -198,6 +311,17 @@ func fuzzChecks(r *harness.Run) []harness.Result {
 		res = append(res, harness.Fail(a, c+"-ran", "the fuzzer did not finish within the run (reached about %d): %s", reached, lastLines(s, 3)))
 	}
 	return res
+}
+
+// stallWindow is the fuzzer's I2 window: L4_FUZZ_STALL_MS, else 15 s. The
+// fuzzer's own 5 s is a unit's: under the emulator a 50 ms/div record (half
+// a second) comes every 4 to 7 s, and the first after a setting change up to
+// 12 s later, while the app keeps publishing.
+func stallWindow() time.Duration {
+	if n, err := strconv.Atoi(os.Getenv("L4_FUZZ_STALL_MS")); err == nil && n > 0 {
+		return time.Duration(n) * time.Millisecond
+	}
+	return 15 * time.Second
 }
 
 func lastLines(s string, n int) string {

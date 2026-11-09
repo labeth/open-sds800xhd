@@ -1151,6 +1151,14 @@ func triggerDefaults(s *core.State) {
 	n := func(id string, v float64) kv { return kv{id, instrument.ParamValue{Num: v}} }
 	t := func(id, v string) kv { return kv{id, instrument.ParamValue{Text: v}} }
 	times := []kv{t("limit", "less"), n("lower", minTrigS), n("upper", minTrigS)}
+	// The UI model's pulse, slope and video settings as it starts (and
+	// after its Default setup): the instrument state is where the UI model
+	// reads them back once one is set, so all three start whole, not zero.
+	s.Qual = instrument.TrigQual{
+		PulseLvl: 0.5, PulseMinNs: 100, PulseMaxNs: 1000,
+		SlopeLo: 0.2, SlopeHi: 0.8, SlopeMinNs: 100, SlopeMaxNs: 1000,
+		VideoNeg: true,
+	}
 	c2 := "C1"
 	if len(s.Channels) > 1 {
 		c2 = "C2"

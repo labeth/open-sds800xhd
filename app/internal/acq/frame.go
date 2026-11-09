@@ -29,10 +29,11 @@ type CodeFormat struct {
 // Format12 is the record format of the SDS800X HD.
 var Format12 = CodeFormat{Bits: 12, Shift: 4, Min: 0, Max: 0xFFF0, Mid: 0x8000}
 
-// Scale converts a word to volts at the probe tip: v = (word − Zero)·PerCode.
+// Scale converts a word to volts at the probe tip: v = (word − Zero)·PerCode − OffsetV.
 type Scale struct {
 	PerCode float64
-	Zero    float64
+	Zero    float64 // the word of the screen's centre line, which reads -OffsetV
+	OffsetV float64 // the trace's vertical offset: the centre line reads -OffsetV volts
 }
 
 // Trace is one channel of a frame.
@@ -56,16 +57,22 @@ type Frame struct {
 	Traces    []Trace
 }
 
-// scaleOf is the word scale of channel ch with derived setup d.
+// scaleOf is the word scale of channel ch with derived setup d: the
+// centre line's word and the offset it reads, as sample.Scale has them, so
+// a consumer drawing about the centre line places the trace where the
+// screen does.
 func scaleOf(ch frontend.Channel, d frontend.Derived) Scale {
 	// 480 codes per division, 16 word units per code; the trace's 0 V sits
 	// PosPx rows (8 codes each) above the centre.
 	per := ch.VoltsDiv / (480 * 16)
-	zero := 0x8000 + d.PosPx*8*16
 	if ch.Invert {
-		return Scale{PerCode: -per, Zero: 0x8000 - d.PosPx*8*16}
+		per = -per
 	}
-	return Scale{PerCode: per, Zero: zero}
+	zero0 := 0x8000 + d.PosPx*8*16 // the word of 0 V
+	if ch.Invert {
+		zero0 = 0x8000 - d.PosPx*8*16
+	}
+	return Scale{PerCode: per, Zero: 0x8000, OffsetV: (zero0 - 0x8000) * per}
 }
 
 // fineValue is φ of spec 03 §4.3 from the trigger-interpolation registers.

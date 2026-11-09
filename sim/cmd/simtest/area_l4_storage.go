@@ -36,7 +36,8 @@ func init() {
 }
 
 // storageHost checks the app serves and takes a setting on the damaged
-// storage, then ends the run.
+// storage, then tells the guest its checks are done (the read-only run's
+// later boots wait for that before stopping the app) and ends the run.
 func storageHost(ctx context.Context, dir, c string) {
 	u, done, ok := l4Rig(ctx, dir, c+"-host.txt")
 	defer done()
@@ -48,7 +49,8 @@ func storageHost(ctx context.Context, dir, c string) {
 		ok, took := u.answers()
 		u.h.check(c+"/serving", ok, "web status and *IDN? answered after the saver ran (%v)", took.Round(time.Millisecond))
 	}
-	_ = os.WriteFile(filepath.Join(dir, "fw", "stop"), nil, 0o644) //nolint:gosec // G306: a marker the guest reads
+	_ = os.WriteFile(filepath.Join(dir, "fw", "checked"), nil, 0o644) //nolint:gosec // G306: a marker the guest reads
+	_ = os.WriteFile(filepath.Join(dir, "fw", "stop"), nil, 0o644)    //nolint:gosec // G306: a marker the guest reads
 }
 
 func storageChecks(runs []*harness.Run) []harness.Result {

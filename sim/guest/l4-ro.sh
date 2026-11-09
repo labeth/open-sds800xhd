@@ -2,11 +2,18 @@
 # Fault lane: p12 read-only (as after the kernel remounted a damaged ext4).
 # The boot runs the hook; the app, an update, the health check's confirm,
 # the boot-target switch and the Acquire key route are tried. The host
-# checks the app over its ports meanwhile.
+# checks the first boot's app over its ports before the next boot.
 . /sim/fw/l4-lib.sh
 touch "$P/.probe" 2>/dev/null && say "storage-ro p12 is writable (the mode did not apply)"
 for n in 1 2 3; do
 	say "storage-ro boot$n $(boot) layout [$(layout)]"
+	if [ $n -eq 1 ]; then
+		# the host checks the first boot's app over its ports; the later
+		# boots stop it, so they wait for the host's checks (bounded)
+		w=0
+		while [ ! -e /sim/fw/checked ] && [ $w -lt 90 ]; do sleep 1; w=$((w + 1)); done
+		say "storage-ro host-checked after ${w}s"
+	fi
 	[ $n -lt 3 ] && stop_app
 done
 out=$($O install $F/app 2>&1); say "storage-ro update rc $? ${out#otactl: }"

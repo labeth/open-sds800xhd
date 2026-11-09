@@ -69,8 +69,15 @@ func (d *displayFacet) Framebuffer() hal.Framebuffer {
 	return nil
 }
 
-// Renderer is the PL map engine.
-func (d *displayFacet) Renderer() (hal.Renderer, bool) { return (*rendererFacet)(d), true }
+// Renderer is the PL map engine. The open image has none (spec 20 §9):
+// the PS draws the traces, and the map engine's held-record redraw would
+// poll vendor registers the open plane never sets.
+func (d *displayFacet) Renderer() (hal.Renderer, bool) {
+	if (*Board)(d).open != nil {
+		return nil, false
+	}
+	return (*rendererFacet)(d), true
+}
 
 // Capture copies the PL's capture of the mixed picture (spec 07 §5).
 func (d *displayFacet) Capture(dst *image.RGBA) error {
