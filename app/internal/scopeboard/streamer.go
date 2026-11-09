@@ -29,14 +29,18 @@ const (
 )
 
 type streamer struct {
-	b      *Board
-	g      acq.RollGeometry
-	chans  []int
-	free   chan int
-	filled chan hal.StreamBlock
-	words  [ringSlots][]uint16
-	stop   chan struct{}
-	done   chan struct{}
+	b     *Board
+	g     acq.RollGeometry
+	chans []int
+	// sampleS is the time between the stream's samples: the acquisition's
+	// interval times the compression factor (the compressed read keeps
+	// every c_f-th word).
+	sampleS float64
+	free    chan int
+	filled  chan hal.StreamBlock
+	words   [ringSlots][]uint16
+	stop    chan struct{}
+	done    chan struct{}
 
 	mu     sync.Mutex
 	faults hal.StreamFaults
@@ -89,7 +93,8 @@ func (s *streamerFacet) Start(spec hal.StreamSpec) error {
 	}
 	st := &streamer{
 		b: b, g: g, chans: chans, free: make(chan int, ringSlots),
-		filled: make(chan hal.StreamBlock, ringSlots), stop: make(chan struct{}), done: make(chan struct{}),
+		sampleS: float64(max(g.Factor, 1)) / (b.eng.Timebase().R * 1e6),
+		filled:  make(chan hal.StreamBlock, ringSlots), stop: make(chan struct{}), done: make(chan struct{}),
 	}
 	for i := range ringSlots {
 		st.words[i] = make([]uint16, blockSamples*len(chans))
@@ -143,7 +148,7 @@ func (st *streamer) run() {
 				for i := range fm {
 					fm[i] = format12
 				}
-				st.filled <- hal.StreamBlock{Payload: hal.PayloadCodes, Formats: fm, Words: words, First: first, Ring: slot}
+				st.filled <- hal.StreamBlock{Payload: hal.PayloadCodes, Formats: fm, Words: words, First: first, Ring: slot, SampleS: st.sampleS}
 			default:
 				st.mu.Lock()
 				st.faults.LostBlocks++

@@ -34,7 +34,8 @@ func fakeScope(t *testing.T) webserver.Scope {
 	ctl := instrument.New(st, nil)
 	frames := fanout.NewFrames()
 	ctl.SetFrames(frames)
-	loop, cycle := engine.NewHALLoop(engine.HALConfig{Board: b, Instrument: ctl, WaitSlice: 5 * time.Millisecond, IdleWait: 5 * time.Millisecond})
+	bode := engine.NewBode()
+	loop, cycle := engine.NewHALLoop(engine.HALConfig{Board: b, Instrument: ctl, Bode: bode, WaitSlice: 5 * time.Millisecond, IdleWait: 5 * time.Millisecond})
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{}, 2)
 	go func() { loop.Run(ctx); done <- struct{}{} }()
@@ -43,11 +44,10 @@ func fakeScope(t *testing.T) webserver.Scope {
 	if frames.WaitNext(0, 2*time.Second) == 0 {
 		t.Fatal("no frame published")
 	}
-	us := panel.NewHALScope(ctl, b, "test")
+	us := panel.NewHALScope(ctl, b, "test").WithBode(bode)
 	ctl.SetTimebases(us.Tdivs())
 	pc := panel.New(us.Engine(), us.Analog(), us.Levels(), us.Hardware(), us.Tdivs(), st.TimeDivS, t.Logf)
 	pc.SetFrameSource(frames.WithFrame)
-	go us.Watch(frames, ctx.Done())
 	return Scope(b, ctl, frames, "test", pc, nil, scopeweb.Parts{Bode: us.Bode()})
 }
 
