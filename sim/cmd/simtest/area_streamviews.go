@@ -97,6 +97,43 @@ func streamViewsHost(ctx context.Context, dir string) {
 	svStream(u)
 	svWebPage(u)
 	svSound(u, feat("sound"))
+	svSlowStream(u)
+}
+
+// svSlowBus is a bus every stream here resolves: DALI's 1200 Bd biphase
+// (a half bit of 417 us) on C1.
+const svSlowBus = "proto dali vpp=3.3 offset=1.65 bus=C1"
+
+// svSlowStream puts a slow bus on C1 and starts BUS's Stream view on it:
+// a scope whose stream carries it counts the transcript's lines (the
+// factory PL's roll stream samples every 24 us).
+func svSlowStream(u *uiRig) {
+	h := u.h
+	if rep := u.ctl("signals C1=dc,0,0,0;C2=dc,0,0,0;C3=dc,0,0,0;C4=dc,0,0,0"); !strings.HasPrefix(rep, "ok") {
+		h.check("slow-bus", false, "simulator: %s", rep)
+		return
+	}
+	if rep := u.ctl(svSlowBus); !strings.HasPrefix(rep, "ok") {
+		h.check("slow-bus", false, "simulator: %s", rep)
+		return
+	}
+	var ws map[string]any
+	_ = u.post("/api/panel", `{"workspace":"bus"}`, &ws) // a refusal shows in the checks below
+	scpi := func(line string) { _, _ = scpiQuery(u.ctx, line+";*OPC?") }
+	scpi(":TIM:SCAL 5E-3")
+	scpi(":TRIG:MODE AUTO;:TRIG:EDGE:SOUR C1;SLOP FALL;LEV 1.65")
+	res := u.setRow("bus.protocol", framecalc.ProtoDALI)
+	res2 := u.setRow("bus.source", 0)
+	until(u.ctx, 10*time.Second, func() bool {
+		p, _, _ := busSettings(u)
+		return p.Proto == framecalc.ProtoDALI && !u.panel().Display.DecDetecting
+	})
+	p, named, set := busSettings(u)
+	if !h.check("slow-bus", res.OK && res2.OK && p.Proto == framecalc.ProtoDALI && p.ChA == 0,
+		"BUS decodes %s on C%d (%s): protocol %+v, source %+v", named, p.ChA+1, set, res, res2) {
+		return
+	}
+	svStreamCase(u, "slow-stream")
 }
 
 // svBus sets the MIDI decoder on C1 and a timebase that holds a whole
@@ -315,21 +352,36 @@ func (u *uiRig) rawFrameSince(seq uint64) (*sample.Frame, []byte, error) {
 
 // svStream starts BUS's Stream view, from the UI model and as the web page
 // asks for it, and counts the transcript's lines; a scope with no decoded
-// stream refuses with its reason.
-func svStream(u *uiRig) {
+// stream refuses with its reason, and one whose stream is too slow for the
+// bus (the factory PL's roll stream and MIDI's 32 us bit) refuses the bus
+// with the rates.
+func svStream(u *uiRig) { svStreamCase(u, "stream") }
+
+// svStreamCase is svStream, its checks named after tag.
+func svStreamCase(u *uiRig, tag string) {
 	h := u.h
 	t0 := time.Now()
 	ok, seen := svAgain(u, "bus", labelStreamView, 6)
-	h.check("stream-view", ok, "BUS again to Stream in %v: views %v", time.Since(t0).Round(time.Millisecond), seen)
+	h.check(tag+"-view", ok, "BUS again to Stream in %v: views %v", time.Since(t0).Round(time.Millisecond), seen)
 	row, _ := u.sheetRow("bus.stream")
 	var page uimodel.SetResult
 	err := u.post("/api/stream/page", `{"on":true}`, &page)
 	lines, code := svGet(u, "/api/stream/lines?from=0&max=1")
+	if why := svRateRefusal(u, row.Available && err == nil, page); why != "" {
+		// a decoded stream too slow for this bus: the start says so with
+		// the rates, and the transcript stays empty
+		var p streamwire.LinesPage
+		gerr := u.get("/api/stream/lines?from=0&max=4", &p)
+		h.check(tag+"-start", gerr == nil && len(p.Lines) == 0, "refused for this bus %v after entering the view: %q; /api/stream/lines %d lines (%v)",
+			time.Since(t0).Round(time.Second), why, len(p.Lines), gerr)
+		svLeaveStream(u)
+		return
+	}
 	if !row.Available || !page.OK {
 		// no decoded stream here: every surface says why, the same why, and
 		// none says the bus is missing (MIDI is decoded)
 		why := page.Error
-		h.check("stream-start", err == nil && !page.OK && code == http.StatusNotFound && why != "" &&
+		h.check(tag+"-start", err == nil && !page.OK && code == http.StatusNotFound && why != "" &&
 			!strings.Contains(why, "needs a bus") && !strings.Contains(why, "set Protocol") && row.Why != "" && !strings.Contains(row.Why, "decode on"),
 			"absent: the page's start refused %q (%v); /api/stream/lines %d %q; the Stream row %q: needs %q", why, err, code, shorten(string(lines), 80), row.Text, row.Why)
 		svLeaveStream(u)
@@ -355,9 +407,62 @@ func svStream(u *uiRig) {
 		}
 		next = p.Next
 	}
-	h.check("stream-lines", total > 0 && first < svFirstS*time.Second && gaps == 0,
+	h.check(tag+"-lines", total > 0 && first < svFirstS*time.Second && gaps == 0,
 		"%d transcript lines in %d s, the first %v after the start, %d lost", total, svCountS, first.Round(time.Millisecond), gaps)
 	svLeaveStream(u)
+}
+
+// svRefusalS bounds the wait for a stream's verdict on a bus too fast for
+// it.
+const svRefusalS = 45
+
+// svRateNote is the words of a stream's refusal of a bus it is too slow
+// for.
+const svRateNote = "the board streams one every"
+
+// svRateRefusal is a decoded stream's refusal of the bus: the page's start
+// refused with the rates, or the stream the view started failed (the UI
+// model's pane on the LCD and the app's log say why: the rates); "" when
+// the stream runs or is absent.
+func svRateRefusal(u *uiRig, has bool, page uimodel.SetResult) string {
+	if !has {
+		return ""
+	}
+	if !page.OK {
+		if strings.Contains(page.Error, svRateNote) {
+			return page.Error
+		}
+		return ""
+	}
+	// the verdict comes once the UI model has read the bus off the screen
+	// (its decode of a frame) and the stream's first block is in: on the
+	// emulator that can take longer than a start of a stream that runs
+	// a FAIL left by an earlier stream counts only once this start has run
+	// (START) or nothing else came in the whole wait
+	started, last := false, ""
+	for end := time.Now().Add(svRefusalS * time.Second); time.Now().Before(end) && u.ctx.Err() == nil; time.Sleep(250 * time.Millisecond) {
+		var p streamwire.LinesPage
+		if u.get("/api/stream/lines?from=0&max=1", &p) != nil {
+			continue
+		}
+		last = p.State
+		switch p.State {
+		case streamwire.Starting.String():
+			started = true
+		case streamwire.Failed.String():
+			if started {
+				// the start failed: the UI model's pane on the LCD and the
+				// app's log say why; the page reads the state
+				return "the stream's start failed (FAIL), its transcript empty"
+			}
+		case streamwire.Streaming.String(), streamwire.Triggered.String(), streamwire.Stopped.String():
+			return ""
+		}
+	}
+	if last == streamwire.Failed.String() {
+		return "the stream failed (FAIL) and did not start again, its transcript empty"
+	}
+	return ""
 }
 
 // labelStreamView is BUS's Stream view as the UI model names it.
