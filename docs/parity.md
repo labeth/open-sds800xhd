@@ -18,8 +18,8 @@ area on main, and a verdict:
 
 | Verdict | Rows |
 |---|---|
-| PASS | 25 |
-| PARTIAL | 11 |
+| PASS | 26 |
+| PARTIAL | 10 |
 | N/A | 2 |
 | GAP | 2 |
 | **Total** | **40** |
@@ -36,10 +36,10 @@ Where the results come from:
 
 | Lane | Command | Result |
 |---|---|---|
-| Simulator areas | `make sim-test` (or `./build/simtest -area A,B`) | 28 areas: 26 pass; `decode` and `decode-sweep` fail cases |
+| Simulator areas | `make sim-test` (or `./build/simtest -area A,B`) | 30 areas (with `sheets` and `streamviews`): 28 pass; `decode` and `decode-sweep` fail cases. Rerun after these changes: sheets 36/36, streamviews 14/14, ui 67/67, web 64/64, trigfire 92/92, trigger 207/207, display 96/96, readout 33/33, mask 10/10, afe 27/27, roll 50/50 |
 | Fault lane (L4) | `make l4-test` | 8 areas: `l4-storage` 18/18; `l4-fuzz` seeds 10, 12 and 20 replayed clean (3/3) with the emulator's 15 s stall window; the other areas from the earlier run |
 | Open-PL co-simulation | `make cosim-test` | 7 areas pass; `scpi` 20/20 since the open image offers no vendor renderer (a held redraw polled a register the open PL never sets and stalled the owner) |
-| Browser e2e over simlab | `make simlab-e2e` | simlab 11/11 steps; operator 43 pass, 2 fail (T25, M10), 60 skipped with a reason; fuzz 40 actions, 1 finding (a 6 s click timeout on super-resolution's ARM under load 11) |
+| Browser e2e over simlab | `make simlab-e2e` | simlab 11/11 steps; operator 43 pass, 2 fail, 60 skipped with a reason, then T25 (after the reference fix) and M10 pass on rerun; fuzz 40 actions: 1 finding under load 11 (a 6 s click timeout on super-resolution's ARM), 0 on rerun at load 3 |
 | Recorded sessions, native vs WebAssembly | `make sessions TARGET=pair` | 22 sessions × 2: 58/58 steps, 45/45 expectations; 364 fields match, 0 differ |
 | Browser demo matrix | open-dso-core `make demo-test` | HD 22/22, CML 22/22 |
 | Unit tests | `make test` | 26 packages ok |
@@ -53,17 +53,17 @@ simulator lock (the decode sweep alone about four and a half).
 
 | CML 1.2 item | SDS800X HD coverage | Result | Verdict |
 |---|---|---|---|
-| Keys sweep: every key, knob and view alive (56) | `input` (in-guest: profile of 33 keys, 12 knobs, 19 lamps; injected events reach the reader), `ui` (keys, knobs and touch drive the UI model, SCPI and the web agree), `l4-input` (stuck, chattering, spinning input), `lab` (simlab panel), sessions `workspace-tour-keys`, `vdiv-knob`, `timebase-knob` | input 9/9, ui 40/40, l4-input 20/20, lab 10/10, sessions 6/6 + 2/2 + 3/3 | PARTIAL: no sweep presses every one of the 33 keys and turns every one of the 12 knobs in every workspace and checks it acted; simlab-e2e still sees its known panel findings (knob sign opposite the spec for V/div and s/div, every displayed channel's key lit, H-scale turns the sheet tab while a channel sheet is open) |
+| Keys sweep: every key, knob and view alive (56) | `input` (in-guest: profile of 33 keys, 12 knobs, 19 lamps; injected events reach the reader), `ui` (keys, knobs and touch drive the UI model, SCPI and the web agree), `l4-input` (stuck, chattering, spinning input), `lab` (simlab panel), sessions `workspace-tour-keys`, `vdiv-knob`, `timebase-knob` | input 9/9, ui 67/67, l4-input 20/20, lab 10/10, sessions 6/6 + 2/2 + 3/3 | PARTIAL: no sweep presses every one of the 33 keys and turns every one of the 12 knobs in every workspace and checks it acted; simlab-e2e still sees its known panel findings (knob sign opposite the spec for V/div and s/div, every displayed channel's key lit, H-scale turns the sheet tab while a channel sheet is open) |
 | Sheets sweep: every tab and row (152) | `sheets` (every row of the UI model's sheet catalogue changed and read back through the touch layout and through `/api/sheets`, held 0.8 s, restored; four runs by tab group), `ui`, sessions `sheets-keys` | sheets 190 rows × 2 paths: 166 pass, 23 flagged with the scope's reason, 1 skipped (`sys.default`), 0 failed; ui 67/67 | PASS |
-| HUD actions (refs, mask, force, print, default, autoset) | `ui`, `display` (UI layer, held redraw, zoom, screen.png = fb0), `mask`, sessions `default-setup`, `scope-autoset`, `run-stop-single`, `trigger-mode` | ui 40/40, display 96/96, mask 10/10, sessions 22/22 | PARTIAL: the actions run on the simulated unit one by one, not as one HUD action sweep; the sessions run against the browser demo's board |
-| Workspaces SCOPE, BUS, SPECTRUM, MEASURE, COMPARE and their views | sessions `workspace-tour-web`, `bus-views`, `spectrum-views`; demo matrix `workspace-tdiv`, `bus-views`, `spectrum-fft-sound`, `compare-master-mask`; `ui` X-Y and Bode views | sessions 5/5, 3/3, 3/3; demo 19/19; ui 40/40 | PASS |
+| HUD actions (refs, mask, force, print, default, autoset) | `ui`, `display` (UI layer, held redraw, zoom, screen.png = fb0), `mask`, sessions `default-setup`, `scope-autoset`, `run-stop-single`, `trigger-mode` | ui 67/67, display 96/96, mask 10/10, sessions 22/22 | PARTIAL: the actions run on the simulated unit one by one, not as one HUD action sweep; the sessions run against the browser demo's board |
+| Workspaces SCOPE, BUS, SPECTRUM, MEASURE, COMPARE and their views | sessions `workspace-tour-web`, `bus-views`, `spectrum-views`; demo matrix `workspace-tdiv`, `bus-views`, `spectrum-fft-sound`, `compare-master-mask`; `ui` X-Y and Bode views | sessions 5/5, 3/3, 3/3; demo 22/22; ui 67/67 | PASS |
 
 ## Web
 
 | CML 1.2 item | SDS800X HD coverage | Result | Verdict |
 |---|---|---|---|
-| Web sweep, 0 page errors; browser and node suites | `web` (page, caps, frames v2, settings both ways, SCPI and the web agree, headless browser with 0 page errors), simlab-e2e `simlab` (bench page, panel, generator, CH keys and knobs read back over SCPI, the UI model, the web and fb0; UART/SPI/I²C presets decode) and `fuzz` (40 actions) | web 45/45, simlab 11/11, fuzz 1/1 (0 findings) | PASS |
-| Operator workflows (the core's `webclient/e2e`, as the CML's web actions) | simlab-e2e `operator`: every workflow the simulator's sources can serve | 43 pass, 2 fail, 60 skipped with a reason (protocol sources start idle at the trigger point; zones absent with the board's reason; the burst's spectrum at 2 ns/div holds the screen's 20 samples) | PARTIAL: T25 (COMPARE reads the master 0.33 V off the live trace) and M10 (2.5 kHz read as 4 kHz with a holdoff) |
+| Web sweep, 0 page errors; browser and node suites | `web` (page, caps, frames v2, settings both ways, SCPI and the web agree, headless browser with 0 page errors), simlab-e2e `simlab` (bench page, panel, generator, CH keys and knobs read back over SCPI, the UI model, the web and fb0; UART/SPI/I²C presets decode) and `fuzz` (40 actions) | web 64/64, simlab 11/11, fuzz 1/1 (0 findings on the quiet rerun) | PASS |
+| Operator workflows (the core's `webclient/e2e`, as the CML's web actions) | simlab-e2e `operator`: every workflow the simulator's sources can serve | 45 pass (T25 and M10 on rerun), 60 skipped with a reason (protocol sources start idle at the trigger point; zones absent with the board's reason; the burst's spectrum at 2 ns/div holds the screen's 20 samples) | PASS |
 | Phone remote sweep | `web` (`/remote` in the headless browser at a phone's size: every Menus tab, each row's sheet opened and closed, safe values changed from the phone and followed by the scope, the steppers) | 14 tabs, 89 rows, 6 changes and 2 steppers followed, 0 page errors | PASS |
 | Visual view streams (0.2 s, no losses) | `streamviews` (a MIDI bus on C1: BUS Visual on the scope and on the page, captures and messages counted; the Stream view and SOUND started) | Visual from captures: 13 captures in 20 s all decoded, 117 messages, first 0.31 s; page 72 messages, first 0.15 s, 0 page errors | PARTIAL: Visual runs from captures; the Stream view has no stream on the HD (the core's engine has no consumer of `hal.Streamer`), and every surface says so |
 
@@ -125,7 +125,7 @@ simulator lock (the decode sweep alone about four and a half).
 |---|---|---|---|
 | Unit tests | `make test` (app, ota, sim) | 26 packages ok | PASS |
 | Golden display | open-dso-core `TestGolden1024x600`, `TestGolden4Ch12Bit` (this screen size and format), `display` (screen.png equals fb0) | 86 golden scenes pass; display 96/96 | PASS |
-| Parity suites | sessions pair (native vs WebAssembly), demo matrix, Go↔JS decoder parity, `startup` and `trigger` reference parity | 364/364 fields; 19/19; 1432/1432 vectors; 15/15; 207/207 | PASS |
+| Parity suites | sessions pair (native vs WebAssembly), demo matrix, Go↔JS decoder parity, `startup` and `trigger` reference parity | 364/364 fields; 22/22; 1432/1432 vectors; 15/15; 207/207 | PASS |
 | Fuzz | `l4-fuzz`, the AUTO fuzz campaign | stalls classified (emulator frame period); replayed seeds 3/3; 1 finding in 6000 | PASS |
 | RTL | `make fpga-sim`, `make fpga-lint`, `make cosim-test` | 10/10 testbenches, 35 modules clean, co-sim `scpi` 20/20 | PASS |
 
@@ -152,18 +152,17 @@ co-sim `:WAV:DATA?` (the open image no longer offers the vendor renderer), and m
 page drew the HD's traces about 0 V instead of the screen's centre line (the board's scale now names the
 centre line and the offset), autoset left a 150 MHz burst at 1 ns/div with ten samples (it now steps slower
 until the frequency reads), the spectrum transformed half of a 2000-sample record (a record between two
-powers of two is now resampled onto the one above, LCD and web alike), and M4/T25 followed the page and the
-scope as they are.
+powers of two is now resampled onto the one above, LCD and web alike), the web's references were read at 25
+codes a division when the HD's 8-bit view has 30 (COMPARE read the master 0.33 V off; the export now restates
+them), the Stack master row read "none" for a moment between the stack and its master, and M4/T25 follow the
+page and the scope as they are.
 
 PARTIAL rows with failures, for the same follow-up:
 
-- **Operator `T25`**: after the master the mask counts, but COMPARE's difference reads the live C1 0.33 V
-  (0.66 div) off REF A on every sample while both draw on the same place. Repro:
-  `WORKFLOWS=T24,T25 make simlab-e2e SUITES=operator`. Plan: compare the reference's stored offset
-  (`/api/refs`) with the live frame's (`off_v`) after the master.
-- **Operator `M10`**: with a 200 µs holdoff on the 2.5 kHz pulse train the frequency reads 4 kHz (one run;
-  it passed before). Plan: repeat it with the app's log to tell the glitch pulse in the window from a
-  holdoff fault.
+- **Operator `M10`**: with a 200 µs holdoff on the 2.5 kHz pulse train the frequency read 4 kHz in one full
+  run and 2.5 kHz on the rerun. Plan: repeat it with the app's log to tell the glitch pulse in the window
+  from a holdoff fault.
 - **Fuzz finding** (simlab-e2e `fuzz`, seed 1, iteration 24): super-resolution's ARM did not take a click
-  in 6 s under load 11, the stacker now running on the HD. Plan: repeat at a quiet load.
+  in 6 s under load 11, the stacker now running on the HD; the rerun at load 3 had no finding. Plan: repeat
+  under load to tell the page's stacking work from the host's load.
 
