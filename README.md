@@ -12,6 +12,10 @@ scripts under emulation against a model of the board). `specs/` holds the implem
 See [`SAFETY.txt`](SAFETY.txt) for what the firmware never writes, how to get back to the vendor firmware and
 the staged first contact with a unit.
 
+The dedicated hardware frequency counter appears as `Counter Cn` in the native readout bar and web UI.
+It is independent of the waveform frequency measurement and remains serviced while acquisition is
+stopped or waiting for a trigger. See [counter behavior and calibration limits](docs/counter.md).
+
 ## Layout
 
 | Path | What |

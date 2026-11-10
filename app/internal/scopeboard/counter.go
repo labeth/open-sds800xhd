@@ -20,9 +20,12 @@ func (c *counterFacet) Read() (sample.Counters, error) {
 	if b.open != nil {
 		return b.openCounter()
 	}
-	if b.ctr == nil {
+	source := int((b.regs.ACQ.Shadow(0x00E) >> 4) & 7)
+	if b.ctr == nil || b.ctrSource != source {
+		b.ctrSource = source
 		b.ctr = counter.New(b.regs.ACQ)
 		b.ctr.Start()
+		return sample.Counters{}, nil
 	}
 	f, ok := b.ctr.Poll()
 	return sample.Counters{FreqHz: f, Total: b.ctr.Total(), Valid: ok}, nil
@@ -39,3 +42,19 @@ const (
 	// external SAG1021I or SDG, which this firmware does not drive (spec 15 §1).
 	GeneratorAbsent = "no on-board generator, and external generators are not driven (spec 15 §1)"
 )
+
+// Source names the counter's actual mux, not a trigger change waiting for
+// the next arm. Pattern and serial triggers can leave a different source.
+func (c *counterFacet) Source() hal.Source {
+	b := (*Board)(c)
+	source := -1
+	if b.open != nil {
+		source = b.staged.Trig.Source
+		if source < 0 || source > 3 {
+			source = 0
+		}
+	} else if b.regs != nil {
+		source = int((b.regs.ACQ.Shadow(0x00E) >> 4) & 7)
+	}
+	return hal.Source{Kind: hal.Analog, Index: source}
+}

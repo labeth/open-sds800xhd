@@ -49,6 +49,8 @@ type Board struct {
 	ui      ui     // UI layer, capture, front panel (display.go, input.go)
 	ctr     *counter.Counter
 	open    *openBackend // stage 2: the open PL (openpl.go); nil on the vendor image
+
+	ctrSource int
 }
 
 // New returns the board before bring-up. log is the app's log.
