@@ -84,7 +84,7 @@ simulator lock (the decode sweep alone about four and a half).
 
 | CML 1.2 item | SDS800X HD coverage | Result | Verdict |
 |---|---|---|---|
-| Bus sweep: every bus named by AUTO in BUS and decoded | `decode` (each of the 52 protocols' first variant through the realistic front end, AUTO, then the decode against the generator's truth), `decode-sweep` (all 92 variants) | decode 40/51, decode-sweep 71/91 (one skip each: a Morse unit longer than AUTO's slowest look) | GAP: see the ranked list; about half of the failures move between runs (record windows under the emulator), the rest repeat |
+| Bus sweep: every bus named by AUTO in BUS and decoded | `decode` (each of the 52 protocols' first variant through the realistic front end, AUTO, then the decode against the generator's truth), `decode-sweep` (all 92 variants) | decode 45/52, decode-sweep 79/92 (one skip each: a Morse unit longer than AUTO's slowest look). Of the 20 failures, 18 name the bus right but decode none or part of a message (IR, LIN, 1-Wire, SWD, RFID readers, CJTAG, USB full speed, caliper): the record AUTO leaves holds no whole message; two name it wrong (stepper as SDQ, T55xx without carrier as UART) | GAP: record windows for slow and framed buses; see the ranked list |
 | AUTO fuzz (software) | open-dso-core `TestAutodetectFuzzCampaign`, 6000 mutations of 151 captures (shared code) | 1 finding (Modbus capture named SDQ under heavy noise); the CML's 1.2 run had 3 | PASS |
 
 ## Records, streams, SOUND
